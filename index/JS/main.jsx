@@ -2,8 +2,8 @@
 // Thay thế toàn bộ babel-loader.js + loadModule chain
 // Giữ nguyên thứ tự load y chang cũ
 
-import './components/globals.js'
-import './components/save-result.js'
+import './components/globals.jsx'
+import './components/save-result.jsx'
 import './components/quiz-player.jsx'
 import './components/pw-gate.jsx'
 import './components/student-login.jsx'
