@@ -1,35 +1,35 @@
-// ★ Vite entry point cho admin.html
-// Thay thế toàn bộ babel-loader.js + loadModule chain
+// ★ Vite entry point — thay thế toàn bộ loadModule chain
 // Giữ nguyên thứ tự load y chang cũ
 
-// 1. Colors & parsers (phải có trước)
-import './learnsy-colors.jsx'
-import './learnsy-parsers.jsx'
+// 1. Globals TRƯỚC TIÊN
+import './colors.jsx'                    // CL, CD, window.C
+import './parsers.jsx'                   // parseText, importJSON, emptyTF/MC/MS/FB, newQ
+import './components/ui-components.jsx'   // SVG icons + Inp/RichInp/MiniRichInp/Fld/Pill
 
-// 2. UI utilities
+// 2. UI utilities (plain JS, không JSX)
+import './toast.jsx'
 import './banh-beo-ui.jsx'
-import './confirm-dialog.jsx'
 import './themes.jsx'
-import './ux-nung.jsx'
 import './sounds.jsx'
+import './easter-eggs.jsx'
+import './ux-nung.jsx'
+import './export-builder.jsx'
+import './merge-questions.jsx'
+import './components/admin-background-settings.jsx'
 
-// 3. Auth & components
+// 3. Các module phụ thuộc globals
 import './login.jsx'
 import './question-editor.jsx'
-import './pw-gate.jsx'
-import './merge-questions.jsx'
-
-// 4. Admin modules
 import './components/chat-mini.jsx'
 import './components/preview-panel.jsx'
 import './components/listening-panel.jsx'
+
+// 4. Student manager + Dashboard
 import './student-manager.jsx'
 import './components/dashboard.jsx'
 
-// 5. App chính (cuối cùng)
+// 5. App chính — render toàn bộ UI
 import './app.jsx'
-// 6. question-editor
-import '. question-editor.jsx'
 
 console.log('[admin] v3 ✅ loaded!')
 
