@@ -1,51 +1,19 @@
-// ★ Vite entry point — thay thế toàn bộ loadModule chain
+// ★ Vite entry point cho index.html
+// Thay thế toàn bộ babel-loader.js + loadModule chain
 // Giữ nguyên thứ tự load y chang cũ
 
-// 1. Globals TRƯỚC TIÊN
-import './parsers.jsx'                   // parseText, importJSON, emptyTF/MC/MS/FB, newQ
-import './components/ui-components.jsx'   // SVG icons + Inp/RichInp/MiniRichInp/Fld/Pill
-
-// 2. UI utilities (plain JS, không JSX)
-import './toast.jsx'
-import './banh-beo-ui.jsx'
-import './themes.jsx'
-import './sounds.jsx'
-import './easter-eggs.jsx'
-import './ux-nung.jsx'
-import './export-builder.jsx'
-import './merge-questions.jsx'
-import './components/admin-background-settings.jsx'
-
-// 3. Các module phụ thuộc globals
-import './login.jsx'
-import './question-editor.jsx'
-import './components/chat-mini.jsx'
-import './components/preview-panel.jsx'
-import './components/listening-panel.jsx'
-
-// 4. Student manager + Dashboard
-import './student-manager.jsx'
+import './components/globals.js'
+import './components/save-result.js'
+import './components/quiz-player.jsx'
+import './components/pw-gate.jsx'
+import './components/student-login.jsx'
+import './components/home-screen.jsx'
+import './components/hist-detail.jsx'
+import './components/avatar.jsx'
 import './components/dashboard.jsx'
-
-// 5. App chính — render toàn bộ UI
+import './export-builder.jsx'
+import './components/background-settings.js'
+import './components/listening-practice.jsx'
 import './app.jsx'
 
-console.log('[admin] v3 ✅ loaded!')
-
-// ── CustomEvent Bridge ───────────────────────────────────────────
-let _renderingLessons = false
-window.addEventListener('learnsy:render-lessons', () => {
-  if (_renderingLessons || typeof window.renderLessons !== 'function') return
-  _renderingLessons = true
-  try {
-    const r = window.renderLessons()
-    if (r && typeof r.catch === 'function') {
-      r.catch(e => console.error('[bridge] renderLessons async error:', e))
-    }
-  } catch(e) { console.error('[bridge] renderLessons error:', e) }
-  finally { _renderingLessons = false }
-})
-
-window.setLessonsFromBridge = function(lessons) {
-  window.dispatchEvent(new CustomEvent('learnsy:set-lessons', { detail: { lessons } }))
-}
+console.log('[index] v2 ✅ loaded!')
