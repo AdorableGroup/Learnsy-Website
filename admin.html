@@ -6,16 +6,15 @@
 <title>Learnsy · Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Dancing+Script:wght@700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="admin/CSS/toast.css">
-<link rel="stylesheet" href="admin/CSS/banh-beo-ui.css">
-<link rel="stylesheet" href="admin/CSS/themes.css">
-<link rel="stylesheet" href="admin/CSS/merge-questions.css">
-<link rel="stylesheet" href="admin/CSS/app.css">
-<!-- ═══ Dark mode pre-init ══════════════════════════════════════════════
-     Inject class .dark TRƯỚC tất cả script (React, bg-settings, ...).
-     Đảm bảo isDarkActive() trong admin-background-settings.js đọc đúng
-     ngay lần đầu — tránh race condition với React useEffect.
-     ════════════════════════════════════════════════════════════════════ -->
+
+<!-- ═══ CSS ═══ -->
+<link rel="stylesheet" href="/admin/CSS/toast.css">
+<link rel="stylesheet" href="/admin/CSS/banh-beo-ui.css">
+<link rel="stylesheet" href="/admin/CSS/themes.css">
+<link rel="stylesheet" href="/admin/CSS/merge-questions.css">
+<link rel="stylesheet" href="/admin/CSS/app.css">
+
+<!-- ═══ Dark mode pre-init ═══ -->
 <script>
 (function(){
   var dark=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;
@@ -36,9 +35,8 @@
   window.__adminDarkInit=dark;
 })();
 </script>
-<!-- ═══ Samsung WebView / Gboard DOM safety patch ═══════════════════════
-     PHẢI đặt TRƯỚC react-dom. Dùng try-catch thuần, không dùng contains().
-     ════════════════════════════════════════════════════════════════════ -->
+
+<!-- ═══ Samsung WebView / Gboard DOM safety patch ═══ -->
 <script>
 (function(){
   var _rc=Node.prototype.removeChild;
@@ -56,9 +54,11 @@
 })();
 </script>
 
-<!-- Tone.js + Supabase vẫn load qua CDN -->
+<!-- ═══ CDN ═══ -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- ═══ Supabase config ═══ -->
 <script>
   const CACHE_KEY='lessons_cache';
 
@@ -104,6 +104,7 @@
     }
   })();
 </script>
+
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body,#root{min-height:100vh;font-family:'Nunito',sans-serif;background:#FFF5F9;}
@@ -136,8 +137,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
     radial-gradient(circle at 15% 20%, rgba(255,182,203,0.12) 0%, transparent 45%),
     radial-gradient(circle at 85% 10%, rgba(196,181,253,0.1) 0%, transparent 40%),
     radial-gradient(circle at 50% 80%, rgba(167,243,208,0.08) 0%, transparent 40%),
-    radial-gradient(circle at 90% 70%, rgba(253,186,116,0.07) 0%, transparent 35%);
-}
+    radial-gradient(circle at 90% 70%, rgba(253,186,116,0.07) 0%, transparent 35%);}
 
 html.dark,body.dark,body.dark #root{background:#180A10!important;}
 body.dark::before{background-image:
@@ -150,27 +150,18 @@ body.dark ::-webkit-scrollbar-thumb{background:rgba(200,80,120,0.25);}
 .dm-btn:hover{background:rgba(255,150,200,0.14);transform:scale(1.08);}
 [contenteditable][data-ph]:empty:before{content:attr(data-ph);color:#C8A0B8;pointer-events:none;font-weight:600;}
 body.dark [contenteditable][data-ph]:empty:before{color:#5A3050;}
-    .ls-container { width:100%; max-width:min(760px,100%); margin:0 auto; box-sizing:border-box; }
-    .ls-page-pad { padding-left:clamp(10px,3vw,28px); padding-right:clamp(10px,3vw,28px); }
-    .ls-content-pad { padding:clamp(12px,3vw,24px) clamp(10px,3vw,24px) 100px; }
-    @media(min-width:600px){ .ls-container{ max-width:min(760px,92vw); } }
-    @media(min-width:900px){ .ls-container{ max-width:760px; } }
+.ls-container{width:100%;max-width:min(760px,100%);margin:0 auto;box-sizing:border-box;}
+.ls-page-pad{padding-left:clamp(10px,3vw,28px);padding-right:clamp(10px,3vw,28px);}
+.ls-content-pad{padding:clamp(12px,3vw,24px) clamp(10px,3vw,24px) 100px;}
+@media(min-width:600px){.ls-container{max-width:min(760px,92vw);}}
+@media(min-width:900px){.ls-container{max-width:760px;}}
 </style>
 </head>
 <body>
 <div id="root"></div>
 <div id="toastContainer"></div>
 
-<!-- Plain JS không có JSX — giữ nguyên script tag, load trước Vite module -->
-<script src="admin/JS/toast.js"></script>
-<script src="admin/JS/banh-beo-ui.js"></script>
-<script src="admin/JS/themes.js"></script>
-<script src="admin/JS/sounds.js"></script>
-<script src="admin/JS/easter-eggs.js"></script>
-<script src="admin/JS/ux-nung.js"></script>
-<script src="admin/JS/components/admin-background-settings.js"></script>
-
-<!-- ★ Vite entry point — thay thế babel-loader + loadModule chain -->
-<script type="module" src="admin/JS/main.jsx"></script>
+<!-- ★★★ CHỈ 1 DÒNG NÀY — Vite lo hết ★★★ -->
+<script type="module" src="/admin/JS/main.jsx"></script>
 </body>
 </html>
