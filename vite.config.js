@@ -9,8 +9,6 @@ export default defineConfig({
       input: {
         main: 'index.html',
         admin: 'admin.html',
-        create: 'create.html',
-        docx: 'docx.html',
       }
     }
   }
