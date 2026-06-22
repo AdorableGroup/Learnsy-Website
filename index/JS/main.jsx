@@ -2,7 +2,6 @@
 // Giữ nguyên thứ tự load y chang cũ
 
 // 1. Globals TRƯỚC TIÊN
-import './colors.jsx'                    // CL, CD, window.C
 import './parsers.jsx'                   // parseText, importJSON, emptyTF/MC/MS/FB, newQ
 import './components/ui-components.jsx'   // SVG icons + Inp/RichInp/MiniRichInp/Fld/Pill
 
