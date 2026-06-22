@@ -1,9 +1,15 @@
 // ★ Vite entry point — thay thế toàn bộ loadModule chain
 // Giữ nguyên thứ tự load y chang cũ
 
+// 0. Babel loader — chạy trước tất cả (setup transform/runtime nếu cần)
+import './babel-loader.jsx'
+
+// 0.5. Password gate — chặn render tới khi nhập đúng pass
+import './pw-gate.jsx'
+
 // 1. Globals TRƯỚC TIÊN
-import './colors.jsx'                    // CL, CD, window.C
-import './parsers.jsx'                   // parseText, importJSON, emptyTF/MC/MS/FB, newQ
+import './learnsy-colors.jsx'             // CL, CD, window.C
+import './learnsy-parsers.jsx'            // parseText, importJSON, emptyTF/MC/MS/FB, newQ
 import './components/ui-components.jsx'   // SVG icons + Inp/RichInp/MiniRichInp/Fld/Pill
 
 // 2. UI utilities (plain JS, không JSX)
@@ -15,10 +21,11 @@ import './easter-eggs.jsx'
 import './ux-nung.jsx'
 import './export-builder.jsx'
 import './merge-questions.jsx'
+import './confirm-dialog.jsx'
 import './components/admin-background-settings.jsx'
 
 // 3. Các module phụ thuộc globals
-import './login.jsx'
+import './learnsy-login.jsx'
 import './question-editor.jsx'
 import './components/chat-mini.jsx'
 import './components/preview-panel.jsx'
