@@ -12,7 +12,7 @@ import './components/hist-detail.jsx'
 import './components/avatar.jsx'
 import './components/dashboard.jsx'
 import './export-builder.jsx'
-import './components/background-settings.js'
+import './components/background-settings.jsx'
 import './components/listening-practice.jsx'
 import './app.jsx'
 
