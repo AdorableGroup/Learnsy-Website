@@ -6,11 +6,6 @@
 <title>Learnsy · Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Dancing+Script:wght@700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="admin/CSS/toast.css">
-<link rel="stylesheet" href="admin/CSS/banh-beo-ui.css">
-<link rel="stylesheet" href="admin/CSS/themes.css">
-<link rel="stylesheet" href="admin/CSS/merge-questions.css">
-<link rel="stylesheet" href="admin/CSS/app.css">
 
 <!-- ═══ Dark mode pre-init ═══ -->
 <script>
@@ -161,11 +156,13 @@ body.dark [contenteditable][data-ph]:empty:before{color:#5A3050;}
 
 <!-- ★★★ Chờ supa sẵn sàng rồi mới load admin ★★★ -->
 <script type="module">
-  await window.__configReady;
-  if(!window.supa){
-    console.error('[admin] supa vẫn undefined sau __configReady — kiểm tra /api/config');
-  }
-  await import('./admin/JS/main.jsx');
+  (async()=>{
+    await window.__configReady;
+    if(!window.supa){
+      console.error('[admin] supa vẫn undefined sau __configReady — kiểm tra /api/config');
+    }
+    await import('./admin/JS/main.jsx');
+  })();
 </script>
 </body>
 </html>
