@@ -341,8 +341,15 @@ import React from 'react';
         return { correct, total };
       }, [selected, blanks, stmtSel]);
 
-      const ANS_LABEL = { 'True': 'Đúng', 'False': 'Sai', 'Not Mentioned': 'NM' };
-      const ANS_COLOR = { 'True': '#10B981', 'False': '#EF4444', 'Not Mentioned': '#818CF8' };
+      // Màu khớp với panel admin (listening-panel) để đồng bộ giao diện
+      const ANS_COLOR = {
+        'True': { c: '#16a34a', bg: 'rgba(22,163,74,.1)', bd: 'rgba(22,163,74,.35)', label: 'Đúng' },
+        'False': { c: '#dc2626', bg: 'rgba(220,38,38,.08)', bd: 'rgba(220,38,38,.32)', label: 'Sai' },
+        'Not Mentioned': { c: '#6366f1', bg: 'rgba(99,102,241,.08)', bd: 'rgba(99,102,241,.32)', label: 'NM' },
+      };
+      // Màu chỗ trống (điền từ) khớp với khối "Đáp án đúng" trong admin
+      const BLANK_OK = '#059669';
+      const BLANK_BAD = '#dc2626';
 
       // ── Render Passage với Inline Inputs ──
       const renderPassage = useCallback(() => {
@@ -378,9 +385,9 @@ import React from 'react';
                     fontSize: 13.5,
                     fontWeight: 700,
                     fontFamily: 'inherit',
-                    color: isOk ? '#10B981' : isBad ? '#EF4444' : LC.inputColor,
-                    background: isOk ? 'rgba(16,185,129,0.10)' : isBad ? 'rgba(239,68,68,0.08)' : LC.inputBg,
-                    border: '1.5px solid ' + (isOk ? '#10B981' : isBad ? '#EF4444' : LC.inputBorder),
+                    color: isOk ? BLANK_OK : isBad ? BLANK_BAD : LC.inputColor,
+                    background: isOk ? 'rgba(5,150,105,0.10)' : isBad ? 'rgba(220,38,38,0.08)' : LC.inputBg,
+                    border: '1.5px solid ' + (isOk ? BLANK_OK : isBad ? BLANK_BAD : LC.inputBorder),
                     outline: 'none',
                     textAlign: 'center',
                     transition: 'border-color 0.15s, background 0.15s, transform 0.1s',
@@ -549,7 +556,7 @@ import React from 'react';
                             <span style={{
                               fontSize: 10,
                               fontWeight: 800,
-                              color: '#10B981',
+                              color: '#059669',
                               background: 'rgba(16,185,129,.1)',
                               border: '1px solid rgba(16,185,129,.3)',
                               borderRadius: 99,
@@ -560,12 +567,12 @@ import React from 'react';
                             <span style={{
                               fontSize: 10,
                               fontWeight: 800,
-                              color: '#818CF8',
-                              background: 'rgba(129,140,248,.1)',
-                              border: '1px solid rgba(129,140,248,.3)',
+                              color: '#dc2626',
+                              background: 'rgba(220,38,38,.08)',
+                              border: '1px solid rgba(220,38,38,.28)',
                               borderRadius: 99,
                               padding: '2px 7px',
-                            }}>{it.statements.length} câu T/F/NM</span>
+                            }}>{it.statements.length} nhận định T/F/NM</span>
                           )}
                         </div>
                       </div>
@@ -798,8 +805,8 @@ import React from 'react';
                   const bad = submitted && sel !== st.answer && sel !== null;
                   return (
                     <div key={i} style={{
-                      background: ok ? 'rgba(16,185,129,0.08)' : bad ? 'rgba(239,68,68,0.06)' : LC.surfaceQ,
-                      border: '1.5px solid ' + (ok ? '#10B981' : bad ? '#EF4444' : LC.borderQ),
+                      background: ok ? 'rgba(22,163,74,0.1)' : bad ? 'rgba(220,38,38,0.08)' : LC.surfaceQ,
+                      border: '1.5px solid ' + (ok ? '#16a34a' : bad ? '#dc2626' : LC.borderQ),
                       borderRadius: 16,
                       padding: '13px 14px',
                       transition: 'border-color 0.2s, background 0.2s',
@@ -825,7 +832,7 @@ import React from 'react';
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
                         {['True', 'False', 'Not Mentioned'].map(key => {
                           const isSel = sel === key;
-                          const col = ANS_COLOR[key];
+                          const ac = ANS_COLOR[key];
                           return (
                             <button key={key} disabled={submitted} onClick={() => setStmt(i, key)}
                               style={{
@@ -834,16 +841,16 @@ import React from 'react';
                                 fontSize: 11.5,
                                 fontWeight: 800,
                                 cursor: submitted ? 'default' : 'pointer',
-                                background: isSel ? col + '2a' : 'transparent',
-                                color: isSel ? col : LC.textMid,
-                                border: '1.5px solid ' + (isSel ? col : LC.borderQ),
+                                background: isSel ? ac.c : ac.bg,
+                                color: isSel ? '#fff' : ac.c,
+                                border: '1.5px solid ' + (isSel ? ac.c : ac.bd),
                                 transition: 'transform 0.08s, background 0.15s, border-color 0.15s',
                               }}
                               onMouseDown={!submitted ? e => e.currentTarget.style.transform = 'scale(0.95)' : undefined}
                               onMouseUp={!submitted ? e => e.currentTarget.style.transform = 'scale(1)' : undefined}
                               onMouseLeave={!submitted ? e => e.currentTarget.style.transform = 'scale(1)' : undefined}
                             >
-                              {ANS_LABEL[key]}
+                              {ac.label}
                             </button>
                           );
                         })}
@@ -858,7 +865,7 @@ import React from 'react';
                             padding: '2px 9px',
                             borderRadius: 999,
                           }}>
-                            Đáp án: {ANS_LABEL[st.answer]}
+                            Đáp án: {ANS_COLOR[st.answer].label}
                           </span>
                         </div>
                       )}
