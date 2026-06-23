@@ -7,26 +7,8 @@ import React from 'react';
 (function () {
   'use strict';
 
-  /* ── Vite: import CSS thay vì inject động ── */
-  // injectCSS đã được thay bằng import ở trên (Vite handle)
-  // Giữ lại hàm phòng trường hợp cần inject runtime, nhưng import tĩnh là chính
-  function injectCSS(href) {
-    if (document.querySelector(`link[href="${href}"]`)) return;
-    const l = document.createElement('link');
-    l.rel = 'stylesheet'; l.href = href;
-    document.head.appendChild(l);
-  }
-  
-  // Vite: CSS được import trực tiếp khi build
-  try {
-    // Dynamic import để Vite không báo lỗi nếu file CSS không tồn tại
-    import('../CSS/banh-beo-ui.css').catch(() => {
-      // Fallback: nếu Vite resolve không được thì inject kiểu cũ
-      injectCSS('admin/CSS/banh-beo-ui.css');
-    });
-  } catch(e) {
-    injectCSS('admin/CSS/banh-beo-ui.css');
-  }
+  // ❌ Đã xóa import động CSS và hàm injectCSS
+  // CSS được import tĩnh từ main.jsx nên không cần load lại ở đây
 
   const TOOLTIPS_ADMIN = [
     'Gõ nhẹ thôi nha admin ơi 🥺',
