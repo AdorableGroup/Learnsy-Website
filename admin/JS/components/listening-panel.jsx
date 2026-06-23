@@ -134,7 +134,10 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
         <div style={panelStyle}>
           {/* header */}
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
-            <div style={{fontSize:14,fontWeight:900,color:C.lav}}>👁️ Xem trước — Giao diện học sinh</div>
+            <div style={{display:'flex',alignItems:'center',gap:6,fontSize:14,fontWeight:900,color:C.lav}}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              Xem trước — Giao diện học sinh
+            </div>
             <button onClick={onClose} style={{width:28,height:28,borderRadius:99,border:`1.5px solid ${C.border2}`,background:C.bg2,color:C.text3,cursor:'pointer',fontSize:15,fontWeight:900,lineHeight:1}}>×</button>
           </div>
 
@@ -187,7 +190,10 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
           {/* Word Box */}
           {(item.wordBox||[]).length>0 && (
             <div style={{marginBottom:12,padding:'10px 12px',borderRadius:12,background:'rgba(99,102,241,.07)',border:'1.5px solid rgba(99,102,241,.25)'}}>
-              <div style={{fontSize:11,fontWeight:900,color:'#4338ca',marginBottom:7}}>📦 Word Box</div>
+              <div style={{display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:900,color:'#4338ca',marginBottom:7}}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                Word Box
+              </div>
               <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
                 {item.wordBox.map((w,i)=>(
                   <span key={i} style={{fontSize:12,fontWeight:700,color:'#4338ca',background:'rgba(99,102,241,.13)',borderRadius:99,padding:'4px 11px'}}>
@@ -233,8 +239,11 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
           {/* score */}
           {checked && totalQ>0 && (
             <div style={{padding:'10px 14px',borderRadius:12,background:totalCorrect===totalQ?'rgba(22,163,74,.1)':'rgba(245,158,11,.1)',border:`1.5px solid ${totalCorrect===totalQ?'rgba(22,163,74,.35)':'rgba(245,158,11,.35)'}`,textAlign:'center',marginBottom:10}}>
-              <span style={{fontSize:15,fontWeight:900,color:totalCorrect===totalQ?'#16a34a':'#d97706'}}>
-                {totalCorrect===totalQ?'🎉':'📝'} {totalCorrect}/{totalQ} câu đúng
+              <span style={{fontSize:15,fontWeight:900,color:totalCorrect===totalQ?'#16a34a':'#d97706',display:'inline-flex',alignItems:'center',gap:6}}>
+                {totalCorrect===totalQ
+                  ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>}
+                {totalCorrect}/{totalQ} câu đúng
               </span>
             </div>
           )}
@@ -268,7 +277,10 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
     );
     return(
       <div style={{padding:'12px 14px',borderRadius:14,background:C.lavPale,border:`1.5px solid ${C.border2}`,marginBottom:2}}>
-        <div style={{fontSize:11,fontWeight:900,color:C.lav,marginBottom:10}}>📊 Thống kê</div>
+        <div style={{display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:900,color:C.lav,marginBottom:10}}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+          Thống kê
+        </div>
         <div style={{display:'flex',gap:7,flexWrap:'wrap'}}>
           {stat('Tổng câu',   items.length,   C.lav)}
           {stat('Chỗ trống',  totalBlanks,    '#059669')}
@@ -366,6 +378,7 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
     },[wbInput,wordBox,toast_]);
 
     const removeWord   = id => setWordBox(p=>p.filter(x=>x.id!==id));
+    const updateWord    = (id,val) => setWordBox(p=>p.map(x=>x.id===id?{...x,val}:x));
 
     // ── Answers ──
     const addAnswer    = ()       => setAnswers(p=>[...p,{id:genId(),val:''}]);
@@ -703,7 +716,10 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
         {/* ── Import panel ── */}
         {showImport && (
           <div style={{padding:'12px 14px',borderRadius:14,border:'1.5px solid rgba(217,119,6,.3)',background:'rgba(217,119,6,.06)'}}>
-            <div style={{fontSize:11,fontWeight:900,color:'#d97706',marginBottom:8}}>📥 Import JSON</div>
+            <div style={{display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:900,color:'#d97706',marginBottom:8}}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Import JSON
+            </div>
             <textarea value={importJson} onChange={e=>setImportJson(e.target.value)}
               rows={4} placeholder='Dán JSON mảng [...] vào đây'
               style={{...inputStyle,fontFamily:'monospace',fontSize:11,resize:'vertical'}}/>
@@ -752,8 +768,10 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
                   <option value="blanks">Nhiều chỗ trống</option>
                 </select>
                 <button onClick={()=>setBulkMode(v=>!v)}
-                  style={{...btnBase(bulkMode?'#dc2626':'#6366f1', bulkMode?'rgba(220,38,38,.08)':'rgba(99,102,241,.08)'),whiteSpace:'nowrap'}}>
-                  {bulkMode?'✕ Thoát':'☑ Chọn nhiều'}
+                  style={{...btnBase(bulkMode?'#dc2626':'#6366f1', bulkMode?'rgba(220,38,38,.08)':'rgba(99,102,241,.08)'),whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:5}}>
+                  {bulkMode
+                    ? <><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Thoát</>
+                    : <><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg> Chọn nhiều</>}
                 </button>
               </div>
             )}
@@ -771,8 +789,9 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
                     <button onClick={()=>setSelected(new Set())}
                       style={btnBase('#6b7280','rgba(107,114,128,.08)')}>Bỏ chọn</button>
                     <button onClick={bulkDelete}
-                      style={{...btnBase('#dc2626','rgba(220,38,38,.1)'),fontWeight:900}}>
-                      🗑 Xoá {selected.size}
+                      style={{...btnBase('#dc2626','rgba(220,38,38,.1)'),fontWeight:900,display:'flex',alignItems:'center',gap:5}}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+                      Xoá {selected.size}
                     </button>
                   </>
                 )}
@@ -906,12 +925,16 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
 
             {/* form header */}
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-              <div style={{fontSize:13,fontWeight:900,color:C.lav}}>
-                {editingId?'✏️ Sửa câu Listening':'➕ Thêm câu Listening mới'}
+              <div style={{display:'flex',alignItems:'center',gap:6,fontSize:13,fontWeight:900,color:C.lav}}>
+                {editingId
+                  ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z"/></svg>
+                  : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>}
+                {editingId?'Sửa câu Listening':'Thêm câu Listening mới'}
               </div>
               <button onClick={()=>{resetForm();setTab('list');}}
-                style={{fontSize:12,color:C.text3,background:'transparent',border:'none',cursor:'pointer',fontWeight:700}}>
-                ← Quay lại
+                style={{fontSize:12,color:C.text3,background:'transparent',border:'none',cursor:'pointer',fontWeight:700,display:'flex',alignItems:'center',gap:4}}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                Quay lại
               </button>
             </div>
 
@@ -925,8 +948,9 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
                 placeholder="VD: Trang An is famous ___ its beautiful landscape."
                 rows={5} style={{...inputStyle,resize:'vertical'}}/>
               <div style={{display:'flex',gap:7,marginTop:7}}>
-                <button onClick={syncBlanksFromText} style={{...btnBase('#059669','rgba(5,150,105,.08)')}}>
-                  ⟳ Đồng bộ {countBlanks(text)} chỗ trống → {answers.length} đáp án
+                <button onClick={syncBlanksFromText} style={{...btnBase('#059669','rgba(5,150,105,.08)'),display:'flex',alignItems:'center',gap:5}}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+                  Đồng bộ {countBlanks(text)} chỗ trống → {answers.length} đáp án
                 </button>
                 <button onClick={()=>handleTTS(text)}
                   style={{...btnBase(C.mint,C.mintL),display:'flex',alignItems:'center',gap:5}}>
@@ -950,15 +974,18 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
             <div style={{padding:'10px 12px',borderRadius:12,border:`1.5px solid ${C.border2}`,background:dark?'#180A10':'#FAFAFE'}}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
                 <span style={{fontSize:11,fontWeight:900,color:'#4338ca'}}>Word Box — từ cho học sinh chọn</span>
-                <button onClick={suggestWBFromAnswers} style={{...btnBase('#4338ca','rgba(67,56,202,.08)'),fontSize:10}}>
-                  ✦ Gợi ý từ đáp án
+                <button onClick={suggestWBFromAnswers} style={{...btnBase('#4338ca','rgba(67,56,202,.08)'),fontSize:10,display:'flex',alignItems:'center',gap:4}}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.5 5.5L19 9l-5.5 1.5L12 16l-1.5-5.5L5 9l5.5-1.5z"/><path d="M19 14l.7 2.3L22 17l-2.3.7L19 20l-.7-2.3L16 17l2.3-.7z"/></svg>
+                  Gợi ý từ đáp án
                 </button>
               </div>
               <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:wordBox.length?8:0}}>
                 {wordBox.map(w=>(
                   <span key={w.id} style={{display:'flex',alignItems:'center',gap:5,fontSize:12,fontWeight:700,color:'#4338ca',background:'rgba(99,102,241,.12)',borderRadius:99,padding:'4px 6px 4px 10px'}}>
-                    {w.val}
-                    <button onClick={()=>removeWord(w.id)} style={{width:16,height:16,borderRadius:99,border:'none',background:'rgba(99,102,241,.25)',color:'#4338ca',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,lineHeight:1,padding:0}}>×</button>
+                    <input value={w.val} onChange={e=>updateWord(w.id,e.target.value)}
+                      onKeyDown={e=>{if(e.key==='Enter')e.target.blur();}}
+                      style={{border:'none',background:'transparent',outline:'none',color:'#4338ca',fontWeight:700,fontSize:12,fontFamily:'inherit',width:`${Math.max((w.val||'').length,2)+1}ch`,padding:0}}/>
+                    <button onClick={()=>removeWord(w.id)} style={{width:16,height:16,borderRadius:99,border:'none',background:'rgba(99,102,241,.25)',color:'#4338ca',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,lineHeight:1,padding:0,flexShrink:0}}>×</button>
                   </span>
                 ))}
               </div>
@@ -975,7 +1002,10 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
               <div style={{fontSize:11,fontWeight:800,color:'#059669',marginBottom:8}}>
                 Đáp án đúng theo thứ tự (1),(2),(3)...
                 {countBlanks(text)>0 && answers.length>0 && countBlanks(text)!==answers.length && (
-                  <span style={{marginLeft:8,color:'#f59e0b',fontWeight:700}}>⚠ {countBlanks(text)} chỗ trống ≠ {answers.length} đáp án</span>
+                  <span style={{marginLeft:8,color:'#f59e0b',fontWeight:700,display:'inline-flex',alignItems:'center',gap:4}}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    {countBlanks(text)} chỗ trống ≠ {answers.length} đáp án
+                  </span>
                 )}
               </div>
               <div style={{display:'flex',flexDirection:'column',gap:6}}>
@@ -1026,7 +1056,10 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
 
             {/* Tags */}
             <div style={{padding:'10px 12px',borderRadius:12,border:`1.5px solid rgba(124,58,237,.25)`,background:'rgba(124,58,237,.04)'}}>
-              <div style={{fontSize:11,fontWeight:800,color:'#7c3aed',marginBottom:8}}>🏷️ Nhãn (Tags) <span style={{fontWeight:600,color:C.text4}}>(tuỳ chọn)</span></div>
+              <div style={{display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:800,color:'#7c3aed',marginBottom:8}}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41L13.42 20.58a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                Nhãn (Tags) <span style={{fontWeight:600,color:C.text4}}>(tuỳ chọn)</span>
+              </div>
               <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:tags.length?8:0}}>
                 {tags.map(t=>(
                   <span key={t} style={{display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:700,color:'#7c3aed',background:'rgba(124,58,237,.12)',borderRadius:99,padding:'3px 6px 3px 10px'}}>
@@ -1050,8 +1083,9 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
                 Hủy
               </button>
               <button onClick={()=>previewItem||setPreviewItem({id:'__preview__',text,wordBox:wordBox.map(w=>w.val),answers:answers.map(a=>a.val),statements:statements.map(({id:_,...r})=>r),tags})}
-                style={{padding:'9px 14px',borderRadius:999,border:`1.5px solid rgba(124,58,237,.35)`,background:'rgba(124,58,237,.08)',color:'#7c3aed',fontSize:12.5,fontWeight:800,cursor:'pointer'}}>
-                👁 Preview
+                style={{padding:'9px 14px',borderRadius:999,border:`1.5px solid rgba(124,58,237,.35)`,background:'rgba(124,58,237,.08)',color:'#7c3aed',fontSize:12.5,fontWeight:800,cursor:'pointer',display:'flex',alignItems:'center',gap:5}}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                Preview
               </button>
               <button onClick={save} disabled={saving}
                 style={{flex:2,padding:'9px',borderRadius:999,border:'none',background:C.grad,color:'#fff',fontSize:12.5,fontWeight:900,cursor:saving?'default':'pointer',opacity:saving?0.7:1,boxShadow:'0 4px 14px rgba(168,85,247,0.3)'}}>
