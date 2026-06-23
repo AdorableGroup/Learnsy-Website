@@ -1,6 +1,13 @@
 // ★ Vite entry point — thay thế toàn bộ loadModule chain
 // Giữ nguyên thứ tự load y chang cũ
 
+// CSS — import ở đây để Vite bundle vào assets
+import '../CSS/toast.css'
+import '../CSS/banh-beo-ui.css'
+import '../CSS/themes.css'
+import '../CSS/merge-questions.css'
+import '../CSS/app.css'
+
 // 0. Babel loader — chạy trước tất cả (setup transform/runtime nếu cần)
 import './babel-loader.jsx'
 
