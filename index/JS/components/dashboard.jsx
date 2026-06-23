@@ -753,7 +753,7 @@ function TabHome({student,lessons,loading,fetchError,onPlay,shuffleQ,shuffleA,se
           {subjects.map(s=>(
             <button key={s} className="bb-btn-tap" onClick={()=>setSubject(s)}
               style={{
-                padding:'5px 14px',borderRadius:99,border:'none',cursor:'pointer',
+                padding:'5px 14px',borderRadius:99,cursor:'pointer',
                 fontSize:11,fontWeight:800,flexShrink:0,fontFamily:'Nunito,sans-serif',
                 background:subject===s?'linear-gradient(135deg,#f472b6,#a855f7)':(dark?'rgba(30,8,22,0.72)':'rgba(255,255,255,0.78)'),
                 color:subject===s?'#fff':(dark?'rgba(255,200,220,0.85)':'#be4e8a'),
@@ -1751,7 +1751,6 @@ function DailyGoalWidget({history,dark,goal=3}){
           display:'flex',alignItems:'center',justifyContent:'center',
           boxShadow:done?'0 4px 16px rgba(52,211,153,0.4)':'none',
           animation:done?'bb-jelly 0.6s ease':'none',
-          display:'flex',alignItems:'center',justifyContent:'center',
         }}>
           <Icon name={done?'check':'target'} size={26} color={done?'#fff':'#f472b6'}/>
         </div>
