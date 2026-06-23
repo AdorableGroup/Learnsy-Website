@@ -15,6 +15,6 @@ import './export-builder.jsx'
 import './components/background-settings.jsx'
 import './components/listening-practice.jsx'
 import './app.jsx'
-import '.ripple-haptic.jsx'
-import '.swipe.jsx'
+import './ripple-haptic.jsx'
+import './swipe.jsx'
 console.log('[index] v2 ✅ loaded!')
