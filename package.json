@@ -1,7 +1,7 @@
 {
   "name": "learnsy",
   "private": true,
-  "version": "1.0.0",
+  "version": "3.23.6",
   "type": "module",
   "scripts": {
     "dev": "vite",
