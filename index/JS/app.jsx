@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
+import ReactDOM from 'react-dom/client'
 
 /* ══ APP.JS ══  Updated to use Dashboard */
 ;(function(){
