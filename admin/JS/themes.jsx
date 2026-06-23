@@ -8,7 +8,7 @@ import React from 'react';
 (function () {
   'use strict';
 
-  /* ── CSS ── */
+  /* ── CSS (nội tuyến) ── */
   const STYLE = `
     #bb-theme-hdr-btn {
       display: flex; align-items: center; justify-content: center;
@@ -90,13 +90,8 @@ import React from 'react';
     document.head.appendChild(s);
   }
 
-  function injectCSS(href) {
-    if (document.querySelector(`link[href="${href}"]`)) return;
-    const l = document.createElement('link');
-    l.rel = 'stylesheet'; l.href = href;
-    document.head.appendChild(l);
-  }
-  injectCSS('admin/CSS/themes.css');
+  // ❌ Đã xóa hàm injectCSS và lời gọi injectCSS('admin/CSS/themes.css')
+  // CSS themes.css đã được import tĩnh trong main.jsx, không cần load thủ công
 
   /* ── Theme data ── */
   const THEMES = [
