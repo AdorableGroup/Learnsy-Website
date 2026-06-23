@@ -2,6 +2,13 @@
 // Thay thế toàn bộ babel-loader.js + loadModule chain
 // Giữ nguyên thứ tự load y chang cũ
 
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+
+// Expose as globals cho các component dùng window.React / ReactDOM trực tiếp
+window.React = React
+window.ReactDOM = ReactDOM
+
 import './components/globals.jsx'
 import './components/save-result.jsx'
 import './components/quiz-player.jsx'
