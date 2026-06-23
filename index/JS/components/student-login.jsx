@@ -347,7 +347,7 @@ import React from 'react';
 
             {/* Brand footer */}
             <div style={{ textAlign: 'center', marginTop: 20, fontSize: 12, color: tSub, opacity: 0.6, fontWeight: 700 }}>
-              Learnsy © 2024 · Nền tảng học tập trực tuyến
+              Learnsy © 2026 · Nền tảng học tập trực tuyến
             </div>
           </div>
 
