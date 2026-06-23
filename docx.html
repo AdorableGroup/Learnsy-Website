@@ -1,0 +1,2733 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#FFE2EC">
+<title>DOCX / PDF → Quiz Parser</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Nunito:wght@400;600;700&display=swap">
+<!-- JSZip / Tesseract.js / heic-to are loaded on demand via loadScriptOnce() instead of
+     eagerly here — together they weigh several MB and most visits only ever need JSZip. -->
+<style>
+:root {
+  --font-display: 'Quicksand', 'Segoe UI', sans-serif;
+  --font-body: 'Nunito', 'Segoe UI', sans-serif;
+
+  --bg-grad-start: #FFEDEA;
+  --bg-grad-mid:   #FFE2EC;
+  --bg-grad-end:   #FFE0C9;
+
+  --surface: #FFFBF7;
+  --surface-soft: #FFF3EC;
+  --surface-strong: #FFEADD;
+
+  --line: #FFD9C7;
+  --line-soft: #FFE6DA;
+
+  --ink: #5B3A35;
+  --ink-soft: #B98A82;
+  --ink-faint: #D8B9AE;
+
+  --coral: #FF8966;
+  --rose: #FB6F92;
+  --accent-grad: linear-gradient(135deg, var(--coral), var(--rose));
+  --accent-soft-bg: #FFE3D6;
+
+  --success-bg: #E3F6E8; --success-text: #2F8F52; --success-strong: #3FA565;
+  --warning-bg: #FFF0CE; --warning-text: #B9710A;
+  --danger-bg:  #FFE3E3; --danger-text:  #E0566F;
+  --info-bg:    #EFE7FB; --info-text:    #8C66C9;
+  --ocr-bg:     #FFE7D2; --ocr-text:     #D97A3F;
+  --neutral-bg: #F4E9E4; --neutral-text: #A98A82;
+  --pdf-bg:     #E3EAFF; --pdf-text:     #4361C2;
+
+  --shadow-soft: 0 6px 18px rgba(255,137,102,.16);
+  --shadow-tiny: 0 2px 8px rgba(255,137,102,.13);
+
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  font-family: var(--font-body);
+  background: linear-gradient(165deg, var(--bg-grad-start) 0%, var(--bg-grad-mid) 45%, var(--bg-grad-end) 100%);
+  color: var(--ink);
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  overscroll-behavior-y: contain;
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font-family: inherit; touch-action: manipulation; }
+button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+
+.icon { width: 1em; height: 1em; display: inline-block; vertical-align: -0.15em; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.icon-spin { animation: icon-spin .9s linear infinite; transform-origin: 50% 50%; }
+@keyframes icon-spin { to { transform: rotate(360deg); } }
+
+h1 { font-family: var(--font-display); font-size: 1.55rem; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; background: var(--accent-grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+h1 .icon { width: 1.25em; height: 1.25em; color: var(--coral); }
+.sub { font-size: 0.85rem; color: var(--ink-soft); margin-bottom: 24px; }
+
+.drop-zone { border: 2px dashed var(--coral); border-radius: 20px; padding: 36px 20px; text-align: center; cursor: pointer; background: var(--surface); margin-bottom: 20px; transition: border-color .2s, background .2s, transform .1s; box-shadow: var(--shadow-soft); touch-action: manipulation; }
+.drop-zone:active { transform: scale(0.99); }
+.drop-zone.drag { border-color: var(--rose); background: var(--accent-soft-bg); }
+.drop-zone .icon { width: 44px; height: 44px; color: var(--coral); margin-bottom: 10px; }
+.drop-zone p { color: var(--ink-soft); font-size: 0.9rem; }
+.drop-zone span { color: var(--rose); font-weight: 700; }
+.drop-zone-meta { font-size: 0.78rem; margin-top: 6px; color: var(--ink-faint); }
+input[type=file] { display: none; }
+
+/* ── Main progress bar (cute pastel) ─────────────────────────── */
+.progress {
+  display: none;
+  background: var(--surface);
+  border-radius: 20px;
+  padding: 14px 16px 16px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-soft);
+  border: 1.5px solid var(--line-soft);
+}
+.progress-inner { display: flex; flex-direction: column; gap: 8px; }
+.progress-msg-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.88rem; font-weight: 700; color: var(--coral);
+  min-height: 22px;
+}
+.progress-msg-row .icon { flex-shrink: 0; }
+.progress-msg-row .lbl { flex: 1; }
+
+.progress-bar-wrap {
+  position: relative;
+  width: 100%;
+  height: 12px;
+  background: var(--surface-strong);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #FFB3BA, #FFB3D9, #C9A7F5, #A7D4F5, #A7F5D4);
+  background-size: 300% 100%;
+  animation: pbar-rainbow 3s linear infinite, pbar-pulse 1.8s ease-in-out infinite alternate;
+  width: 30%;
+  transition: width .4s cubic-bezier(.4,0,.2,1);
+}
+.progress-bar-shimmer {
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.55) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: pbar-shimmer 1.4s ease-in-out infinite;
+  border-radius: 99px;
+}
+@keyframes pbar-rainbow {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 300% 50%; }
+}
+@keyframes pbar-pulse {
+  from { opacity: .85; }
+  to   { opacity: 1; }
+}
+@keyframes pbar-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+/* indeterminate bounce when no % available */
+.progress-bar-fill.indeterminate {
+  width: 40% !important;
+  animation: pbar-rainbow 3s linear infinite, pbar-bounce 1.6s ease-in-out infinite alternate;
+}
+@keyframes pbar-bounce {
+  0%   { transform: translateX(-60%); opacity: .8; }
+  100% { transform: translateX(160%); opacity: 1; }
+}
+
+.stats { display: none; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+.stat-card { flex: 1; min-width: 70px; background: var(--surface); border-radius: 14px; padding: 10px 12px; text-align: center; box-shadow: var(--shadow-tiny); }
+.stat-card .num { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; color: var(--rose); }
+.stat-card .lbl { font-size: 0.7rem; color: var(--ink-soft); margin-top: 2px; }
+
+.warn-box { display: none; align-items: flex-start; gap: 8px; background: var(--warning-bg); border: 1px solid #B9710A33; border-radius: 14px; padding: 12px 14px; font-size: 0.82rem; color: var(--warning-text); margin-bottom: 16px; line-height: 1.6; }
+.warn-box .icon { margin-top: 0.15em; }
+
+.ocr-section { display: none; background: var(--surface); border: 1px solid var(--line-soft); border-radius: 18px; padding: 14px; margin-bottom: 20px; box-shadow: var(--shadow-tiny); }
+.ocr-title { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--rose); font-weight: 700; margin-bottom: 4px; }
+.ocr-hint { font-size: 0.76rem; color: var(--ink-soft); margin-bottom: 12px; line-height: 1.5; }
+.ocr-thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.ocr-thumb { position: relative; border-radius: 12px; overflow: hidden; border: 2px solid var(--line); cursor: pointer; aspect-ratio: 1; background: var(--surface-soft); touch-action: manipulation; -webkit-touch-callout: none; }
+.ocr-thumb.sel { border-color: var(--rose); }
+.ocr-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; -webkit-touch-callout: none; }
+.ocr-thumb .chk { position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; border-radius: 50%; background: #ffffffb0; border: 1.5px solid var(--line); display: flex; align-items: center; justify-content: center; color: var(--ink-soft); }
+.ocr-thumb .chk .icon { width: 12px; height: 12px; }
+.ocr-thumb.sel .chk { background: var(--rose); border-color: var(--rose); color: #fff; }
+.ocr-thumb .sz { position: absolute; bottom: 0; left: 0; right: 0; background: #00000055; font-size: 0.62rem; color: #fff; padding: 2px 4px; text-align: center; }
+.ocr-progress { display: none; flex-direction: column; gap: 8px; font-size: 0.8rem; font-weight: 700; color: var(--coral); margin-bottom: 10px; line-height: 1.5; }
+.msg-row { display: flex; align-items: flex-start; gap: 8px; }
+
+.ocr-pbar-wrap {
+  width: 100%; height: 12px;
+  background: var(--surface-strong);
+  border-radius: 99px; overflow: hidden; margin-top: 4px;
+  position: relative;
+}
+.ocr-pbar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #FFB3BA, #FFB3D9, #C9A7F5, #A7D4F5, #A7F5D4);
+  background-size: 300% 100%;
+  animation: pbar-rainbow 3s linear infinite;
+  border-radius: 99px; transition: width .3s ease; width: 0%;
+}
+.ocr-pbar-wrap::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.5) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: pbar-shimmer 1.4s ease-in-out infinite;
+  border-radius: 99px;
+}
+.ocr-pbar-label { font-size: 0.75rem; font-weight: 600; color: var(--ink-soft); margin-top: 3px; }
+.ocr-pbar-fill.ocr-pbar-indeterminate {
+  width: 40% !important;
+  animation: pbar-rainbow 3s linear infinite, pbar-bounce 1.6s ease-in-out infinite alternate;
+}
+
+.badge-ocr { background: var(--ocr-bg); color: var(--ocr-text); }
+.badge-ai  { background: var(--info-bg); color: var(--info-text); }
+.badge-pdf { background: var(--pdf-bg); color: var(--pdf-text); }
+
+.engine-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.engine-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface-soft); color: var(--ink-soft); font-size: 0.78rem; font-weight: 700; cursor: pointer; text-align: center; transition: border-color .15s, background .15s, color .15s; }
+.engine-btn.active { border-color: var(--rose); color: var(--rose); background: var(--accent-soft-bg); }
+.engine-main { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-display); }
+.engine-sub { font-size: 0.66rem; color: var(--ink-faint); margin-top: 1px; font-weight: 500; }
+.engine-btn.active .engine-sub { color: var(--rose); opacity: .75; }
+
+.tab-row { display: none; gap: 8px; margin-bottom: 16px; }
+.tab-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border-radius: 20px; border: none; font-size: 0.82rem; font-weight: 700; cursor: pointer; background: var(--surface-soft); color: var(--ink-soft); }
+.tab-btn.active { background: var(--accent-soft-bg); color: var(--rose); }
+
+.section-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft); margin-bottom: 8px; }
+.output-box { display: none; background: var(--surface); border-radius: 16px; padding: 16px; margin-bottom: 16px; font-family: monospace; font-size: 0.82rem; line-height: 1.7; white-space: pre-wrap; word-break: break-word; max-height: 400px; overflow-y: auto; border: 1px solid var(--line-soft); }
+
+.actions { display: none; gap: 10px; margin-bottom: 24px; }
+.btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 13px; border-radius: 14px; border: none; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: transform .1s, opacity .1s; }
+.btn:active { transform: scale(0.97); opacity: 0.9; }
+.btn-primary { background: var(--accent-grad); color: #fff; box-shadow: var(--shadow-soft); }
+.btn-secondary { background: var(--surface-soft); color: var(--rose); border: 1px solid var(--line); }
+
+.q-preview { display: none; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+.q-card { background: var(--surface); border-radius: 16px; padding: 14px 16px; border: 1px solid var(--line-soft); box-shadow: var(--shadow-tiny); content-visibility: auto; contain-intrinsic-size: 220px; }
+.q-meta { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+.q-num { font-family: var(--font-display); font-size: 0.74rem; color: var(--rose); font-weight: 700; }
+.detect-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.65rem; padding: 3px 9px; border-radius: 10px; font-weight: 700; }
+.detect-badge .icon { width: 0.85em; height: 0.85em; }
+.badge-u { background: var(--accent-soft-bg); color: var(--rose); }
+.badge-b { background: var(--ocr-bg); color: var(--ocr-text); }
+.badge-s { background: var(--danger-bg); color: var(--danger-text); }
+.badge-t { background: var(--warning-bg); color: var(--warning-text); }
+.badge-n { background: var(--neutral-bg); color: var(--neutral-text); }
+
+.q-text { font-size: 0.95rem; margin-bottom: 8px; line-height: 1.55; }
+.q-text[contenteditable="true"] { outline: none; border-bottom: 1px dashed var(--line); padding-bottom: 2px; cursor: text; }
+.q-text[contenteditable="true"]:focus { border-bottom-color: var(--rose); background: var(--surface-soft); border-radius: 4px; padding: 2px 4px; }
+.edit-hint { display: flex; align-items: center; gap: 5px; font-size: 0.7rem; color: var(--ink-faint); margin-bottom: 6px; }
+
+@media (hover: hover) and (pointer: fine) {
+  .opt:hover:not(.correct) { background: var(--surface-strong); border-color: var(--line); }
+}
+.opt { display: flex; align-items: flex-start; gap: 6px; font-size: 0.92rem; padding: 7px 10px; border-radius: 10px; color: var(--ink); user-select: none; transition: background .15s, border-color .15s; border: 1px solid transparent; }
+.opt-text[contenteditable="true"] { cursor: text; outline: none; flex: 1; user-select: text; }
+.opt-text[contenteditable="true"]:focus { background: var(--surface-soft); border-radius: 6px; }
+.opt.correct { background: var(--success-bg); border-color: var(--success-strong); color: var(--success-text); font-weight: 700; }
+.opt.struck { text-decoration: line-through; color: var(--ink-faint); }
+
+.opt-key-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; min-height: 30px; border-radius: 9px; cursor: pointer; padding: 0 4px; font-weight: 700; font-family: var(--font-display); background: var(--surface-strong); color: var(--coral); user-select: none; flex-shrink: 0; touch-action: manipulation; transition: background .15s, color .15s, transform .1s; }
+.opt-key-badge:active { transform: scale(0.9); }
+.opt-key-badge.is-selected { background: var(--success-strong); color: #fff; }
+
+.pick-ans-hint { display: flex; align-items: center; gap: 5px; font-size: 0.72rem; color: var(--ink-soft); margin-top: 4px; }
+.opts { display: flex; flex-direction: column; gap: 5px; }
+.no-answer { font-size: 0.78rem; color: var(--warning-text); margin-top: 6px; }
+
+.draft-banner { background: var(--success-bg); border: 1px solid #2F8F5230; border-radius: 14px; padding: 10px 14px; font-size: 0.82rem; color: var(--success-text); margin-bottom: 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.draft-banner-msg { flex: 1; display: inline-flex; align-items: center; gap: 6px; }
+.draft-btn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; font-size: 0.8rem; }
+.draft-btn-restore { background: #ffffffb0; color: var(--success-text); }
+.draft-btn-discard { background: var(--surface-soft); color: var(--ink-soft); }
+
+.ocr-raw-fallback { margin-top: 8px; background: var(--surface-soft); border: 1px solid var(--line-soft); border-radius: 10px; padding: 10px; font-family: monospace; font-size: 0.74rem; color: var(--ink-soft); white-space: pre-wrap; max-height: 240px; overflow-y: auto; }
+
+.load-more-row { margin-bottom: 12px; }
+
+.engine-btn.recommended { position: relative; }
+.engine-btn.recommended::after { content: '✦'; position: absolute; top: -4px; right: -4px; font-size: 0.55rem; background: var(--rose); color: #fff; border-radius: 50%; width: 14px; height: 14px; display: flex; align-items: center; justify-content: center; line-height: 1; }
+
+</style>
+</head>
+<body>
+<h1><svg class="icon" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5z"/><path d="M14 2v6h6"/><path d="M9 13h6"/><path d="M9 17h6"/></svg> DOCX → Quiz</h1>
+<p class="sub">Upload file Word — tự nhận dạng trắc nghiệm nhiều định dạng</p>
+
+<div class="drop-zone" id="dropZone">
+  <svg class="icon" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+  </svg>
+  <p><span>Chọn file .docx, .pdf hoặc ảnh</span></p>
+  <input type="file" id="fileInput" accept=".docx,.pdf,.jpg,.jpeg,.png,.heic,.heif" multiple>
+</div>
+
+<div class="progress" id="progress">
+  <div class="progress-inner">
+    <div class="progress-msg-row" id="progressMsgRow"></div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="progressBarFill"></div>
+      <div class="progress-bar-shimmer"></div>
+    </div>
+  </div>
+</div>
+<div class="stats" id="stats">
+  <div class="stat-card"><div class="num" id="sTOTAL">0</div><div class="lbl">Tổng câu</div></div>
+  <div class="stat-card"><div class="num" id="sOK">0</div><div class="lbl">Có đáp án</div></div>
+  <div class="stat-card"><div class="num" id="sNA">0</div><div class="lbl">Thiếu đáp án</div></div>
+</div>
+<div class="warn-box" id="warnBox"></div>
+<div class="ocr-section" id="ocrSection">
+  <div class="ocr-title" id="ocrTitle"></div>
+  <div class="ocr-hint" id="ocrHint">Có thể là đề/câu hỏi dạng scan. Chọn ảnh muốn quét (đã tự chọn sẵn ảnh lớn) rồi bấm Quét. Không nhận diện được tô đậm/gạch chân nên các câu lấy từ ảnh sẽ cần bạn tự điền đáp án đúng.</div>
+  <div class="ocr-thumbs" id="ocrThumbs"></div>
+  <div class="load-more-row" id="loadMoreRow" style="display:none">
+    <button class="btn btn-secondary" id="loadMoreBtn" onclick="loadMorePdfThumbs()" style="width:100%"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg> Tải thêm trang</button>
+  </div>
+  <div class="engine-row">
+    <button class="engine-btn active" id="engTess" onclick="setEngine('tesseract')"><span class="engine-main"><svg class="icon" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg> Tesseract</span><span class="engine-sub">Offline, chạy ngay</span></button>
+    <button class="engine-btn" id="engAi" onclick="setEngine('workersai')"><span class="engine-main"><svg class="icon" viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="10" rx="3"/><path d="M12 9V5"/><circle cx="12" cy="4" r="1" fill="currentColor" stroke="none"/><circle cx="9" cy="14" r="1.1" fill="currentColor" stroke="none"/><circle cx="15" cy="14" r="1.1" fill="currentColor" stroke="none"/></svg> Workers AI</span><span class="engine-sub">Chính xác hơn, cần deploy + binding AI</span></button>
+  </div>
+  <div class="ocr-progress" id="ocrProgress"></div>
+  <button class="btn btn-primary" id="ocrBtn" onclick="runOcr()" style="width:100%"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg> Quét ảnh đã chọn</button>
+</div>
+<div class="tab-row" id="tabRow">
+  <button class="tab-btn active" id="tabText"    onclick="switchTab('text')"><svg class="icon" viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 10h6M9 14h6"/></svg> Text output</button>
+  <button class="tab-btn"        id="tabPreview" onclick="switchTab('preview')"><svg class="icon" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg> Xem trước</button>
+</div>
+<div class="section-label" id="outLabel" style="display:none">Kết quả — dán vào Learnsy</div>
+<div class="output-box" id="outputBox"></div>
+<div class="actions" id="actions">
+  <button class="btn btn-primary" id="copyBtn" onclick="copyOutput()"><svg class="icon" viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 10h6M9 14h6"/></svg> Copy tất cả</button>
+  <button class="btn btn-secondary" onclick="resetAll()"><svg class="icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg> File khác</button>
+</div>
+<div class="q-preview" id="qPreview"></div>
+
+<script>
+// ── Icon set (inline SVG) ───────────────────────────────────────────────────
+// Replaces emoji glyphs everywhere in the UI: emoji render inconsistently
+// (sometimes blurry, sometimes missing entirely) across Android keyboards,
+// OEM skins and WebView versions, whereas an inline SVG with stroke="currentColor"
+// always renders crisp and themeable at any size/DPI.
+const ICONS = {
+  doc:        '<svg class="icon" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5z"/><path d="M14 2v6h6"/><path d="M9 13h6"/><path d="M9 17h6"/></svg>',
+  pdf:        '<svg class="icon" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5z"/><path d="M14 2v6h6"/><path d="M10 10.5c0-.83.67-1.5 1.5-1.5S13 9.67 13 10.5v1c0 .83-.67 1.5-1.5 1.5H11v2H9.5V10.5H10zm1.5 1c.28 0 .5-.22.5-.5v-1c0-.28-.22-.5-.5-.5H11v2h.5zm2.5-2H15c1.1 0 2 .9 2 2v1c0 1.1-.9 2-2 2h-1.5V9.5zm1.5 3.5c.55 0 1-.45 1-1v-1c0-.55-.45-1-1-1H15V13h.5zm2-3.5H19v1.5h1V12h-1v2H17.5V9.5H18z"/></svg>',
+  loader:     '<svg class="icon icon-spin" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10"/></svg>',
+  image:      '<svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="1.6" fill="currentColor" stroke="none"/><path d="m21 15-5-5L5 21"/></svg>',
+  monitor:    '<svg class="icon" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',
+  bot:        '<svg class="icon" viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="10" rx="3"/><path d="M12 9V5"/><circle cx="12" cy="4" r="1" fill="currentColor" stroke="none"/><circle cx="9" cy="14" r="1.1" fill="currentColor" stroke="none"/><circle cx="15" cy="14" r="1.1" fill="currentColor" stroke="none"/></svg>',
+  search:     '<svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>',
+  clipboard:  '<svg class="icon" viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 10h6M9 14h6"/></svg>',
+  eye:        '<svg class="icon" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>',
+  refresh:    '<svg class="icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>',
+  save:       '<svg class="icon" viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v6h8V3M8 21v-7h8v7"/></svg>',
+  undo:       '<svg class="icon" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5A5.5 5.5 0 0 1 20 14.5 5.5 5.5 0 0 1 14.5 20H11"/></svg>',
+  x:          '<svg class="icon" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+  xCircle:    '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/></svg>',
+  check:      '<svg class="icon" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L20 6.5"/></svg>',
+  alertTriangle: '<svg class="icon" viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3z"/><path d="M12 9.5v4"/><circle cx="12" cy="16.7" r="1" fill="currentColor" stroke="none"/></svg>',
+  checkCircle: '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 3 3 5-6.5"/></svg>',
+  hand:       '<svg class="icon" viewBox="0 0 24 24"><path d="M9 11.5V5.5a1.5 1.5 0 0 1 3 0v6"/><path d="M12 11V4.5a1.5 1.5 0 0 1 3 0V11"/><path d="M15 11V6.5a1.5 1.5 0 0 1 3 0V14c0 3.3-2.7 6-6 6h-1c-2 0-3.2-.6-4.4-2.1l-3-3.8c-.5-.7-.4-1.6.3-2.1.6-.5 1.5-.4 2 .2L9 14.5"/></svg>',
+  camera:     '<svg class="icon" viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.3"/></svg>',
+  edit:       '<svg class="icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+};
+
+// Renders {icon}+{text label} into an element. Re-creates the SVG node only
+// when the icon name actually changes between calls; otherwise it just
+// updates the label's text node. This matters because some callers (e.g.
+// Tesseract's recognition progress logger) update the SAME element many
+// times per second — without this guard, every tick would re-parse a fresh
+// SVG into the DOM for no visual benefit, which is wasted work on the kind
+// of mid-range Android devices teachers actually grade on.
+function setIconText(target, iconName, text) {
+  const node = typeof target === 'string' ? document.getElementById(target) : target;
+  if (!node) return;
+  // If targeting #progress, write into the inner msg-row and manage the bar
+  const msgRow = node.id === 'progress'
+    ? node.querySelector('#progressMsgRow')
+    : (node.classList.contains('msg-row') ? node : null);
+  const writeTarget = msgRow || node;
+  if (writeTarget.dataset.iconName !== iconName) {
+    writeTarget.innerHTML = (ICONS[iconName] || '') + '<span class="lbl"></span>';
+    writeTarget.dataset.iconName = iconName;
+  }
+  writeTarget.lastElementChild.textContent = text;
+  // Auto-manage the progress bar fill animation
+  if (node.id === 'progress') {
+    const fill = node.querySelector('#progressBarFill');
+    const barWrap = node.querySelector('.progress-bar-wrap');
+    const msgRowEl = node.querySelector('#progressMsgRow');
+    if (fill && barWrap) {
+      if (iconName === 'xCircle') {
+        // Error state: hide bar, turn text red
+        barWrap.style.display = 'none';
+        if (msgRowEl) msgRowEl.style.color = 'var(--danger-text)';
+      } else {
+        barWrap.style.display = '';
+        if (msgRowEl) msgRowEl.style.color = '';
+        // Extract % from text like "Đang tải pdf.js... 72%"
+        const pct = text.match(/(\d{1,3})%/);
+        if (pct) {
+          fill.classList.remove('indeterminate');
+          fill.style.width = Math.min(100, parseInt(pct[1])) + '%';
+        } else {
+          fill.classList.add('indeterminate');
+          fill.style.width = '';
+        }
+      }
+    }
+  }
+}
+
+// #ocrProgress sometimes holds a single status line, and sometimes a status
+// line PLUS a scrollable raw-text fallback box stacked underneath it — so it
+// is a column flex container, and a one-line status update should only ever
+// touch its first child "row", never replace the whole container (which
+// would also wipe out the optimisation in setIconText for fast Tesseract
+// progress ticks).
+function setOcrProgress(prog, iconName, text) {
+  prog.style.display = 'flex';
+  let row = prog.querySelector(':scope > .msg-row');
+  if (!row) {
+    prog.innerHTML = '';
+    row = document.createElement('div'); row.className = 'msg-row'; prog.appendChild(row);
+    const wrap = document.createElement('div'); wrap.className = 'ocr-pbar-wrap';
+    const fill = document.createElement('div'); fill.className = 'ocr-pbar-fill ocr-pbar-indeterminate'; wrap.appendChild(fill);
+    prog.appendChild(wrap);
+    const lbl = document.createElement('div'); lbl.className = 'ocr-pbar-label'; prog.appendChild(lbl);
+  }
+  setIconText(row, iconName, text);
+  // Ensure bar is in indeterminate mode
+  const fill = prog.querySelector('.ocr-pbar-fill');
+  if (fill && !fill.classList.contains('ocr-pbar-indeterminate')) {
+    fill.classList.add('ocr-pbar-indeterminate');
+    fill.style.width = '';
+  }
+}
+
+// ── Lazy-load heavy libraries only when actually needed ───────────────────
+// JSZip / Tesseract.js / heic-to together weigh several MB. Loading all three
+// unconditionally on first paint — as <script> tags in <head> — wasted data
+// and delayed interactivity for the common case where a visit never touches
+// OCR or HEIC at all. Each is now fetched once, on first real use.
+const LIB_URLS = {
+  jszip:     'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
+  tesseract: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js',
+  heicTo:    'https://cdn.jsdelivr.net/npm/heic-to@1.5.2/dist/iife/heic-to.js',
+  // pdf.js — dùng bản legacy (UMD) để tương thích loadScriptOnce, không cần import()
+  pdfjs:     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+  pdfjsWorker: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
+};
+const _loadedScripts = {};
+// onProgress(pct, loadedBytes, totalBytes) — pct là số nguyên 0-99 trong lúc tải
+// (chừa 100 lại cho lúc script chạy xong), hoặc null nếu CDN không trả về
+// Content-Length (lúc đó không thể tính % nên gọi onProgress(null) để UI
+// hiện trạng thái "đang tải" thay vì treo một con số sai).
+
+// ── PWA: cache các thư viện CDN nặng (xem sw.js cùng thư mục) để vẫn parse
+// được khi mất mạng hoặc khi mạng trường học chặn/chậm CDN quốc tế. Bọc
+// điều kiện protocol vì Service Worker KHÔNG hoạt động khi mở trực tiếp
+// file (file://) — chỉ chạy sau khi deploy lên http(s) thật (Cloudflare
+// Pages/Vercel/VPS). Lỗi đăng ký (ví dụ quên upload sw.js) không được làm
+// hỏng app chính — OCR/parse vẫn chạy bình thường, chỉ là không có cache
+// offline cho lần sau.
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
+function loadScriptOnce(url, onProgress) {
+  if (!_loadedScripts[url]) {
+    _loadedScripts[url] = loadScriptWithProgress(url, onProgress).catch(err => {
+      delete _loadedScripts[url]; // cho phép thử lại nếu lần này lỗi
+      throw err;
+    });
+  }
+  return _loadedScripts[url];
+}
+
+async function loadScriptWithProgress(url, onProgress) {
+  // Ưu tiên tải bằng fetch() để đọc được Content-Length và báo % theo từng
+  // chunk nhận về — đây là cách duy nhất để biết tiến độ tải vì thẻ
+  // <script src> không có sự kiện progress. Nếu fetch lỗi (mạng chặn CORS,
+  // trình duyệt cũ, v.v.) thì rơi về cách cũ (<script src>, không có %).
+  try {
+    const res = await fetch(url);
+    if (!res.ok || !res.body) throw new Error('fetch-failed');
+    const total = parseInt(res.headers.get('Content-Length') || '0', 10);
+    const reader = res.body.getReader();
+    const chunks = [];
+    let loaded = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      loaded += value.length;
+      if (onProgress) onProgress(total ? Math.min(99, Math.round(loaded / total * 100)) : null, loaded, total);
+    }
+    const code = await new Blob(chunks).text();
+    const s = document.createElement('script');
+    s.text = code; // chạy script, tương đương <script src> đã tải xong
+    document.head.appendChild(s);
+    if (onProgress) onProgress(100, loaded, total);
+  } catch (e) {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = url;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error('Không tải được thư viện cần thiết. Kiểm tra kết nối mạng rồi thử lại.'));
+      document.head.appendChild(s);
+    });
+    if (onProgress) onProgress(100, 0, 0);
+  }
+}
+
+const WNS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+const MNS = 'http://schemas.openxmlformats.org/officeDocument/2006/math';
+// RE_Q: nhận diện đầu câu hỏi — các dạng hỗ trợ:
+//   Câu 1.  Câu 1)  Câu 1:  Câu 1 (1đ):  câu  2.
+//   Question 1.  Bài 1:  Phần 1.
+//   II.3.  (mã phần Roman numeral)
+//   (1) text   [1] text
+//   1. text    1) text  (số đứng đầu, phải có khoảng trắng sau dấu)
+const RE_Q = /^(?:(?:câu|cau)\s*\d+\s*(?:\([^)]{0,10}\))?\s*[.):\-–—]|(?:question|bài|phần)\s*\d+\s*[.):\-–—]|[IVXLC]+\.\d+[.):\s]|\(\s*\d+\s*\)\s*\S|\[\s*\d+\s*\]\s*\S|\d+\s*[.)]\s+\S)/i;
+
+// RE_ANS: dòng khai báo đáp án rõ ràng
+const RE_ANS = /^(?:answer|đáp\s*án|key|đs|ans|correct|chọn|đáp|da)[\s:.\-–—]+([A-Ea-e])/i;
+
+// RE_MARKER: chữ cái đáp án đứng độc lập (A. / B) / C– / D hoặc chỉ "A")
+// Chấp nhận thêm dấu "–" "—" và khoảng trắng giữa chữ và dấu
+const RE_MARKER = /^[A-Ea-e]\s*[.)\-–—]?\s*$/;
+
+const dz = document.getElementById('dropZone');
+const fi = document.getElementById('fileInput');
+dz.addEventListener('click', () => fi.click());
+dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag'); handleFiles(e.dataTransfer.files); });
+fi.addEventListener('change', e => handleFiles(e.target.files));
+
+let allQ = [];
+let currentZip = null;
+let ocrImages = []; // [{name, blob, url, size, selected}] (DOCX/ảnh: blob/url có sẵn)
+                     // PDF scan dùng lazy entry: {name, size, selected, pdfDoc, pageNum,
+                     //   thumbBlob, url(=thumb url, chỉ để hiển thị), fullBlob:null}
+let currentPdfDoc = null; // giữ tham chiếu PDFDocumentProxy để render trang theo yêu cầu (lazy)
+
+// Render thumbnail PDF theo lô — PDF scan 50+ trang nếu render hết 1 lần sẽ
+// đứng hình trên máy yếu dù đã yield giữa các trang. Chỉ render trước
+// PDF_THUMB_BATCH trang, người dùng bấm "Tải thêm trang" để render tiếp.
+const PDF_THUMB_SCALE = 0.35; // chỉ đủ để xem trước, nhẹ — vài chục KB/trang
+const PDF_THUMB_BATCH = 8;
+let pdfThumbState = null; // { pdfDoc, numPages, nextPage } | null khi không phải PDF scan
+
+// ── Auto-save / LocalStorage ──────────────────────────────────────────────────
+const LS_KEY = 'learnsy_quiz_draft';
+
+function saveToLocalStorage() {
+  try {
+    // Chỉ lưu dữ liệu thuần (không lưu Blob/URL)
+    const payload = allQ.map(q => ({
+      text: q.text,
+      opts: q.opts.map(o => ({ key: o.key, text: o.text, u: o.u, b: o.b, s: o.s })),
+      ans:  q.ans,
+      how:  q.how,
+      source: q.source,
+    }));
+    localStorage.setItem(LS_KEY, JSON.stringify({ ts: Date.now(), qs: payload }));
+  } catch (e) {
+    // localStorage đầy hoặc bị chặn — bỏ qua, không làm gián đoạn luồng chính
+  }
+}
+
+function loadFromLocalStorage() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return null;
+    const { ts, qs } = JSON.parse(raw);
+    if (!Array.isArray(qs) || !qs.length) return null;
+    // Không khôi phục nếu bản nháp quá cũ (> 7 ngày)
+    if (Date.now() - ts > 7 * 24 * 60 * 60 * 1000) { localStorage.removeItem(LS_KEY); return null; }
+    return { ts, qs };
+  } catch (e) { return null; }
+}
+
+function clearLocalStorage() {
+  try { localStorage.removeItem(LS_KEY); } catch (e) {}
+}
+
+// Hiện banner khôi phục nếu có bản nháp
+(function checkDraft() {
+  const draft = loadFromLocalStorage();
+  if (!draft) return;
+  const age = Math.round((Date.now() - draft.ts) / 60000); // phút
+  const ageStr = age < 60 ? `${age} phút trước` : `${Math.round(age/60)} giờ trước`;
+
+  const banner = document.createElement('div');
+  banner.id = 'draftBanner';
+  banner.className = 'draft-banner';
+  banner.innerHTML = `
+    <span class="draft-banner-msg">${ICONS.save} Có bản nháp chưa lưu từ <strong>${ageStr}</strong> — ${draft.qs.length} câu</span>
+    <button class="draft-btn draft-btn-restore" onclick="restoreDraft()">${ICONS.undo} Khôi phục</button>
+    <button class="draft-btn draft-btn-discard" onclick="discardDraft()">${ICONS.x} Xoá</button>
+  `;
+  document.body.insertBefore(banner, document.getElementById('dropZone').nextSibling);
+})();
+
+function restoreDraft() {
+  const draft = loadFromLocalStorage();
+  if (!draft) return;
+  allQ = draft.qs;
+  document.getElementById('draftBanner')?.remove();
+  render(allQ);
+}
+
+function discardDraft() {
+  clearLocalStorage();
+  document.getElementById('draftBanner')?.remove();
+}
+
+function isImageFile(f) {
+  return /\.(jpe?g|png|heic|heif)$/i.test(f.name||'') || /^image\//.test(f.type||'');
+}
+
+function isPdfFile(f) {
+  return /\.pdf$/i.test(f.name||'') || f.type === 'application/pdf';
+}
+
+// Single entry point for both click-to-browse and drag-drop. A batch of
+// one-or-more images (jpg/png/heic, e.g. several photos of exam pages)
+// goes straight to the OCR flow; anything else falls back to the
+// original single-file .docx flow.
+function handleFiles(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+  if (files.every(isImageFile)) goImages(files);
+  else if (isPdfFile(files[0])) goPdf(files[0]);
+  else go(files[0]);
+}
+
+function resetUiForNewFile() {
+  ['stats','warnBox','outputBox','actions','qPreview','tabRow','outLabel','ocrSection'].forEach(hideEl);
+  ocrImages.forEach(im => im.url && URL.revokeObjectURL(im.url));
+  ocrImages = [];
+  allQ = [];
+  currentZip = null;
+  currentPdfDoc = null; // bỏ tham chiếu PDF cũ — cho phép GC giải phóng
+  pdfThumbState = null;
+}
+
+async function go(file) {
+  showEl('progress');
+  setIconText('progress', 'loader', 'Đang đọc file...');
+  resetUiForNewFile();
+  try {
+    await loadScriptOnce(LIB_URLS.jszip, (pct) => {
+      setIconText('progress', 'loader', pct == null ? 'Đang đọc file...' : `Đang đọc file... ${pct}%`);
+    });
+    const buf = await file.arrayBuffer();
+    const zip = await JSZip.loadAsync(buf);
+    currentZip = zip;
+    const xmlStr = await zip.file('word/document.xml').async('string');
+    const doc = new DOMParser().parseFromString(xmlStr, 'application/xml');
+    const numbering = await loadNumberingDefs(zip);
+    hideEl('progress');
+    const paras = readParas(doc, numbering);
+    const lines = expandParas(paras);
+    allQ = parse(lines, 'text');
+    render(allQ);
+    detectImages(zip); // best-effort; never blocks main result
+  } catch(e) {
+    const p = document.getElementById('progress');
+    p.style.display = 'block';
+    setIconText(p, 'xCircle', e.message);
+  }
+}
+
+// Direct image upload (no docx) — converts HEIC to JPEG if needed, then
+// drops straight into the same OCR section used for images found inside
+// a docx. No text-based parsing happens here since there's no document.xml.
+async function goImages(files) {
+  showEl('progress');
+  setIconText('progress', 'loader', 'Đang xử lý ảnh...');
+  resetUiForNewFile();
+  const prog = document.getElementById('progress');
+  try {
+    const loaded = [];
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      let blob = f, name = f.name || `image${i+1}`;
+      const looksHeic = /\.(heic|heif)$/i.test(name) || /^image\/hei[cf]$/i.test(f.type||'');
+      if (looksHeic) {
+        setIconText(prog, 'loader', `Đang chuyển đổi ảnh HEIC ${i+1}/${files.length}...`);
+        await loadScriptOnce(LIB_URLS.heicTo, (pct) => {
+          setIconText(prog, 'loader', pct == null
+            ? `Đang chuyển đổi ảnh HEIC ${i+1}/${files.length}...`
+            : `Đang chuyển đổi ảnh HEIC ${i+1}/${files.length}... ${pct}%`);
+        });
+        blob = await HeicTo({ blob: f, type: 'image/jpeg', quality: 0.85 });
+        name = name.replace(/\.(heic|heif)$/i, '.jpg');
+      }
+      loaded.push({ name, blob, url: URL.createObjectURL(blob), size: blob.size, selected: true });
+    }
+    hideEl('progress');
+    ocrImages = loaded;
+    document.getElementById('ocrTitle').innerHTML = ICONS.image + ' Ảnh đã chọn';
+    document.getElementById('ocrHint').textContent = 'Bấm Quét để nhận diện chữ trong ảnh. Không nhận diện được tô đậm/gạch chân nên cần bạn tự điền đáp án đúng sau khi quét.';
+    renderOcrThumbs();
+    showEl('ocrSection');
+  } catch(e) {
+    prog.style.display = 'block';
+    setIconText(prog, 'xCircle', e.message);
+  }
+}
+// ── PDF handler ──────────────────────────────────────────────────────────────
+// Chiến lược 2 bước:
+//   1. Thử getTextContent() — nếu có chữ thật (native PDF) thì parse ngay,
+//      nhanh và chính xác, không cần OCR.
+//   2. Nếu tất cả trang đều trống (scanned PDF) → render từng trang ra
+//      <canvas> → chuyển thành Blob ảnh → đẩy vào ocrImages để người
+//      dùng chọn và quét bằng Tesseract / Workers AI như bình thường.
+async function goPdf(file) {
+  showEl('progress');
+  setIconText('progress', 'loader', 'Đang tải thư viện PDF...');
+  resetUiForNewFile();
+  const prog = document.getElementById('progress');
+
+  try {
+    // ── Bước 0: tải pdf.js (UMD legacy build) qua loadScriptOnce ──
+    // Dùng bản 3.x UMD (.js, không phải .mjs) để load được bằng <script>
+    // thông thường — tránh vấn đề CORS với dynamic import() của .mjs trên
+    // một số host/browser. Sau khi load xong, thư viện tự đăng ký vào
+    // window.pdfjsLib.
+    if (!window.pdfjsLib) {
+      setIconText(prog, 'loader', 'Đang tải pdf.js...');
+      await loadScriptOnce(LIB_URLS.pdfjs, (pct) => {
+        setIconText(prog, 'loader', pct == null ? 'Đang tải pdf.js...' : `Đang tải pdf.js... ${pct}%`);
+      });
+    }
+    const pdfjsLib = window.pdfjsLib;
+    if (!pdfjsLib) throw new Error('Không load được pdf.js — kiểm tra kết nối mạng.');
+
+    // Chỉ định worker cùng version để tránh "fake worker" (chạy chậm)
+    // Chỉ cần set 1 lần — worker tự cache trong service worker / memory
+    if (!pdfjsLib._workerSet) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = LIB_URLS.pdfjsWorker;
+      pdfjsLib._workerSet = true;
+    }
+
+    setIconText(prog, 'loader', 'Đang đọc PDF...');
+    const buf = await file.arrayBuffer();
+    const pdfDoc = await pdfjsLib.getDocument({ data: buf }).promise;
+    currentPdfDoc = pdfDoc; // giữ lại để render lazy từng trang khi người dùng bấm "Quét"
+    const numPages = pdfDoc.numPages;
+
+    // ── Bước 1: thử trích xuất text native ──────────────────────────────
+    // Ghép items theo tọa độ x/y thay vì chỉ nối chuỗi thô —
+    // tránh lỗi "T u   t h ế" (mỗi ký tự là 1 item riêng do kerning PDF)
+    // và tránh câu hỏi bị cắt giữa trang (không chèn '\n' trang mới).
+    setIconText(prog, 'loader', `Đang trích xuất chữ (${numPages} trang)...`);
+    let totalChars = 0;
+    const allLines = []; // gom dòng từ tất cả trang vào 1 mảng phẳng
+
+    // pdf.js getTextContent() KHÔNG trả về màu fill của text (đây là graphics
+    // state, tách biệt khỏi text content stream). Nhiều đề thi đánh dấu đáp
+    // án đúng bằng màu chữ (đỏ) chứ không bold/underline — nếu bỏ qua signal
+    // này thì toàn bộ PDF sẽ "Chưa xác định" đáp án. Để lấy màu, ta phải tự
+    // duyệt operator list (getOperatorList) và track graphics state
+    // (save/restore/transform = CTM, setTextMatrix = Tm) để tính ra đúng vị
+    // trí x,y mà mỗi showText() vẽ — sau đó dùng x,y đó làm khoá để khớp lại
+    // với từng item của getTextContent() (cùng hệ tọa độ cuối).
+    // Regex nhận diện font đậm từ tên font pdf.js (item.fontName). Mở rộng so
+    // với bản cũ (chỉ bold|Black|Heavy) để bắt thêm SemiBold, Demibold,
+    // Medium, và các mức đậm dạng số W6-W9 (chuẩn đặt tên font CJK/Adobe,
+    // ví dụ "NotoSansCJK-W6"). Không bắt "W1"-"W5" vì đó là các mức
+    // thin/light/regular, không phải đậm.
+    const RE_BOLD_FONT = /bold|black|heavy|semibold|demibold|medium|w[6-9]/i;
+    function mat6Mul(m1, m2) {
+      // Compose theo quy ước pdf.js: áp m1 trước rồi m2 (m1 * m2)
+      return [
+        m1[0]*m2[0] + m1[1]*m2[2],
+        m1[0]*m2[1] + m1[1]*m2[3],
+        m1[2]*m2[0] + m1[3]*m2[2],
+        m1[2]*m2[1] + m1[3]*m2[3],
+        m1[4]*m2[0] + m1[5]*m2[2] + m2[4],
+        m1[4]*m2[1] + m1[5]*m2[3] + m2[5],
+      ];
+    }
+    async function buildColorPosMap(page) {
+      // Trả về mảng các điểm {x, y} (vị trí bắt đầu vẽ text) nơi màu fill
+      // KHÁC đen/xám-đen (tức được tô màu có chủ đích). Trước đây dùng Map
+      // khớp CHÍNH XÁC chuỗi tọa độ làm tròn 1 số lẻ — nhưng getOperatorList()
+      // và getTextContent() đôi khi tính toán tọa độ lệch nhau vài pixel (do
+      // kerning/word-spacing được xử lý hơi khác giữa 2 luồng), khiến nhiều
+      // từ tô màu bị bỏ sót vì khớp chuỗi thất bại dù vị trí thực tế rất gần
+      // nhau. Dùng danh sách điểm + so khớp theo khoảng cách (dung sai vài
+      // pixel) ở isNearColoredPoint() bên dưới để ổn định hơn.
+      const points = [];
+      try {
+        const opList = await page.getOperatorList();
+        const OPS = pdfjsLib.OPS;
+        const opNames = {};
+        for (const k in OPS) opNames[OPS[k]] = k;
+        let curColor = [0, 0, 0];
+        let curTm = [1, 0, 0, 1, 0, 0];
+        let ctm = [1, 0, 0, 1, 0, 0];
+        const ctmStack = [];
+        for (let k = 0; k < opList.fnArray.length; k++) {
+          const name = opNames[opList.fnArray[k]];
+          const args = opList.argsArray[k];
+          if (name === 'save') {
+            ctmStack.push(ctm.slice());
+          } else if (name === 'restore') {
+            ctm = ctmStack.pop() || ctm;
+          } else if (name === 'transform') {
+            ctm = mat6Mul(args, ctm);
+          } else if (name === 'setFillRGBColor') {
+            curColor = args.slice(0, 3);
+          } else if (name === 'setFillGray') {
+            const g = args[0] * 255;
+            curColor = [g, g, g];
+          } else if (name === 'setFillColorN' || name === 'setFillColor') {
+            // Không phải RGB/Gray đơn giản (CMYK/ICC/pattern) — coi như "có màu"
+            // vì các đề dùng RGB đỏ thường đi qua setFillRGBColor, trường hợp
+            // này hiếm; đánh dấu khác-đen để không bỏ sót.
+            curColor = [1, 0, 0];
+          } else if (name === 'setTextMatrix') {
+            curTm = args;
+          } else if (name === 'showText') {
+            const isColored = !(
+              Math.round(curColor[0]) === 0 &&
+              Math.round(curColor[1]) === 0 &&
+              Math.round(curColor[2]) === 0
+            );
+            if (isColored) {
+              const combined = mat6Mul(curTm, ctm);
+              points.push({ x: combined[4], y: combined[5] });
+            }
+          }
+        }
+      } catch (e) {
+        // Nếu structure PDF lạ làm operator-list parse lỗi, bỏ qua màu —
+        // fallback về hành vi cũ (chỉ dùng bold), không làm crash việc đọc PDF.
+      }
+      return points;
+    }
+
+    // So khớp tọa độ item (từ getTextContent) với danh sách điểm tô màu (từ
+    // getOperatorList) bằng khoảng cách Euclide thay vì khớp chuỗi tuyệt đối —
+    // dung sai mặc định ±2.5px đủ để hấp thụ sai số kerning/word-spacing giữa
+    // 2 luồng, nhưng vẫn đủ nhỏ để không nhận nhầm điểm tô màu của từ kế bên.
+    function isNearColoredPoint(points, x, y, tolerance = 2.5) {
+      const tol2 = tolerance * tolerance;
+      for (const p of points) {
+        const dx = p.x - x, dy = p.y - y;
+        if (dx * dx + dy * dy <= tol2) return true;
+      }
+      return false;
+    }
+
+    // ── Phát hiện layout chia cột (multi-column) ────────────────────────────
+    // Đề thi hay chia trang thành 2 (đôi khi 3) cột để tiết kiệm giấy. Nếu
+    // chỉ sort theo Y rồi X như cũ, dòng ở cột 1 và dòng cùng cao độ Y ở cột 2
+    // bị gộp chung 1 hàng → nội dung 2 cột bị trộn lẫn. Để tránh, ta phân
+    // tích mật độ tọa độ X khởi đầu (left-edge) của các item trên trang: nếu
+    // tách thành 2 cụm rõ rệt cách nhau một khoảng trống đủ lớn (gutter) thì
+    // coi là layout chia cột, và xử lý (sort Y rồi build rows) RIÊNG cho từng
+    // cột trước khi nối các cột lại theo thứ tự trái → phải.
+    function detectColumns(items, pageWidth) {
+      if (items.length < 8) return null; // quá ít item, không đủ tin cậy để tách cột
+      const xs = items.map(it => it.transform[4]).sort((a, b) => a - b);
+      // Tìm khoảng trống (gap) lớn nhất giữa 2 x liên tiếp, loại bỏ phần đuôi
+      // 5% hai đầu để tránh outlier (số trang, header lệch...) làm sai lệch.
+      const lo = Math.floor(xs.length * 0.05), hi = Math.ceil(xs.length * 0.95);
+      let bestGap = 0, bestAt = -1;
+      for (let i = lo + 1; i < hi; i++) {
+        const gap = xs[i] - xs[i - 1];
+        if (gap > bestGap) { bestGap = gap; bestAt = i; }
+      }
+      // Gutter (khoảng trắng giữa 2 cột) hợp lệ phải đủ rộng so với trang
+      // (>= 8% bề rộng trang) — nếu không, đó chỉ là khoảng cách từ thường,
+      // không phải ranh giới cột.
+      if (bestAt < 0 || bestGap < pageWidth * 0.08) return null;
+      const splitX = (xs[bestAt - 1] + xs[bestAt]) / 2;
+      const colA = items.filter(it => it.transform[4] < splitX);
+      const colB = items.filter(it => it.transform[4] >= splitX);
+      // Cả 2 cụm phải đủ lớn (>= 15% tổng số item mỗi bên) — tránh việc 1-2
+      // item lạc (vd: số trang góc phải) bị hiểu nhầm thành "cột 2".
+      const minSide = items.length * 0.15;
+      if (colA.length < minSide || colB.length < minSide) return null;
+      return [colA, colB];
+    }
+
+    // Sort + gom rows cho 1 nhóm item (dùng chung cho cả single-column và
+    // từng cột riêng khi phát hiện multi-column).
+    function sortIntoRows(items) {
+      const sorted = [...items].sort((a, b) => {
+        const dy = b.transform[5] - a.transform[5];
+        if (Math.abs(dy) > 3) return dy;
+        return a.transform[4] - b.transform[4];
+      });
+      const rows = [];
+      for (const item of sorted) {
+        const y = item.transform[5];
+        const h = Math.max(item.height || 0, item.fontSize || 10, 6);
+        const last = rows[rows.length - 1];
+        if (last && Math.abs(last.y - y) <= h * 0.6) {
+          last.items.push(item);
+        } else {
+          rows.push({ y, items: [item] });
+        }
+      }
+      return rows;
+    }
+
+    for (let i = 1; i <= numPages; i++) {
+      setIconText(prog, 'loader', `Đang trích xuất chữ trang ${i}/${numPages}...`);
+      // Nhường quyền điều khiển UI giữa các trang (tránh freeze với đề dài)
+      await new Promise(r => setTimeout(r, 0));
+      const page = await pdfDoc.getPage(i);
+      // includeMarkedContent: false — chỉ lấy text items, bỏ marked content
+      const [content, colorPosMap] = await Promise.all([
+        page.getTextContent({ includeMarkedContent: false }),
+        buildColorPosMap(page),
+      ]);
+      const items = content.items.filter(it => it.str && it.str.trim());
+      if (!items.length) continue;
+      totalChars += items.reduce((s, it) => s + it.str.replace(/\s/g,'').length, 0);
+
+      // Phát hiện chia cột trước khi gom hàng theo Y. Nếu có, xử lý (sort Y +
+      // group rows) RIÊNG cho từng cột rồi nối kết quả theo thứ tự cột trái
+      // → phải — tránh dòng cột 1 và cột 2 cùng cao độ Y bị gộp chung 1 hàng.
+      const pageWidth = page.getViewport({ scale: 1 }).width;
+      const columns = detectColumns(items, pageWidth);
+      const rows = columns
+        ? columns.flatMap(colItems => sortIntoRows(colItems))
+        : sortIntoRows(items);
+
+      // Mỗi row → 1 dòng text (+ runs theo màu, để detect đáp án tô màu chữ)
+      // + metadata font (bold) cho detect đáp án
+      for (const row of rows) {
+        row.items.sort((a, b) => a.transform[4] - b.transform[4]);
+        let line = '';
+        let prevRight = null;
+        const runs = []; // [{text, b, colored}] — gộp các item liên tiếp cùng (bold,colored)
+
+        for (const item of row.items) {
+          const x  = item.transform[4];
+          const y  = item.transform[5];
+          const str = item.str;
+
+          // fontSize thực tế = |scaleY| từ transform matrix (index 3)
+          const fz = Math.abs(item.transform[3]) || item.fontSize || 10;
+
+          // Chiều rộng item: ưu tiên item.width nếu hợp lệ (> fz/4 per char),
+          // fallback sang fz * 0.55 * len — tránh item.width=0 của font Unicode
+          const expectedMinW = str.length * fz * 0.25;
+          const w = (item.width > expectedMinW) ? item.width : str.length * fz * 0.55;
+
+          // Ngưỡng space: đo thực tế trên nhiều mẫu PDF cho thấy khoảng cách
+          // giữa 2 từ thường ~0.25×fontSize (không phải 0.30 như trước) — với
+          // ngưỡng 0.30 thì gap thật bị loại, gây dính chữ ("chiếnđấu",
+          // "D.Phát hiện"). Hạ xuống 0.20 để bắt đúng gap thật mà vẫn đủ nhỏ
+          // để không tách lẫn ký tự trong cùng 1 từ (gap đó luôn ≤ 0).
+          const spaceThresh = fz * 0.20;
+
+          // pdf.js getTextContent() chỉ trả về fontName (alias nội bộ như
+          // "g_d0_f1", không phải tên font thật / FontDescriptor), nên KHÔNG
+          // có field fontWeight số để đọc trực tiếp ở đây — phải dựa vào tên
+          // font. Một số PDF subset tên font dạng "AAAAAA+ArialMT" (sau dấu
+          // "+") hoặc dùng các mức đậm khác ngoài "bold" như "SemiBold",
+          // "Medium", "W6"-"W9" (font CJK/Adobe) — mở rộng regex để bắt thêm
+          // các trường hợp này, không chỉ bold/black/heavy như trước.
+          const itemBold = !!(item.fontName && RE_BOLD_FONT.test(item.fontName));
+          // Khớp màu qua khoảng cách Euclide (dung sai ±2.5px) thay vì khớp
+          // chuỗi tọa độ tuyệt đối — xem isNearColoredPoint() / buildColorPosMap()
+          const itemColored = isNearColoredPoint(colorPosMap, x, y);
+
+          let prefix = '';
+          if (prevRight !== null && x - prevRight > spaceThresh) prefix = ' ';
+          line += prefix + str;
+          prevRight = x + w;
+
+          const lastRun = runs[runs.length - 1];
+          if (lastRun && lastRun.b === itemBold && lastRun.colored === itemColored) {
+            lastRun.text += prefix + str;
+          } else {
+            runs.push({ text: prefix + str, b: itemBold, colored: itemColored });
+          }
+        }
+        line = line.trim().replace(/\s{2,}/g, ' ');
+        if (!line) continue;
+        // Bỏ khoảng trắng thừa đầu/cuối run đầu/cuối tương ứng với trim() ở trên
+        if (runs.length) {
+          runs[0].text = runs[0].text.replace(/^\s+/, '');
+          runs[runs.length - 1].text = runs[runs.length - 1].text.replace(/\s+$/, '');
+        }
+
+        // Phát hiện bold từ fontName (pdf.js: font chứa "Bold"/"Black"/"Heavy"
+        // hoặc các mức đậm khác — xem RE_BOLD_FONT)
+        const isBold = row.items.some(it =>
+          it.fontName && RE_BOLD_FONT.test(it.fontName)
+        );
+        allLines.push({ text: line, bold: isBold, runs });
+      }
+    }
+
+    const isNative = totalChars > 20;
+    if (isNative) {
+      hideEl('progress');
+      // Lọc header/footer lặp (số trang, tên trường): dòng xuất hiện > 40% số trang
+      // và ngắn (< 60 ký tự) thường là noise — loại bỏ trước khi parse
+      if (numPages >= 3) {
+        const lineFreq = {};
+        for (const l of allLines) {
+          const key = l.text.trim().toLowerCase();
+          if (key.length < 60 && key.length > 0) lineFreq[key] = (lineFreq[key] || 0) + 1;
+        }
+        const threshold = Math.max(2, Math.round(numPages * 0.4));
+        const noiseSet = new Set(Object.entries(lineFreq).filter(([,v]) => v >= threshold).map(([k]) => k));
+        if (noiseSet.size > 0 && noiseSet.size <= 10) { // chỉ lọc khi có ít noise items (tránh lọc nhầm đề ngắn)
+          for (let k = allLines.length - 1; k >= 0; k--) {
+            if (noiseSet.has(allLines[k].text.trim().toLowerCase())) allLines.splice(k, 1);
+          }
+        }
+      }
+
+      // Dòng khai báo đáp án rõ (Đáp án: D / Answer: B / ĐA: C...)
+      // → nhận diện ngay tại đây để gán vào câu hỏi trước đó
+      const RE_ANS_INLINE = /^(?:đáp\s*án|answer|key|đs|ans|da|correct|chọn)[\s:.\-–—]+([A-Ea-e])/i;
+      // Pattern: "38. ... D" — số thứ tự + text + chữ cái cuối → đáp án inline
+      const RE_TRAILING_ANS = /^\d+[.)].+\s([A-Ea-e])\s*\.?\s*$/;
+
+      // ── PDF-specific pre-processing: rejoin wrapped lines & strip page headers ──
+      // pdf.js cắt dòng theo chiều rộng trang — câu hỏi dài bị split thành 2+ rows.
+      // Chạy rejoin TRƯỚC expandParas để tránh phần tiếp theo bị drop khi parse().
+
+      // Bước 0: lọc pattern "x/5", "1/5", "ÔN TẬP KTCK2" v.v. (header/footer rõ ràng)
+      const RE_PAGE_HEADER = /^\d+\/\d+$|^ôn\s*tập\b/i;
+      for (let k = allLines.length - 1; k >= 0; k--) {
+        if (RE_PAGE_HEADER.test(allLines[k].text.trim())) allLines.splice(k, 1);
+      }
+
+      // Bước 1: rejoin — nối dòng continuation vào dòng trước
+      // Dòng được coi là "bắt đầu unit mới" nếu là câu hỏi (RE_Q) hoặc đáp án [A-E].
+      // Mọi dòng khác là continuation → ghép vào dòng trước.
+      const RE_OPT_START = /^[A-Ea-e][\.\)]\s*\S/;
+      const rejoinedLines = [];
+      for (const l of allLines) {
+        const t = l.text.trim();
+        if (!t) continue;
+        // runs mặc định = [{text: toàn dòng, colored:false}] nếu trang/dòng nào
+        // đó không có runs (an toàn dự phòng) — nhưng bình thường luôn có runs
+        // thật từ buildColorPosMap ở bước trích xuất.
+        const lRuns = (l.runs && l.runs.length) ? l.runs : [{ text: l.text, b: l.bold, colored: false }];
+        const isNewUnit = RE_Q.test(t) || RE_OPT_START.test(t) || RE_ANS.test(t);
+        if (!isNewUnit && rejoinedLines.length > 0) {
+          const prev = rejoinedLines[rejoinedLines.length - 1];
+          // Không ghép nếu dòng trước đã kết thúc bằng "?" (câu hỏi hoàn chỉnh)
+          // hoặc nếu dòng hiện tại bắt đầu bằng chữ hoa (có thể là câu mới không có số)
+          const prevEndsQuestion = prev.text.trim().endsWith('?');
+          if (prevEndsQuestion) {
+            rejoinedLines.push({ text: t, bold: l.bold, runs: lRuns });
+          } else {
+            prev.text += ' ' + t;
+            // Thêm 1 run "space" trung tính rồi nối tiếp runs của dòng mới,
+            // để vị trí đáp án màu nằm cuối dòng (VD: "...? D.") vẫn giữ được
+            // signal colored khi 2 dòng pdf.js bị tách do wrap.
+            prev.runs.push({ text: ' ', b: false, colored: false });
+            prev.runs.push(...lRuns);
+          }
+        } else {
+          rejoinedLines.push({ text: t, bold: l.bold, runs: lRuns });
+        }
+      }
+
+      const lines = rejoinedLines.map(({ text, runs }) => ({
+        text,
+        runs: runs.map(r => ({ text: r.text, u:false, b: !!r.b, s:false, colored: !!r.colored, highlighted:false })),
+        all_s: false,
+      }));
+      const expanded = expandParas(lines);
+      allQ = parse(expanded, 'pdf');
+
+      // Post-process: thử detect đáp án từ bold font hoặc pattern phổ biến trong PDF
+      // Với PDF không có highlight/underline, nhưng đáp án in đậm → dùng bold signal
+      // Bước A: Xây dựng answer-key map từ dòng "Đáp án:" / bảng đáp án cuối đề
+      // Ví dụ: "1. D  2. A  3. C ..." hoặc "1-D 2-A ..."
+      const RE_GRID = /(?:^|\s)(\d+)\s*[.\-–—:)]\s*([A-Ea-e])(?=\s|$)/g;
+      const answerGrid = {};
+      for (let k = allLines.length - 1; k >= Math.max(0, allLines.length - 60); k--) {
+        let m;
+        while ((m = RE_GRID.exec(allLines[k].text)) !== null) {
+          const qNum = parseInt(m[1], 10);
+          if (qNum >= 1 && qNum <= allQ.length + 5) {
+            answerGrid[qNum] = m[2].toUpperCase();
+          }
+        }
+        RE_GRID.lastIndex = 0;
+      }
+      allQ.forEach((q, idx) => {
+        if (!q.ans && answerGrid[idx + 1]) { q.ans = answerGrid[idx + 1]; q.how = 'text'; }
+      });
+
+      // Bước B: Bold signal + trailing-answer pattern
+      for (const q of allQ) {
+        if (q.ans) continue;
+        let bestKey = null;
+        // Kiểm tra đáp án trailing: "1. Câu hỏi D" (chữ cái cuối dòng)
+        const qLineText = allLines.find(l => RE_Q.test(l.text) && l.text.includes(q.text.slice(0, 15)));
+        if (qLineText) {
+          const trailM = qLineText.text.match(/\s([A-Ea-e])\s*\.?\s*$/);
+          if (trailM) { q.ans = trailM[1].toUpperCase(); q.how = 'text'; continue; }
+        }
+        // Bold option
+        for (const o of q.opts) {
+          const srcLine = allLines.find(l => {
+            const t = l.text.trim();
+            return (t === o.key + '. ' + o.text || t.startsWith(o.key + '. ' + o.text.slice(0, Math.min(12, o.text.length))));
+          });
+          if (srcLine && srcLine.bold) { bestKey = o.key; break; }
+        }
+        if (bestKey) { q.ans = bestKey; q.how = 'bold'; }
+      }
+
+      render(allQ);
+      return;
+    }
+
+    // ── Bước 2: Scanned PDF → chỉ render ảnh THUMBNAIL nhỏ cho từng trang ──
+    // (KHÔNG render full-res ngay — tránh OOM crash trên đề 15-20+ trang).
+    // Ảnh full-res (SCALE_FULL) chỉ được render LAZY, đúng lúc OCR thật sự
+    // chạy trên trang đó (xem renderPageFull()), và được revoke ngay sau khi
+    // dùng xong — xem runOcr().
+    // Cũng KHÔNG render hết numPages thumbnail cùng lúc — PDF scan 50+ trang
+    // vẫn có thể đứng máy dù đã yield giữa các trang trên thiết bị yếu, nên
+    // chỉ render lô đầu (PDF_THUMB_BATCH trang) rồi để nút "Tải thêm trang"
+    // (loadMorePdfThumbs) render tiếp theo yêu cầu.
+    setIconText(prog, 'loader', 'PDF dạng scan — đang tạo ảnh xem trước...');
+    ocrImages = [];
+    pdfThumbState = { pdfDoc, numPages, nextPage: 1 };
+    await renderPdfThumbBatch(prog);
+
+    hideEl('progress');
+    document.getElementById('ocrTitle').innerHTML = ICONS.image + ` PDF scan — ${numPages} trang`;
+    document.getElementById('ocrHint').textContent =
+      'PDF này không có lớp chữ — đã render từng trang thành ảnh. Chọn trang muốn quét rồi bấm Quét để nhận diện chữ bằng OCR. Không nhận diện được tô đậm/gạch chân nên cần bạn tự điền đáp án đúng sau khi quét.';
+    renderOcrThumbs();
+    showEl('ocrSection');
+
+  } catch(e) {
+    prog.style.display = 'block';
+    setIconText(prog, 'xCircle', 'Lỗi đọc PDF: ' + e.message);
+  }
+}
+
+// Render lô tiếp theo của thumbnail PDF (PDF_THUMB_BATCH trang), bắt đầu từ
+// pdfThumbState.nextPage. prog (tuỳ chọn) là phần tử #progress để hiện %
+// — khi gọi từ nút "Tải thêm trang" thì truyền null vì progress bar chính
+// đã ẩn, trạng thái hiện ngay trên nút bấm (xem loadMorePdfThumbs).
+async function renderPdfThumbBatch(prog) {
+  if (!pdfThumbState) return;
+  const { pdfDoc, numPages, nextPage } = pdfThumbState;
+  const end = Math.min(numPages, nextPage + PDF_THUMB_BATCH - 1);
+  for (let i = nextPage; i <= end; i++) {
+    if (prog) {
+      const pct = Math.round((i - nextPage) / (end - nextPage + 1) * 100);
+      setIconText(prog, 'loader', `Đang tạo ảnh xem trước trang ${i}/${numPages}... (${pct}%)`);
+    }
+    // Nhường quyền điều khiển cho UI giữa các trang — tránh màn hình đứng hình
+    await new Promise(r => setTimeout(r, 0));
+
+    const page = await pdfDoc.getPage(i);
+    const vp = page.getViewport({ scale: PDF_THUMB_SCALE });
+
+    const canvas = document.createElement('canvas');
+    canvas.width  = vp.width;
+    canvas.height = vp.height;
+    const ctx = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport: vp }).promise;
+
+    // Canvas → Blob JPEG nhỏ, chỉ dùng để hiển thị thumbnail
+    const thumbBlob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.7));
+    const url = URL.createObjectURL(thumbBlob);
+    ocrImages.push({
+      name: `trang_${i}.jpg`, size: thumbBlob.size, selected: true,
+      pdfDoc, pageNum: i, url, blob: null, // blob full-res sẽ được lazy-render khi OCR chạy
+    });
+    // Giải phóng canvas ngay sau mỗi trang
+    canvas.width = 0; canvas.height = 0;
+  }
+  pdfThumbState.nextPage = end + 1;
+}
+
+// Handler cho nút "Tải thêm trang" — render lô tiếp theo rồi vẽ lại lưới
+// thumbnail (renderOcrThumbs sẽ tự ẩn nút khi đã hết trang).
+async function loadMorePdfThumbs() {
+  const btn = document.getElementById('loadMoreBtn');
+  if (!pdfThumbState || btn.disabled) return;
+  btn.disabled = true;
+  const remain = pdfThumbState.numPages - pdfThumbState.nextPage + 1;
+  setIconText(btn, 'loader', `Đang tải thêm... (còn ${remain} trang)`);
+  try {
+    await renderPdfThumbBatch(null);
+    renderOcrThumbs();
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Number formatting helpers for Word auto-numbering (w:numPr) ──────────
+// Many teachers generate "Câu 1.", "A.", "B." via Word's Numbering feature
+// instead of typing the literal characters — in that case <w:t> never
+// contains "Câu 1" or "A." at all, it's purely defined by word/numbering.xml.
+function numToLetter(n) {
+  let s = '';
+  while (n > 0) { const r = (n - 1) % 26; s = String.fromCharCode(65 + r) + s; n = Math.floor((n - 1) / 26); }
+  return s || 'A';
+}
+function numToRoman(n) {
+  const vals = [[1000,'M'],[900,'CM'],[500,'D'],[400,'CD'],[100,'C'],[90,'XC'],[50,'L'],[40,'XL'],[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']];
+  let s = '';
+  for (const [v, sym] of vals) { while (n >= v) { s += sym; n -= v; } }
+  return s || 'I';
+}
+function formatNumValue(n, numFmt) {
+  switch (numFmt) {
+    case 'upperLetter': return numToLetter(n);
+    case 'lowerLetter': return numToLetter(n).toLowerCase();
+    case 'upperRoman':  return numToRoman(n);
+    case 'lowerRoman':  return numToRoman(n).toLowerCase();
+    case 'bullet':      return '';
+    case 'decimal':
+    default:             return String(n);
+  }
+}
+
+// Parses word/numbering.xml (if present) into a lookup the rest of the code
+// can query while walking paragraphs. Best-effort: any failure here just
+// means numPr-based markers are skipped, never blocks the main parse.
+async function loadNumberingDefs(zip) {
+  const file = zip.file('word/numbering.xml');
+  if (!file) return null;
+  try {
+    const xmlStr = await file.async('string');
+    const ndoc = new DOMParser().parseFromString(xmlStr, 'application/xml');
+    const abstractMap = {};
+    for (const an of ndoc.getElementsByTagNameNS(WNS,'abstractNum')) {
+      const id = an.getAttributeNS(WNS,'abstractNumId') || an.getAttribute('w:abstractNumId');
+      if (id == null) continue;
+      const lvls = {};
+      for (const lvl of an.getElementsByTagNameNS(WNS,'lvl')) {
+        const ilvl = lvl.getAttributeNS(WNS,'ilvl') || lvl.getAttribute('w:ilvl') || '0';
+        const numFmtEl = lvl.getElementsByTagNameNS(WNS,'numFmt')[0];
+        const numFmt = numFmtEl ? (numFmtEl.getAttributeNS(WNS,'val')||numFmtEl.getAttribute('w:val')||'decimal') : 'decimal';
+        const lvlTextEl = lvl.getElementsByTagNameNS(WNS,'lvlText')[0];
+        const lvlText = lvlTextEl ? (lvlTextEl.getAttributeNS(WNS,'val')||lvlTextEl.getAttribute('w:val')||'%1.') : '%1.';
+        const startEl = lvl.getElementsByTagNameNS(WNS,'start')[0];
+        const start = startEl ? (parseInt(startEl.getAttributeNS(WNS,'val')||startEl.getAttribute('w:val'),10) || 1) : 1;
+        lvls[ilvl] = {numFmt, lvlText, start};
+      }
+      abstractMap[id] = lvls;
+    }
+    const numMap = {};
+    for (const num of ndoc.getElementsByTagNameNS(WNS,'num')) {
+      const numId = num.getAttributeNS(WNS,'numId') || num.getAttribute('w:numId');
+      const absEl = num.getElementsByTagNameNS(WNS,'abstractNumId')[0];
+      const absId = absEl ? (absEl.getAttributeNS(WNS,'val')||absEl.getAttribute('w:val')) : null;
+      if (numId != null) numMap[numId] = absId;
+    }
+    return {abstractMap, numMap, counters: {}};
+  } catch (e) {
+    return null;
+  }
+}
+
+// Computes the next marker text (e.g. "1.", "A.") for a given numId+ilvl,
+// advancing its counter. Restarts deeper levels whenever a shallower level
+// of the SAME list advances — mirrors Word's normal multilevel-list
+// behavior, e.g. option lettering A-D restarting at A for every new "Câu N".
+function getNumberingMarker(numbering, numId, ilvl) {
+  const absId = numbering.numMap[numId];
+  if (absId == null) return null;
+  const lvlDef = numbering.abstractMap[absId]?.[ilvl];
+  if (!lvlDef || lvlDef.numFmt === 'bullet') return null;
+
+  for (const k of Object.keys(numbering.counters)) {
+    const [kNumId, kIlvl] = k.split('-');
+    if (kNumId === numId && Number(kIlvl) > Number(ilvl)) delete numbering.counters[k];
+  }
+  const key = numId + '-' + ilvl;
+  numbering.counters[key] = (key in numbering.counters) ? numbering.counters[key] + 1 : lvlDef.start;
+  const numText = formatNumValue(numbering.counters[key], lvlDef.numFmt);
+  return lvlDef.lvlText.replace(/%\d/g, numText);
+}
+
+// ── OMML (Office Math Markup Language, <m:oMath>) → LaTeX chuẩn ──────────
+// Word lưu công thức dưới dạng cây cấu trúc, không phải <w:t> text thường,
+// nên một run-walker thuần sẽ làm rớt mất phân số, lũy thừa, căn, v.v. Đây
+// là bộ "flatten" OOXML → LaTeX (không phải parser MathML đầy đủ, nhưng đủ
+// cho các dạng phổ biến trong đề Toán-Lý-Hóa): \frac{a}{b}, \sqrt[n]{x},
+// x^{2}, x_{i}, \sum_{i}^{n}, \sin(x), \overline{AB}... — để các nền tảng
+// LMS dùng KaTeX/MathJax (Learnsy nếu có hỗ trợ) hiển thị công thức đẹp khi
+// dán vào, thay vì kiểu "toán thô bằng text" (a)/(b) như trước.
+function omChildren(node) {
+  let s = '';
+  for (const c of node.children) s += ommlNode(c);
+  return s;
+}
+
+// Ký tự toán tử nary (∑, ∏, ∫…) → lệnh LaTeX tương ứng. Ký tự lạ không có
+// trong map vẫn được giữ nguyên — không đẹp bằng lệnh LaTeX riêng nhưng
+// vẫn hiển thị được, không làm hỏng công thức.
+const NARY_LATEX = {
+  '∑': '\\sum', '∏': '\\prod', '∫': '\\int', '∬': '\\iint', '∭': '\\iiint',
+  '∮': '\\oint', '⋂': '\\bigcap', '⋃': '\\bigcup', '⊕': '\\bigoplus', '⊗': '\\bigotimes',
+};
+// Tên hàm dựng sẵn của Word (m:fName) → lệnh LaTeX có dấu \ phía trước, để
+// KaTeX/MathJax render đúng kiểu chữ đứng (\sin) thay vì chữ nghiêng như
+// biến số thông thường (s·i·n sẽ bị hiểu là s×i×n nếu để trần).
+const FUNC_LATEX = {
+  sin:'\\sin', cos:'\\cos', tan:'\\tan', cot:'\\cot', sec:'\\sec', csc:'\\csc',
+  ln:'\\ln', log:'\\log', lim:'\\lim', exp:'\\exp', max:'\\max', min:'\\min',
+  gcd:'\\gcd', det:'\\det', arcsin:'\\arcsin', arccos:'\\arccos', arctan:'\\arctan',
+};
+// Ký tự mở/đóng của <m:d> (dấu ngoặc) cần escape khi đưa vào \left..\right —
+// '{' '}' phải escape thành \{ \}, còn chuỗi rỗng (m:val="") là dấu phân
+// định "vô hình" trong OOXML, LaTeX biểu diễn bằng dấu chấm '.'.
+const LATEX_DELIM = { '{': '\\{', '}': '\\}', '': '.' };
+function latexDelim(ch) { return LATEX_DELIM[ch] !== undefined ? LATEX_DELIM[ch] : ch; }
+
+function ommlNode(node) {
+  switch (node.localName) {
+    case 't': return node.textContent || '';
+    case 'rPr': case 'ctrlPr': return '';
+    case 'sSup': {
+      const e = node.getElementsByTagNameNS(MNS,'e')[0];
+      const sup = node.getElementsByTagNameNS(MNS,'sup')[0];
+      return (e?ommlNode(e):'') + '^{' + (sup?ommlNode(sup):'') + '}';
+    }
+    case 'sSub': {
+      const e = node.getElementsByTagNameNS(MNS,'e')[0];
+      const sub = node.getElementsByTagNameNS(MNS,'sub')[0];
+      return (e?ommlNode(e):'') + '_{' + (sub?ommlNode(sub):'') + '}';
+    }
+    case 'sSubSup': {
+      const e = node.getElementsByTagNameNS(MNS,'e')[0];
+      const sub = node.getElementsByTagNameNS(MNS,'sub')[0];
+      const sup = node.getElementsByTagNameNS(MNS,'sup')[0];
+      return (e?ommlNode(e):'') + '_{' + (sub?ommlNode(sub):'') + '}^{' + (sup?ommlNode(sup):'') + '}';
+    }
+    case 'f': {
+      const num = node.getElementsByTagNameNS(MNS,'num')[0];
+      const den = node.getElementsByTagNameNS(MNS,'den')[0];
+      return '\\frac{' + (num?ommlNode(num):'') + '}{' + (den?ommlNode(den):'') + '}';
+    }
+    case 'rad': {
+      // m:radPr/m:degHide đánh dấu căn không hiện chỉ số (căn bậc 2 — phổ
+      // biến nhất); nếu không hide, m:deg chứa chỉ số căn bậc n → \sqrt[n]{}.
+      const radPr = node.getElementsByTagNameNS(MNS,'radPr')[0];
+      const degHideEl = radPr ? radPr.getElementsByTagNameNS(MNS,'degHide')[0] : null;
+      const degHideVal = degHideEl ? (degHideEl.getAttributeNS(MNS,'val')||degHideEl.getAttribute('m:val')||'1') : null;
+      const degHidden = degHideVal != null && degHideVal !== '0' && degHideVal !== 'off' && degHideVal !== 'false';
+      const deg = node.getElementsByTagNameNS(MNS,'deg')[0];
+      const base = node.getElementsByTagNameNS(MNS,'e')[0];
+      const degText = (!degHidden && deg) ? ommlNode(deg).trim() : '';
+      const baseTxt = base ? ommlNode(base) : '';
+      return degText ? '\\sqrt[' + degText + ']{' + baseTxt + '}' : '\\sqrt{' + baseTxt + '}';
+    }
+    case 'd': {
+      const pr = node.getElementsByTagNameNS(MNS,'dPr')[0];
+      let open = '(', close = ')';
+      if (pr) {
+        const b = pr.getElementsByTagNameNS(MNS,'begChr')[0];
+        const c = pr.getElementsByTagNameNS(MNS,'endChr')[0];
+        if (b) open = b.getAttributeNS(MNS,'val') || b.getAttribute('m:val') || open;
+        if (c) close = c.getAttributeNS(MNS,'val') || c.getAttribute('m:val') || close;
+      }
+      const inner = Array.from(node.children).filter(c=>c.localName==='e').map(ommlNode).join(', ');
+      return '\\left' + latexDelim(open) + inner + '\\right' + latexDelim(close);
+    }
+    case 'nary': {
+      const naryPr = node.getElementsByTagNameNS(MNS,'naryPr')[0];
+      let chr = '∑';
+      if (naryPr) {
+        const chrEl = naryPr.getElementsByTagNameNS(MNS,'chr')[0];
+        if (chrEl) chr = chrEl.getAttributeNS(MNS,'val') || chrEl.getAttribute('m:val') || chr;
+      }
+      const latexChr = NARY_LATEX[chr] || chr;
+      const sub = node.getElementsByTagNameNS(MNS,'sub')[0];
+      const sup = node.getElementsByTagNameNS(MNS,'sup')[0];
+      const e = node.getElementsByTagNameNS(MNS,'e')[0];
+      let out = latexChr;
+      if (sub) out += '_{' + ommlNode(sub) + '}';
+      if (sup) out += '^{' + ommlNode(sup) + '}';
+      return out + (e ? ommlNode(e) : '');
+    }
+    case 'func': {
+      const fName = node.getElementsByTagNameNS(MNS,'fName')[0];
+      const e = node.getElementsByTagNameNS(MNS,'e')[0];
+      const fnRaw = fName ? ommlNode(fName).trim() : '';
+      const fnLatex = FUNC_LATEX[fnRaw.toLowerCase()] || fnRaw;
+      return fnLatex + (e?ommlNode(e):'');
+    }
+    case 'limLow': {
+      const e = node.getElementsByTagNameNS(MNS,'e')[0];
+      const lim = node.getElementsByTagNameNS(MNS,'lim')[0];
+      return (e?ommlNode(e):'') + (lim ? '_{' + ommlNode(lim) + '}' : '');
+    }
+    case 'limUpp': {
+      const e = node.getElementsByTagNameNS(MNS,'e')[0];
+      const lim = node.getElementsByTagNameNS(MNS,'lim')[0];
+      return (e?ommlNode(e):'') + (lim ? '^{' + ommlNode(lim) + '}' : '');
+    }
+    case 'bar': {
+      const e = node.getElementsByTagNameNS(MNS,'e')[0];
+      const barPr = node.getElementsByTagNameNS(MNS,'barPr')[0];
+      const posEl = barPr ? barPr.getElementsByTagNameNS(MNS,'pos')[0] : null;
+      const pos = posEl ? (posEl.getAttributeNS(MNS,'val')||posEl.getAttribute('m:val')||'top') : 'top';
+      const inner = e ? ommlNode(e) : '';
+      return pos === 'bot' ? '\\underline{' + inner + '}' : '\\overline{' + inner + '}';
+    }
+    default:
+      return omChildren(node);
+  }
+}
+function ommlToText(node) {
+  try { return ommlNode(node).trim(); } catch (e) { return ''; }
+}
+
+// Reads <w:rPr> (run or paragraph-level) into {u,b,s,colored,highlighted}.
+// colored/highlighted are NEW signals: many đề thi mark the correct answer
+// with red/blue text color or yellow highlight instead of bold/underline.
+function getRunFormatting(rpr, inherit) {
+  if (!rpr) return {u: inherit?.u||false, b: inherit?.b||false, s: inherit?.s||false, colored: inherit?.colored||false, highlighted: inherit?.highlighted||false};
+  let u, b, s, colored=false, highlighted=false;
+  const uEl = rpr.getElementsByTagNameNS(WNS,'u')[0];
+  if (uEl) { const v = uEl.getAttributeNS(WNS,'val')||uEl.getAttribute('w:val')||'single'; u = v !== 'none' && v !== '0'; }
+  else u = inherit?.u || false;
+  b = !!rpr.getElementsByTagNameNS(WNS,'b')[0];
+  s = !!(rpr.getElementsByTagNameNS(WNS,'strike')[0]||rpr.getElementsByTagNameNS(WNS,'dstrike')[0]);
+  const colorEl = rpr.getElementsByTagNameNS(WNS,'color')[0];
+  if (colorEl) {
+    const val = (colorEl.getAttributeNS(WNS,'val')||colorEl.getAttribute('w:val')||'').toLowerCase();
+    colored = !!val && val !== '000000' && val !== 'auto';
+  }
+  const hlEl = rpr.getElementsByTagNameNS(WNS,'highlight')[0];
+  if (hlEl) {
+    const val = (hlEl.getAttributeNS(WNS,'val')||hlEl.getAttribute('w:val')||'').toLowerCase();
+    highlighted = !!val && val !== 'none';
+  }
+  return {u, b, s, colored, highlighted};
+}
+
+// Walks a run-container (a <w:p>, or anything wrapping runs like
+// <w:hyperlink>/<w:ins>) in document order, producing flattened runs.
+// Handles: plain runs (incl. multiple <w:t>/<w:tab>/<w:br> per run),
+// hyperlink/ins/smartTag wrappers (recurse in), del (tracked-deletion —
+// excluded from the final text), and <m:oMath>/<m:oMathPara> equations.
+function walkRunContainer(node, inheritFmt, runsOut) {
+  for (const child of node.children) {
+    const ln = child.localName;
+    if (ln === 'r') {
+      const rpr = child.getElementsByTagNameNS(WNS,'rPr')[0];
+      const fmt = getRunFormatting(rpr, inheritFmt);
+      let text = '';
+      for (const c of child.children) {
+        const cln = c.localName;
+        if (cln === 't') text += c.textContent || '';
+        else if (cln === 'tab') text += '\t';
+        else if (cln === 'br') text += '\n';
+      }
+      if (text) runsOut.push({text, ...fmt});
+    } else if (ln === 'hyperlink' || ln === 'smartTag' || ln === 'ins') {
+      walkRunContainer(child, inheritFmt, runsOut);
+    } else if (ln === 'del') {
+      continue; // tracked deletion: not part of the current text
+    } else if (ln === 'oMath' || ln === 'oMathPara') {
+      const mtext = ommlToText(child);
+      // oMathPara = công thức đứng riêng 1 đoạn (display) trong Word, oMath
+      // = công thức chèn giữa câu (inline) — dùng đúng cặp delimiter LaTeX
+      // tương ứng để KaTeX/MathJax tự nhận diện khi dán vào LMS.
+      if (mtext) {
+        const wrapped = ln === 'oMathPara' ? '\\[' + mtext + '\\]' : '\\(' + mtext + '\\)';
+        runsOut.push({text: wrapped, u:false, b:false, s:false, colored:false, highlighted:false});
+      }
+    }
+  }
+}
+
+// Builds one "line" ({text, runs, all_s}) from a single <w:p>, including
+// the w:numPr → numbering.xml fallback for auto-numbered "Câu N."/"A." that
+// never appear as literal <w:t> text.
+function paraToLine(p, numbering) {
+  const pPr = p.getElementsByTagNameNS(WNS,'pPr')[0];
+  let pFmt = {u:false, b:false, s:false, colored:false, highlighted:false};
+  if (pPr) {
+    const pRpr = pPr.getElementsByTagNameNS(WNS,'rPr')[0];
+    if (pRpr) pFmt = getRunFormatting(pRpr, pFmt);
+  }
+  const runs = [];
+  walkRunContainer(p, pFmt, runs);
+
+  if (pPr && numbering) {
+    const numPr = pPr.getElementsByTagNameNS(WNS,'numPr')[0];
+    if (numPr) {
+      const ilvlEl = numPr.getElementsByTagNameNS(WNS,'ilvl')[0];
+      const numIdEl = numPr.getElementsByTagNameNS(WNS,'numId')[0];
+      const ilvl = ilvlEl ? (ilvlEl.getAttributeNS(WNS,'val')||ilvlEl.getAttribute('w:val')||'0') : '0';
+      const numId = numIdEl ? (numIdEl.getAttributeNS(WNS,'val')||numIdEl.getAttribute('w:val')) : null;
+      if (numId != null) {
+        const marker = getNumberingMarker(numbering, numId, ilvl);
+        const currentText = runs.map(r=>r.text).join('').trim();
+        const alreadyHasMarker = RE_Q.test(currentText) || /^[A-Ea-e][\.\)]\s*\S/.test(currentText);
+        if (marker && !alreadyHasMarker) {
+          runs.unshift({text: marker + ' ', u:false, b:false, s:false, colored:false, highlighted:false});
+        }
+      }
+    }
+  }
+
+  if (!runs.length) return null;
+  const all_s = runs.every(r => r.s);
+  return {text: runs.map(r=>r.text).join(''), runs, all_s};
+}
+
+// Processes a <w:tbl> (teachers very often dump A/B/C/D into a borderless
+// 2x2 or 1x4 table to line them up visually). Cells are walked w:tr → w:tc
+// in document order, which is ALREADY row-major (A,B then C,D) since that's
+// how the table XML itself is structured — the risk is really the OPPOSITE
+// case: cells with no "A."/"B." text at all (the letter is implied purely
+// by column position). For that case we inject A,B,C,D.../letters
+// positionally, but only when the table looks like a plain options block
+// (2-5 short, unmarked cells; not a layout table holding a whole question).
+function processTable(tbl, numbering, out) {
+  // ── Bước 1: đọc tất cả rows & cells ──────────────────────
+  const rows = [];
+  for (const tr of tbl.children) {
+    if (tr.localName !== 'tr') continue;
+    const cells = [];
+    for (const tc of tr.children) {
+      if (tc.localName !== 'tc') continue;
+      const ps = tc.getElementsByTagNameNS(WNS,'p');
+      const cellLines = [];
+      for (const p of ps) {
+        const line = paraToLine(p, numbering);
+        if (line) cellLines.push(line);
+      }
+      if (!cellLines.length) { cells.push(null); continue; }
+      cells.push({
+        text: cellLines.map(l=>l.text).join('\n').trim(),
+        runs: [].concat(...cellLines.map(l=>l.runs)),
+        all_s: cellLines.every(l=>l.all_s),
+        lines: cellLines,
+      });
+    }
+    rows.push(cells);
+  }
+
+  if (!rows.length) return;
+  const numCols = Math.max(...rows.map(r => r.length));
+
+  // ── Bước 2: phân loại loại bảng ──────────────────────────
+  // Dạng A — BẢNG LAYOUT (chia cột nội dung, đề 2 cột):
+  //   numCols >= 2 VÀ có ô dài hoặc có đầu câu hỏi → đọc column-major
+  // Dạng B — BẢNG DỮ LIỆU (bảng biến thiên, số liệu địa lý,...):
+  //   có nhiều hàng, không có câu hỏi/đáp án → giữ nguyên dạng Markdown table
+  // Dạng C — OPTION BLOCK: tất cả ô ngắn, có A/B/C/D → row-major như cũ
+  const flat_row = [];
+  for (const row of rows) for (const cell of row) flat_row.push(cell);
+  const nonEmpty = flat_row.filter(c => c && c.text);
+
+  const hasLongCell   = nonEmpty.some(c => c.text.length > 100);
+  const hasQuestion   = nonEmpty.some(c => RE_Q.test(c.text.split('\n')[0]));
+  const alreadyMarked = nonEmpty.some(c => /^[A-Ea-e][\.\)]\s*\S/.test(c.text));
+  const hasOptionMark = nonEmpty.some(c => /^[A-Ea-e][\.\)]/.test(c.text.trim()));
+
+  // Bảng dữ liệu: nhiều hàng, không có dấu hiệu câu hỏi/đáp án
+  // → convert sang Markdown table để giữ nguyên cấu trúc số liệu
+  const isDataTable = rows.length >= 2
+    && !hasQuestion
+    && !hasOptionMark
+    && !alreadyMarked
+    && numCols >= 2;
+
+  if (isDataTable) {
+    let md = '';
+    rows.forEach((row, rIdx) => {
+      const cells = row.map(c => (c ? c.text.replace(/\n/g, ' ').trim() : ''));
+      md += '| ' + cells.join(' | ') + ' |';
+      if (rIdx === 0) {
+        md += '\n| ' + cells.map(() => '---').join(' | ') + ' |';
+      }
+      if (rIdx < rows.length - 1) md += '\n';
+    });
+    if (md) out.push({ text: md, runs: [{ text: md, u:false, b:false, s:false, colored:false, highlighted:false }], all_s: false });
+    return;
+  }
+
+  const isLayoutTable = numCols >= 2 && (hasLongCell || hasQuestion);
+
+  if (isLayoutTable) {
+    // Column-major: đọc cột trái trước
+    for (let col = 0; col < numCols; col++) {
+      for (const row of rows) {
+        const cell = row[col];
+        if (!cell || !cell.text) continue;
+        for (const line of (cell.lines || [{text: cell.text, runs: cell.runs, all_s: cell.all_s}])) {
+          if (line.text) out.push(line);
+        }
+      }
+    }
+    return;
+  }
+
+  // Dạng C — row-major option block
+  const tooLong = nonEmpty.some(c => c.text.length > 200);
+  if (nonEmpty.length >= 2 && nonEmpty.length <= 5 && !alreadyMarked && !hasQuestion && !tooLong) {
+    const letters = 'ABCDE';
+    let idx = 0;
+    for (const cell of flat_row) {
+      if (!cell || !cell.text) continue;
+      const letter = letters[idx++];
+      if (!letter) continue;
+      out.push({
+        text: letter + '. ' + cell.text,
+        runs: [{text: letter+'. ', u:false, b:false, s:false, colored:false, highlighted:false}, ...cell.runs],
+        all_s: cell.all_s,
+      });
+    }
+  } else {
+    for (const cell of flat_row) {
+      if (!cell || !cell.text) continue;
+      for (const line of (cell.lines || [{text: cell.text, runs: cell.runs, all_s: cell.all_s}])) {
+        if (line.text) out.push(line);
+      }
+    }
+  }
+}
+// Each line: { text, runs:[{text,u,b,s,colored,highlighted}], all_s }
+// Walks the body's DIRECT children in document order (not a flat
+// getElementsByTagName over all <w:p>) so <w:tbl> can be intercepted and
+// handled by processTable() instead of falling through as plain paragraphs.
+function readParas(doc, numbering) {
+  const body = doc.getElementsByTagNameNS(WNS,'body')[0];
+  const out = [];
+  function walk(node) {
+    for (const child of node.children) {
+      const ln = child.localName;
+      if (ln === 'p') {
+        const line = paraToLine(child, numbering);
+        if (line) out.push(line);
+      } else if (ln === 'tbl') {
+        processTable(child, numbering, out);
+      } else if (ln === 'sdt') {
+        // content-control wrapper: actual paragraphs live inside <w:sdtContent>,
+        // a grandchild, not a direct child of <w:sdt> — recurse into that.
+        const sdtContent = [...child.children].find(c => c.localName === 'sdtContent');
+        if (sdtContent) walk(sdtContent);
+      }
+    }
+  }
+  walk(body);
+  return out;
+}
+
+// ─── STEP 2: Expand paragraphs ───────────────────────────
+// Split paragraphs that contain MULTIPLE option markers (inline 2-col layout)
+// Detection: scan runs for SHORT marker runs (≤3 chars: "A.", "B.", "C", "D")
+// Group runs by marker, produce virtual option paragraphs
+
+function expandParas(paras) {
+  const lines = [];
+  for (const p of paras) {
+    // Question detection: also match strikethrough questions (đề cũ)
+    if (RE_Q.test(p.text)) { lines.push(p); continue; }
+    // Try every splitting strategy and keep whichever finds the MOST options.
+    // trySplit() can under-split when a marker (e.g. "C.") ends up appended
+    // inside a larger combined run instead of having its own short marker-only
+    // run; trySplitText()/trySplitTextCD() work at the character level and,
+    // now that tabs are preserved as real \t characters, reliably catch every
+    // marker even when trySplit() only finds the first one or two.
+    const candidates = [trySplit(p), trySplitText(p), trySplitTextCD(p)].filter(Boolean);
+    const expanded = candidates.length
+      ? candidates.reduce((best, cur) => cur.length > best.length ? cur : best)
+      : [p];
+    for (const e of expanded) lines.push(e);
+  }
+  return lines;
+}
+
+// Split a C+D only line (second column of a 2-col table row where A+B was already on a previous line)
+function trySplitTextCD(para) {
+  const txt = para.text.trim();
+  // Must start with C. or D. (second column)
+  if (!/^[CDcd][\.\)]/.test(txt)) return null;
+  // Must have at least 2 markers
+  const charFlags = [];
+  for (const run of para.runs) {
+    for (const ch of run.text) charFlags.push({u: run.u, b: run.b, s: run.s, c: run.colored||false, h: run.highlighted||false});
+  }
+  const positions = [];
+  for (let i = 0; i < txt.length - 1; i++) {
+    const ch = txt[i];
+    if (!/[CDEcde]/.test(ch)) continue;
+    const next = txt[i+1];
+    if (next !== '.' && next !== ')') continue;
+    const prev = i > 0 ? txt[i-1] : '';
+    const validPrev = i === 0 || /[\s\t\d\.,]/.test(prev);
+    if (!validPrev) continue;
+    if (ch === ch.toLowerCase() && i > 0 && /[a-zA-ZÀ-ỹ]/.test(prev)) continue;
+    positions.push({pos: i, letter: ch.toUpperCase()});
+  }
+  if (positions.length < 1) return null;
+  // First must be C or D
+  if (!['C','D'].includes(positions[0]?.letter)) return null;
+  const opts = [];
+  for (let pi = 0; pi < positions.length; pi++) {
+    const start = positions[pi].pos;
+    const end = pi+1 < positions.length ? positions[pi+1].pos : txt.length;
+    const optTxt = txt.slice(start, end).trim();
+    const letter = positions[pi].letter;
+    const content = optTxt.replace(/^[CDEcde][\.\)] ?/, '').trim();
+    if (!content) continue;
+    const normalized = letter + '. ' + content;
+    const u = charFlags[start]?.u || false;
+    const b = charFlags[start]?.b || false;
+    const s = charFlags[start]?.s || false;
+    const c = charFlags[start]?.c || false;
+    const h = charFlags[start]?.h || false;
+    opts.push({text: normalized, runs: para.runs, _mu: u, _mb: b, _ms: s, _mc: c, _mh: h});
+  }
+  if (opts.length >= 1 && opts.every(o => /^[C-E]\. \S/.test(o.text))) return opts;
+  return null;
+}
+
+function trySplit(para) {
+  // Find all runs that are pure option markers
+  // A "pure marker run" = trimmed text matches /^[A-E][.)]?\s*$/ AND run is short (≤3 chars)
+  const markerIdx = []; // indices of marker runs
+  for (let i = 0; i < para.runs.length; i++) {
+    const t = para.runs[i].text.trim();
+    if (RE_MARKER.test(t) && t.length <= 3) markerIdx.push(i);
+  }
+
+  // Need ≥2 markers, first one at or near start (allow up to index 3)
+  if (markerIdx.length < 2) return null;
+  if (markerIdx[0] > 3) return null; // first marker not at start
+
+  // Build virtual options: slice runs between markers
+  const opts = [];
+  for (let mi = 0; mi < markerIdx.length; mi++) {
+    const start = markerIdx[mi];
+    const end   = mi+1 < markerIdx.length ? markerIdx[mi+1] : para.runs.length;
+    const rslice = para.runs.slice(start, end);
+    const txt = rslice.map(r=>r.text).join('').trim();
+    // Normalize: ensure "A. text" format
+    const letter = para.runs[start].text.trim()[0].toUpperCase();
+    const normalized = letter + '. ' + txt.replace(/^[A-Ea-e][\.)] ?/, '').trim();
+    opts.push({
+      text: normalized,
+      runs: rslice,
+      _mu: para.runs[start].u,
+      _mb: para.runs[start].b,
+      _ms: para.runs[start].s,
+      _mc: para.runs[start].colored || false,
+      _mh: para.runs[start].highlighted || false,
+    });
+  }
+
+  // Validate all look like options
+  if (!opts.every(o => /^[A-E]\. /.test(o.text))) return null;
+  return opts;
+}
+
+// Fallback text-level split for inline options like "A. 2  B. 3  C. 4  D. 5"
+// or "A. 2B. 3C. 4D. 5" (no spaces between)
+// Also handles 2-column layouts with only A+C or A+B on same line.
+// v4: hỗ trợ thêm:
+//  • Tab (\t) làm separator giữa các đáp án (dạng A.x\tB.y\tC.z)
+//  • Đáp án viết liền không có khoảng trắng sau dấu (A.apple B.banana)
+//  • Phần văn bản giới thiệu trước "A." (ví dụ "Choose A. something")
+//  • Dấu ngoặc quanh option content: A.(something)
+function trySplitText(para) {
+  const txt = para.text;
+
+  // Build char-level flags from runs
+  const charFlags = [];
+  for (const run of para.runs) {
+    for (const ch of run.text) charFlags.push({u: run.u, b: run.b, s: run.s, c: run.colored||false, h: run.highlighted||false});
+  }
+
+  // Phát hiện tab-separated: tách theo \t rồi kiểm mỗi phần bắt đầu bằng [A-E][.)]
+  const tabParts = txt.split(/\t+/);
+  if (tabParts.length >= 2 && tabParts.filter(p => /^[A-Ea-e][\.\)]/.test(p.trim())).length >= 2) {
+    const opts = [];
+    let charOffset = 0;
+    for (const part of tabParts) {
+      const trimmed = part.trim();
+      const partStart = txt.indexOf(part, charOffset);
+      charOffset = partStart + part.length;
+      const m = trimmed.match(/^([A-Ea-e])[\.\)]\s*([\s\S]+)$/);
+      if (!m) continue;
+      const letter = m[1].toUpperCase();
+      const content = m[2].trim();
+      if (!content) continue;
+      const u = charFlags[partStart]?.u || false;
+      const b = charFlags[partStart]?.b || false;
+      const s = charFlags[partStart]?.s || false;
+      const c = charFlags[partStart]?.c || false;
+      const h = charFlags[partStart]?.h || false;
+      opts.push({text: letter + '. ' + content, runs: para.runs, _mu: u, _mb: b, _ms: s, _mc: c, _mh: h});
+    }
+    if (opts.length >= 2) return opts;
+  }
+
+  // Find all option marker positions in raw text
+  // Mở rộng: cho phép KHÔNG có khoảng trắng sau dấu (A.apple), cho phép dấu "–"/"—"
+  const positions = [];
+  for (let i = 0; i < txt.length - 1; i++) {
+    const ch = txt[i];
+    if (!/[A-Ea-e]/.test(ch)) continue;
+    const next = txt[i+1];
+    if (next !== '.' && next !== ')' && next !== '–' && next !== '—') continue;
+    // Valid preceding context: đầu dòng, khoảng trắng, tab, chữ số, dấu chấm/phẩy, ngoặc đóng
+    const prev = i > 0 ? txt[i-1] : '';
+    const validPrev = i === 0 || /[\s\t\d\.,\)\]>]/.test(prev);
+    if (!validPrev) continue;
+    // Skip chữ thường đứng giữa từ tiếng Anh/Việt (e.g. "apple" → 'e' trước là 'l')
+    if (ch === ch.toLowerCase() && i > 0 && /[a-zA-ZÀ-ỹ]/.test(prev)) continue;
+    positions.push({pos: i, letter: ch.toUpperCase()});
+  }
+
+  if (positions.length < 2) return null;
+
+  // Cho phép phần tiền tố trước A. (ví dụ "Choose " hoặc "Select: ")
+  // Chấp nhận A không cần ở vị trí 0, nhưng tối đa 20 ký tự trước A
+  if (positions[0].pos > 20) return null;
+
+  // Validate: first letter must be A; all letters in A-E; ascending order
+  const letters = positions.map(p => p.letter);
+  const expected = new Set(['A','B','C','D','E']);
+  if (letters[0] !== 'A') return null;
+  if (!letters.every(l => expected.has(l))) return null;
+  for (let i=1; i<letters.length; i++) {
+    if (letters[i] <= letters[i-1]) return null;
+  }
+
+  const opts = [];
+  for (let pi = 0; pi < positions.length; pi++) {
+    const start = positions[pi].pos;
+    const end   = pi+1 < positions.length ? positions[pi+1].pos : txt.length;
+    const optTxt = txt.slice(start, end).trim();
+    const letter = positions[pi].letter;
+    // Strip marker: A. / A) / A– / A— (có hoặc không có khoảng trắng)
+    const content = optTxt.replace(/^[A-Ea-e][\.\)\-–—]\s*/, '').trim();
+    if (!content) continue;
+    const normalized = letter + '. ' + content;
+    const u = charFlags[start]?.u || false;
+    const b = charFlags[start]?.b || false;
+    const s = charFlags[start]?.s || false;
+    const c = charFlags[start]?.c || false;
+    const h = charFlags[start]?.h || false;
+    opts.push({text: normalized, runs: para.runs, _mu: u, _mb: b, _ms: s, _mc: c, _mh: h});
+  }
+
+  if (opts.length >= 2 && opts.every(o => /^[A-E]\. \S/.test(o.text))) return opts;
+  return null;
+}
+
+// ─── STEP 3: Parse questions ─────────────────────────────
+function parse(lines, source) {
+  source = source || 'text';
+  const qs = [];
+  let i = 0;
+  while (i < lines.length) {
+    if (!RE_Q.test(lines[i].text)) { i++; continue; }
+
+    const q = {
+      text: lines[i].text
+        .replace(/^(?:câu|cau)\s*\d+\s*(?:\([^)]{0,10}\))?\s*[\.\):\-–—]\s*/i,'')
+        .replace(/^(?:question|bài|phần)\s*\d+\s*[\.\):\-–—]\s*/i,'')
+        .replace(/^[IVXLC]+\.\d+[\.\):\s]+/,'')
+        .replace(/^\(\s*\d+\s*\)\s*/,'')
+        .replace(/^\[\s*\d+\s*\]\s*/,'')
+        .replace(/^\d+\s*[\.\)]\s+/,'')
+        .trim(),
+      opts: [],   // [{key,text,u,b,s}]
+      ans: null,
+      how: null,
+      source,
+    };
+    i++;
+
+    while (i < lines.length) {
+      const line = lines[i];
+
+      // Explicit answer keyword line
+      const am = line.text.match(RE_ANS);
+      if (am) { q.ans = am[1].toUpperCase(); q.how = 'text'; i++; break; }
+
+      // Next question → stop (regardless of opts count)
+      if (RE_Q.test(line.text)) break;
+
+      // Option line
+      if (/^[A-Ea-e][\.\)]\s*\S/.test(line.text) || /^[A-E]\. /.test(line.text)) {
+        const m = line.text.match(/^([A-Ea-e])[\.\)]\s*(.*)/s);
+        if (!m) { i++; continue; }
+        const key = m[1].toUpperCase();
+        const text = m[2].trim();
+
+        // Get signals:
+        // Priority 1: pre-computed marker signals from split (_mu/_mb/_ms/_mc/_mh)
+        // Priority 2: scan runs for marker run signal
+        let u = false, b = false, s = false, c = false, h = false;
+        if ('_mu' in line) {
+          u = line._mu; b = line._mb; s = line._ms; c = line._mc || false; h = line._mh || false;
+        } else {
+          // Find the run containing the option letter (with or without trailing dot/paren)
+          for (const run of line.runs) {
+            const rt = run.text.trim();
+            // Match: "A" "A." "A)" or just the letter
+            const letterMatch = rt.match(/^([A-Ea-e])[\.)]?\s*$/);
+            if (letterMatch && letterMatch[1].toUpperCase() === key) {
+              u = run.u; b = run.b; s = run.s; c = run.colored||false; h = run.highlighted||false; break;
+            }
+            // Also match full "A. text" run — take formatting of first char
+            if (rt.startsWith(key) || rt.startsWith(key.toLowerCase())) {
+              const firstCharKey = rt[0].toUpperCase();
+              if (firstCharKey === key && /^[A-Ea-e][\.\)]/.test(rt)) {
+                u = run.u; b = run.b; s = run.s; c = run.colored||false; h = run.highlighted||false; break;
+              }
+            }
+          }
+          // Fallback: if whole line is underlined
+          if (!u && line.runs.length && line.runs.every(r=>r.u)) u = true;
+        }
+
+        q.opts.push({key, text, u, b, s, c, h});
+        i++;
+        continue;
+      }
+
+      // Non-option non-question: append to q.text if no opts yet
+      if (q.opts.length === 0) q.text += ' ' + line.text;
+      i++;
+    }
+
+    if (q.opts.length < 2) continue;
+
+    // Determine answer from formatting if not explicit
+    if (!q.ans) {
+      // Detect if all options are strikethrough (đề cũ pattern)
+      const allStruck = q.opts.every(o => o.s);
+
+      // Score each option
+      let best = null, bestScore = 0, bestHow = null;
+      for (const o of q.opts) {
+        let sc = 0, how = null;
+        if (allStruck) {
+          // When all options are struck (đề cũ), look for underline+strike combo
+          if (o.u && o.b) { sc = 92; how = 'bold+underline'; }
+          else if (o.u)   { sc = 87; how = 'underline'; }
+          else if (o.b)   { sc = 70; how = 'bold'; }
+          else if (o.c || o.h) { sc = 60; how = o.c ? 'colored' : 'highlighted'; }
+        } else {
+          if (o.u && o.b) { sc = 92; how = 'bold+underline'; }
+          else if (o.u)   { sc = 87; how = 'underline'; }
+          else if (o.b)   { sc = 76; how = 'bold'; }
+          else if (o.c && o.h) { sc = 68; how = 'colored'; }
+          else if (o.c)   { sc = 64; how = 'colored'; }
+          else if (o.h)   { sc = 60; how = 'highlighted'; }
+        }
+        if (sc > bestScore) { bestScore = sc; best = o; bestHow = how; }
+      }
+      // Strikethrough elimination: if all-but-one are struck (and not allStruck)
+      if (!allStruck) {
+        const struck = q.opts.filter(o=>o.s).map(o=>o.key);
+        if ((!best || bestScore < 50) && struck.length > 0) {
+          const remain = q.opts.filter(o=>!struck.includes(o.key));
+          if (remain.length === 1) { best = remain[0]; bestScore = 65; bestHow = 'exclude'; }
+        }
+      }
+      if (best && bestScore >= 50) { q.ans = best.key; q.how = bestHow; }
+    }
+
+    qs.push(q);
+  }
+  return qs;
+}
+
+// ─── STEP 4: Render ──────────────────────────────────────
+const IMG_EXT = /\.(png|jpe?g|gif|bmp|webp)$/i;
+const OCR_AUTOSELECT_BYTES = 30 * 1024; // pre-check images above ~30KB (likely full-page scans, not small logos)
+
+async function detectImages(zip) {
+  const entries = zip.file(/^word\/media\//i).filter(f => IMG_EXT.test(f.name));
+  if (!entries.length) return;
+  try {
+    const loaded = await Promise.all(entries.map(async f => {
+      const blob = await f.async('blob');
+      return { name: f.name, blob, url: URL.createObjectURL(blob), size: blob.size, selected: blob.size > OCR_AUTOSELECT_BYTES };
+    }));
+    ocrImages = loaded;
+    document.getElementById('ocrTitle').innerHTML = ICONS.image + ' Phát hiện ảnh trong file';
+    document.getElementById('ocrHint').textContent = 'Có thể là đề/câu hỏi dạng scan. Chọn ảnh muốn quét (đã tự chọn sẵn ảnh lớn) rồi bấm Quét. Không nhận diện được tô đậm/gạch chân nên các câu lấy từ ảnh sẽ cần bạn tự điền đáp án đúng.';
+    renderOcrThumbs();
+    showEl('ocrSection');
+  } catch (e) {
+    // Image scan is best-effort only; ignore failures silently.
+  }
+}
+
+function renderOcrThumbs() {
+  const c = document.getElementById('ocrThumbs');
+  c.innerHTML = '';
+  ocrImages.forEach((im, idx) => {
+    const t = el('div', 'ocr-thumb' + (im.selected ? ' sel' : ''));
+    t.onclick = () => { im.selected = !im.selected; renderOcrThumbs(); };
+    const img = document.createElement('img');
+    img.src = im.url;
+    t.appendChild(img);
+    const chk = el('div', 'chk'); chk.innerHTML = im.selected ? ICONS.check : '';
+    t.appendChild(chk);
+    const sz = el('div', 'sz'); sz.textContent = im.size > 1024 ? Math.round(im.size/1024)+' KB' : im.size+' B';
+    t.appendChild(sz);
+    c.appendChild(t);
+  });
+
+  // Nút "Tải thêm trang" chỉ hiện với PDF scan còn trang chưa render
+  // (ảnh/docx không có pdfThumbState nên luôn ẩn).
+  const moreRow = document.getElementById('loadMoreRow');
+  const hasMore = !!pdfThumbState && pdfThumbState.nextPage <= pdfThumbState.numPages;
+  moreRow.style.display = hasMore ? 'block' : 'none';
+  if (hasMore) {
+    const remain = pdfThumbState.numPages - pdfThumbState.nextPage + 1;
+    setIconText('loadMoreBtn', 'refresh', `Tải thêm trang (còn ${remain}/${pdfThumbState.numPages})`);
+  }
+}
+
+let ocrEngine = 'tesseract';
+const WORKERS_AI_ENDPOINT = '/api/ocr-ai'; // adjust if your Pages Function lives at a different route
+
+function setEngine(eng) {
+  ocrEngine = eng;
+  document.getElementById('engTess').classList.toggle('active', eng==='tesseract');
+  document.getElementById('engAi').classList.toggle('active', eng==='workersai');
+}
+
+// Strip common markdown artifacts that vision-LLMs / messy OCR sometimes
+// add around lines (e.g. "**Câu 1:**" instead of "Câu 1:"), which would
+// otherwise fail RE_Q / the option-letter regex since those expect the
+// line to start with the literal text.
+function cleanOcrLine(t) {
+  let s = t.trim();
+  // Strip markdown artifacts
+  s = s.replace(/^(\*{1,3}|_{1,3}|#{1,6}|>|`{1,3}|-\s)\s*/, '');
+  s = s.replace(/(\*{1,3}|_{1,3}|`{1,3})\s*$/, '');
+  s = s.replace(/\*\*/g, '').replace(/_{2}/g, '');
+  s = s.trim();
+  if (!s) return s;
+
+  // Sửa lỗi OCR: ký tự bị nhầm ở vị trí đầu dòng đáp án (đứng trước . hoặc ))
+  //   G. → C.   (lỗi rất phổ biến của Tesseract với chữ C)
+  //   0. → D.   (số 0 bị đọc thành chữ D)
+  s = s.replace(/^G([.)]) /, 'C$1 ');
+  s = s.replace(/^G([.)])$/, 'C$1');
+  s = s.replace(/^0([.)]) /, 'D$1 ');
+  s = s.replace(/^0([.)])$/, 'D$1');
+
+  // Tách đáp án bị dính trên cùng một dòng (Tesseract đọc ngang)
+  // Ví dụ: "A. 2 B3 C4" → "A. 2\nB. 3\nC. 4"
+  // Ví dụ: "A. foo B. bar C. baz" → "A. foo\nB. bar\nC. baz"
+  if (/^[A-Da-d][\.)]/.test(s)) {
+    // Dạng B3 C4 (letter dính vào số, không có dấu chấm)
+    s = s.replace(/ ([B-Eb-e])(\d)/g, (_, l, d) => '\n' + l.toUpperCase() + '. ' + d);
+    // Dạng "B. text" hoặc "B) text" xuất hiện giữa dòng
+    s = s.replace(/ ([B-Eb-e])([.)])([ \t])/g, (_, l, dot, sp) => '\n' + l.toUpperCase() + dot + sp);
+  }
+
+  return s.trim();
+}
+
+// OCR (especially on a phone-screen screenshot of a doc viewer) sees the
+// pixels as laid out, so a single logical sentence that visually wraps
+// onto a second screen-line comes back as TWO separate lines of text.
+// Without this, that second half would look like a stray non-option line
+// and get silently dropped, truncating every wrapped option/question.
+// Heuristic: a line that starts a new "Câu N", a new "A/B/C/D." option,
+// or an explicit answer line is a real new unit — anything else is a
+// continuation of whatever came right before it.
+function rejoinOcrLines(lines) {
+  const startsNewUnit = s => RE_Q.test(s) || /^[A-Ea-e][\.\)]\s*\S/.test(s) || RE_ANS.test(s);
+  const out = [];
+  for (const line of lines) {
+    if (out.length === 0 || startsNewUnit(line)) out.push(line);
+    else out[out.length - 1] += ' ' + line;
+  }
+  return out;
+}
+
+// Lazy full-res render: chỉ gọi đúng lúc cần OCR 1 trang cụ thể, KHÔNG render
+// trước toàn bộ PDF (tránh OOM crash trên thiết bị di động tầm trung khi đề
+// dài 15-20+ trang). Trả về blob full-res, người gọi chịu trách nhiệm dùng
+// xong rồi giải phóng (xem hydrateAndOcrPdfPage bên dưới).
+const SCALE_FULL = 2.0; // 2× để OCR rõ hơn — chỉ áp dụng cho 1 trang tại 1 thời điểm
+async function renderPageFull(pdfDoc, pageNum) {
+  const page = await pdfDoc.getPage(pageNum);
+  const vp = page.getViewport({ scale: SCALE_FULL });
+  const canvas = document.createElement('canvas');
+  canvas.width  = vp.width;
+  canvas.height = vp.height;
+  const ctx = canvas.getContext('2d');
+  await page.render({ canvasContext: ctx, viewport: vp }).promise;
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
+  // Giải phóng canvas ngay — không cần giữ lại sau khi đã có blob
+  canvas.width = 0; canvas.height = 0;
+  return blob;
+}
+
+async function runOcr() {
+  const selected = ocrImages.filter(im => im.selected);
+  if (!selected.length) { alert('Chưa chọn ảnh nào để quét.'); return; }
+
+  const btn = document.getElementById('ocrBtn');
+  const prog = document.getElementById('ocrProgress');
+  btn.disabled = true; btn.style.opacity = 0.6;
+  prog.style.display = 'flex';
+
+  // Lazy hydrate: với các trang đến từ PDF scan (chưa có blob full-res, chỉ
+  // có pdfDoc + pageNum), render full-res NGAY TRƯỚC KHI OCR — không render
+  // sẵn toàn bộ PDF cùng lúc. Theo dõi để giải phóng lại sau khi quét xong,
+  // tránh giữ nhiều ảnh full-res (hàng trăm MB) trong RAM cùng lúc.
+  const hydratedForRelease = [];
+  try {
+    setOcrProgress(prog, 'loader', 'Đang chuẩn bị ảnh độ phân giải cao để quét...');
+    for (let i = 0; i < selected.length; i++) {
+      const im = selected[i];
+      if (!im.blob && im.pdfDoc && im.pageNum) {
+        setOcrProgress(prog, 'loader', `Đang render trang ${im.pageNum} (độ phân giải cao)... (${i+1}/${selected.length})`);
+        im.blob = await renderPageFull(im.pdfDoc, im.pageNum);
+        hydratedForRelease.push(im);
+        await new Promise(r => setTimeout(r, 0)); // nhường UI giữa các trang
+      }
+    }
+
+    let combined;
+    let structuredQs = null; // chỉ có giá trị khi Workers AI trả JSON cấu trúc hợp lệ
+    if (ocrEngine === 'workersai') {
+      const wResult = await ocrWithWorkersAi(selected, prog);
+      combined = wResult.text;
+      structuredQs = wResult.questions;
+    } else {
+      // Tesseract: dùng main thread — Web Worker Blob bị chặn khi mở từ content:// trên Android
+      combined = await ocrWithTesseractMainThread(selected, prog);
+    }
+
+    let ocrQs;
+    if (structuredQs && structuredQs.length) {
+      // Dùng trực tiếp Question objects đã dựng từ JSON — giữ được markType
+      // (bold/underline/strikethrough) mà bước flatten-rồi-parse() cũ sẽ
+      // luôn làm rớt mất (vì runs giả lập từ text thô luôn để u/b/s = false).
+      ocrQs = structuredQs;
+    } else {
+      const cleanedLines = combined.split(/\r?\n/).flatMap(l => {
+        const cleaned = cleanOcrLine(l);
+        return cleaned ? cleaned.split('\n').map(x => x.trim()).filter(Boolean) : [];
+      });
+      const processedLines = rejoinOcrLines(cleanedLines);
+      const ocrParas = processedLines.map(t => ({ text: t, runs: [{text: t, u:false, b:false, s:false}], all_s:false }));
+      const ocrLines = expandParas(ocrParas);
+      const thisSource = ocrEngine === 'workersai' ? 'workersai' : 'tesseract';
+      ocrQs = parse(ocrLines, thisSource);
+    }
+
+    if (!ocrQs.length) {
+      prog.innerHTML = '';
+      const warn = document.createElement('div');
+      warn.className = 'msg-row';
+      warn.innerHTML = ICONS.alertTriangle + '<span>Không tìm thấy câu hỏi nào trong ảnh đã quét (ảnh có thể mờ, nghiêng, hoặc không đúng định dạng "Câu N:"). Text nhận diện được:</span>';
+      prog.appendChild(warn);
+      const raw = document.createElement('div');
+      raw.className = 'ocr-raw-fallback';
+      raw.textContent = combined.trim() ? combined.trim().slice(0, 3000) : '(rỗng — không nhận diện được chữ nào)';
+      prog.appendChild(raw);
+    } else {
+      allQ = allQ.filter(q => q.source !== 'tesseract' && q.source !== 'workersai').concat(ocrQs);
+      render(allQ);
+      setOcrProgress(prog, 'checkCircle', `Đã quét xong — ${ocrQs.length} câu từ ảnh (cần tự kiểm tra & điền đáp án).`);
+    }
+  } catch (e) {
+    setOcrProgress(prog, 'xCircle', 'Lỗi: ' + e.message);
+  } finally {
+    // Giải phóng full-res blob của các trang PDF vừa lazy-render — chỉ giữ
+    // lại thumbnail (url) để hiển thị, không giữ blob nặng trong RAM sau khi
+    // đã quét xong. Nếu người dùng quét lại trang này, sẽ render lại lazy.
+    hydratedForRelease.forEach(im => { im.blob = null; });
+    btn.disabled = false; btn.style.opacity = 1;
+  }
+}
+
+// ── Engine 1: Tesseract.js — main thread (Worker Blob bị chặn trên Android content://) ──
+// Web Worker via Blob URL không hoạt động khi HTML được mở từ content://media/... trên Android
+// (importScripts từ CDN bị Same-Origin block). Dùng main thread thay thế.
+async function ocrWithTesseract(selected, prog) {
+  return ocrWithTesseractMainThread(selected, prog);
+}
+
+// Fallback main-thread (giữ lại phòng trường hợp Worker bị chặn)
+// Dịch status Tesseract sang tiếng Việt
+const TESS_STATUS_VI = {
+  'downloading tesseract.js':     'Đang tải thư viện Tesseract.js...',
+  'loading tesseract core':       'Đang tải Tesseract...',
+  'initializing tesseract':       'Đang khởi động...',
+  'initialized tesseract':        'Khởi động xong',
+  'loading language traineddata': 'Đang tải dữ liệu tiếng Việt...',
+  'loaded language traineddata':  'Đã tải xong ngôn ngữ',
+  'initializing api':             'Đang khởi tạo...',
+  'recognizing text':             'Đang nhận diện chữ...',
+};
+
+function setOcrProgressBar(prog, pct, statusRaw) {
+  prog.style.display = 'flex';
+
+  // Tạo hoặc lấy lại các phần tử cố định
+  let row = prog.querySelector('.msg-row');
+  if (!row) {
+    prog.innerHTML = '';
+    row = document.createElement('div'); row.className = 'msg-row'; prog.appendChild(row);
+    const wrap = document.createElement('div'); wrap.className = 'ocr-pbar-wrap';
+    const fill = document.createElement('div'); fill.className = 'ocr-pbar-fill'; wrap.appendChild(fill);
+    prog.appendChild(wrap);
+    const lbl = document.createElement('div'); lbl.className = 'ocr-pbar-label'; prog.appendChild(lbl);
+  }
+
+  const statusVI = TESS_STATUS_VI[statusRaw] || statusRaw || 'Đang xử lý...';
+  setIconText(row, 'loader', statusVI);
+
+  const fill = prog.querySelector('.ocr-pbar-fill');
+  if (fill) {
+    fill.classList.remove('ocr-pbar-indeterminate');
+    fill.style.width = pct + '%';
+  }
+
+  const lbl = prog.querySelector('.ocr-pbar-label');
+  if (lbl) lbl.textContent = pct > 0 ? `${pct}%` : '';
+}
+
+async function ocrWithTesseractMainThread(selected, prog) {
+  setOcrProgressBar(prog, 0, 'downloading tesseract.js');
+  await loadScriptOnce(LIB_URLS.tesseract, (pct) => {
+    if (pct == null) {
+      // CDN không trả Content-Length nên không tính được % — vẫn hiện
+      // trạng thái "đang tải" để người dùng biết máy không bị treo.
+      setOcrProgress(prog, 'loader', 'Đang tải thư viện Tesseract.js...');
+    } else {
+      setOcrProgressBar(prog, pct, 'downloading tesseract.js');
+    }
+  });
+
+  // Tesseract.js v5 đổi signature thành createWorker(langs, oem, options) —
+  // truyền sai object {logger} vào vị trí "langs" (như bản cũ) khiến thư viện
+  // cố hiểu object đó là tên ngôn ngữ, không bao giờ resolve và logger không
+  // bao giờ được gọi → UI bị treo y nguyên ở dòng "Đang tải thư viện..." dù
+  // file đã tải xong 100%. Phải truyền 'vie' và oem ở đúng vị trí.
+  const worker = await Tesseract.createWorker('vie', 1, {
+    logger: m => {
+      const pct = m.progress != null ? Math.round(m.progress * 100) : 0;
+      setOcrProgressBar(prog, pct, m.status || '');
+    }
+  });
+
+  let combined = '';
+  for (let i = 0; i < selected.length; i++) {
+    // Reset bar cho mỗi ảnh
+    const fill = prog.querySelector('.ocr-pbar-fill');
+    if (fill) fill.style.width = '0%';
+    const lbl = prog.querySelector('.ocr-pbar-label');
+    if (lbl) lbl.textContent = selected.length > 1 ? `Ảnh ${i+1}/${selected.length}` : '';
+
+    // v5 không còn nhận { lang: 'vie' } ở recognize() — ngôn ngữ đã được
+    // cố định khi tạo worker ở trên (đổi ngôn ngữ giữa chừng phải dùng
+    // worker.reinitialize(), không cần ở đây vì luôn chỉ dùng 'vie').
+    const { data } = await worker.recognize(selected[i].blob);
+    combined += (data.text || '') + '\n';
+  }
+  await worker.terminate();
+
+  // Hiện 100% khi xong
+  const fill = prog.querySelector('.ocr-pbar-fill');
+  if (fill) fill.style.width = '100%';
+
+  return combined;
+}
+
+// ── Engine 2: Claude AI (Anthropic API) ─────────────────────────────────────
+// Gửi ảnh dưới dạng base64 lên api.anthropic.com/v1/messages (claude-sonnet-4-6).
+// Không cần server — key lưu local, request chạy thẳng từ trình duyệt.
+// Vision model đọc cả chữ in, chữ nghiêng, bảng, công thức tốt hơn Tesseract.
+const CLAUDE_OCR_SYSTEM = `Bạn là trợ lý số hóa đề thi chuyên nghiệp cho giáo viên Việt Nam.
+Đọc ảnh và trích xuất TẤT CẢ câu hỏi trắc nghiệm.
+Trả về JSON hợp lệ — không có markdown, không có backtick, không có giải thích — theo định dạng:
+[{"q":"Nội dung câu hỏi (bỏ số thứ tự)","A":"...","B":"...","C":"...","D":"...","answer":"A hoặc null"}]
+Nếu không xác định được đáp án đúng: "answer": null.
+Nếu không phát hiện câu hỏi nào: trả về [].
+Nếu trang chia 2 cột: đọc từng cột riêng biệt, KHÔNG đọc ngang.`;
+
+async function blobToBase64(blob) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = () => rej(new Error('Không đọc được ảnh'));
+    r.readAsDataURL(blob);
+  });
+}
+
+async function ocrWithClaude(selected, prog) {
+  const apiKey = (document.getElementById('claudeApiKey')?.value || '').trim();
+  if (!apiKey) throw new Error('Chưa nhập Anthropic API Key. Nhập key vào ô phía trên rồi thử lại.');
+  if (!apiKey.startsWith('sk-ant-')) throw new Error('API Key không hợp lệ (phải bắt đầu bằng sk-ant-...)');
+
+  let combinedQs = [];
+
+  for (let i = 0; i < selected.length; i++) {
+    setOcrProgress(prog, 'loader', `[Claude AI] Đang quét ảnh ${i+1}/${selected.length}...`);
+    const b64 = await blobToBase64(selected[i].blob);
+    const mtype = selected[i].blob.type || 'image/jpeg';
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 4096,
+        system: CLAUDE_OCR_SYSTEM,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mtype, data: b64 } },
+            { type: 'text', text: 'Trích xuất tất cả câu hỏi trắc nghiệm trong ảnh này.' }
+          ]
+        }]
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      const msg = err?.error?.message || res.statusText;
+      if (res.status === 401) throw new Error('API Key sai hoặc hết hạn. Kiểm tra lại key.');
+      if (res.status === 429) throw new Error('Vượt giới hạn request. Chờ vài giây rồi thử lại.');
+      throw new Error(`Claude API lỗi (${res.status}): ${msg}`);
+    }
+
+    const data = await res.json();
+    const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+
+    try {
+      const clean = text.replace(/```json|```/gi, '').trim();
+      const arr = JSON.parse(clean);
+      if (Array.isArray(arr)) combinedQs = combinedQs.concat(arr);
+    } catch {
+      // Fallback: trả text thô để parse bằng cleanOcrLine như Tesseract
+      return text;
+    }
+  }
+
+  // Convert structured JSON → Learnsy text format
+  let out = '';
+  for (const q of combinedQs) {
+    if (!q.q) continue;
+    out += `Câu: ${q.q}\n`;
+    for (const k of ['A','B','C','D','E']) { if (q[k]) out += `${k}. ${q[k]}\n`; }
+    if (q.answer) out += `Answer: ${q.answer}\n`;
+    out += '\n';
+  }
+  return out;
+}
+
+// ── Engine 3: Cloudflare Workers AI vision model ────────────────────────────
+// Yêu cầu Cloudflare Pages Function tại WORKERS_AI_ENDPOINT với AI binding.
+//
+// v4: Thay vì OCR thô + Regex phía client, ta truyền structured system prompt
+// để model Vision LLM (llama-3.2-11b-vision-instruct) trả về JSON cấu trúc
+// câu hỏi luôn. Điều này loại bỏ lỗi đọc lệch cột Tesseract gây ra.
+//
+// Server (functions/api/ocr-ai.js) nên forward thêm trường `prompt` và
+// `system_prompt` xuống Workers AI. Nếu server cũ không hỗ trợ, client sẽ
+// tự động fallback về chế độ text thô.
+const OCR_STRUCTURED_SYSTEM_PROMPT = `Bạn là trợ lý số hóa đề thi chuyên nghiệp.
+Hãy đọc hình ảnh này và trích xuất TẤT CẢ câu hỏi trắc nghiệm.
+Trả về JSON hợp lệ (không có markdown, không có backtick, không có giải thích) theo định dạng:
+[
+  {
+    "q": "Nội dung câu hỏi (không kèm số thứ tự)",
+    "A": "Nội dung đáp án A",
+    "B": "Nội dung đáp án B",
+    "C": "Nội dung đáp án C",
+    "D": "Nội dung đáp án D",
+    "answer": "A",
+    "markType": "bold"
+  }
+]
+QUAN TRỌNG — xác định đáp án đúng bằng dấu hiệu định dạng trực quan (đề thi Việt Nam
+thường đánh dấu đáp án đúng bằng một trong các cách sau, hãy nhìn kỹ từng đáp án):
+- Chữ IN ĐẬM (nét dày hơn các đáp án khác) → markType: "bold"
+- Chữ có GẠCH CHÂN (đường kẻ ngang dưới chữ) → markType: "underline"
+- Chữ vừa đậm vừa gạch chân → markType: "bold+underline"
+- Các đáp án SAI bị GẠCH NGANG QUA GIỮA CHỮ (loại trừ), chỉ còn 1 đáp án không bị
+  gạch → đáp án không bị gạch chính là "answer", markType: "strikethrough"
+Nếu không thấy dấu hiệu định dạng nào nhưng có ghi rõ chữ "Đáp án:" / "Answer:" trong
+ảnh, lấy theo đó và đặt markType: null.
+Nếu không có dấu hiệu nào và không xác định được, đặt "answer": null, "markType": null.
+KHÔNG đoán bừa đáp án nếu không có căn cứ — thà để null còn hơn sai.
+Nếu không phát hiện câu hỏi nào, trả về mảng rỗng [].
+QUAN TRỌNG: Đọc từng CỘT riêng biệt nếu trang chia 2 cột — KHÔNG đọc ngang giữa 2 cột.`;
+
+// Gọi fetch kèm timeout — không có cái này, nếu Workers AI cold-start chậm
+// hoặc server không phản hồi, request treo VÔ THỜI HẠN và người dùng không
+// có cách nào biết là nó đã chết hay vẫn đang chạy.
+async function fetchWithTimeout(url, options, timeoutMs) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: ctrl.signal });
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      throw new Error(`Server không phản hồi sau ${Math.round(timeoutMs/1000)}s. Có thể Workers AI đang cold-start lâu hoặc functions/api/ocr-ai.js chưa deploy đúng — thử lại lần 2 thường nhanh hơn.`);
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+const WORKERS_AI_TIMEOUT_MS = 60000; // model vision lần đầu có thể cold-start khá lâu
+
+// Map markType mà model Workers AI báo lại (dấu hiệu trực quan nó "nhìn" thấy)
+// sang key trong BADGE — luôn dùng tiền tố ai- để phân biệt với badge đọc
+// trực tiếp từ XML docx (đáng tin hơn nhiều so với suy luận từ ảnh).
+function markTypeToHow(markType, hasAnswer) {
+  switch (markType) {
+    case 'bold':            return 'ai-bold';
+    case 'underline':       return 'ai-underline';
+    case 'bold+underline':  return 'ai-bold+underline';
+    case 'strikethrough':   return 'ai-exclude';
+    default:                return hasAnswer ? 'text' : null;
+  }
+}
+
+// Chuyển 1 câu hỏi JSON từ Workers AI thành đúng shape mà parse() vẫn trả ra
+// cho docx/Tesseract, để render()/buildCard() xử lý đồng nhất không cần biết
+// nguồn gốc khác nhau.
+function workersAiQuestionToObj(q) {
+  if (!q || !q.q) return null;
+  const opts = [];
+  for (const key of ['A','B','C','D','E']) {
+    if (q[key]) opts.push({ key, text: String(q[key]).trim(), u:false, b:false, s:false });
+  }
+  if (opts.length < 2) return null;
+  const ans = q.answer ? String(q.answer).trim().toUpperCase() : null;
+  return {
+    text: String(q.q).trim(),
+    opts,
+    ans,
+    how: ans ? markTypeToHow(q.markType, true) : null,
+    source: 'workersai',
+  };
+}
+
+async function ocrWithWorkersAi(selected, prog) {
+  let combinedText = '';
+  let structuredQs = [];
+
+  for (let i = 0; i < selected.length; i++) {
+    // Đếm giây trôi qua mỗi giây — không có việc này, màn hình đứng yên ở
+    // "Đang quét ảnh 1/1..." suốt thời gian chờ server và trông giống treo,
+    // dù thực ra vẫn đang chạy chờ Workers AI trả kết quả.
+    const startedAt = Date.now();
+    const label = `[Workers AI] Đang quét ảnh ${i+1}/${selected.length}...`;
+    setOcrProgress(prog, 'loader', `${label} (0s)`);
+    const tickId = setInterval(() => {
+      const s = Math.round((Date.now() - startedAt) / 1000);
+      setOcrProgress(prog, 'loader', `${label} (${s}s)`);
+    }, 1000);
+
+    const fd = new FormData();
+    fd.append('image', selected[i].blob, selected[i].name || `image${i}.png`);
+    // Gửi kèm system prompt để server forward xuống Vision LLM
+    fd.append('system_prompt', OCR_STRUCTURED_SYSTEM_PROMPT);
+    fd.append('mode', 'structured'); // flag để server biết dùng structured mode
+
+    let res;
+    try {
+      res = await fetchWithTimeout(WORKERS_AI_ENDPOINT, { method: 'POST', body: fd }, WORKERS_AI_TIMEOUT_MS);
+    } finally {
+      clearInterval(tickId);
+    }
+    if (!res.ok) {
+      const errText = await res.text().catch(()=>res.statusText);
+      throw new Error(`Server trả lỗi (${res.status}): ${errText}. Đã thêm binding "AI" và deploy functions/api/ocr-ai.js chưa?`);
+    }
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    // Nếu server trả JSON cấu trúc (mảng câu hỏi) — xây trực tiếp Question
+    // objects (giữ nguyên markType→how) THAY VÌ chuyển về text rồi parse lại,
+    // vì vòng text→parse cũ làm rớt mất hoàn toàn thông tin bold/underline/
+    // strikethrough mà model đã nhận diện được.
+    let arr = null;
+    if (data.questions && Array.isArray(data.questions)) {
+      arr = data.questions;
+    } else if (data.structured_raw) {
+      try { arr = JSON.parse(data.structured_raw); } catch { arr = null; }
+      if (!Array.isArray(arr)) {
+        combinedText += (data.structured_raw || '') + '\n';
+        arr = null;
+      }
+    }
+
+    if (arr) {
+      for (const q of arr) {
+        const obj = workersAiQuestionToObj(q);
+        if (!obj) continue;
+        structuredQs.push(obj);
+        // Vẫn dựng text thô song song — chỉ dùng để hiển thị debug/fallback
+        // khi không câu nào hợp lệ, không dùng để parse lại.
+        combinedText += `Câu: ${obj.text}\n`;
+        for (const o of obj.opts) combinedText += `${o.key}. ${o.text}\n`;
+        if (obj.ans) combinedText += `Answer: ${obj.ans}\n`;
+        combinedText += '\n';
+      }
+    } else if (!data.questions && !data.structured_raw) {
+      // Fallback: server cũ chỉ trả data.text — dùng như cũ, không có cấu trúc
+      combinedText += (data.text || '') + '\n';
+    }
+  }
+  return { text: combinedText, questions: structuredQs };
+}
+
+function toLearnsyText(qs) {
+  return qs.map((q,i) => {
+    const opts = q.opts.map(o=>`${o.key}. ${o.text}`).join('\n');
+    const ans  = q.ans ? `Answer: ${q.ans}` : '';
+    return [`${i+1}. ${q.text}`, opts, ans].filter(Boolean).join('\n');
+  }).join('\n\n');
+}
+
+const BADGE = {
+  'underline':     ['badge-u','Gạch chân'],
+  'bold':          ['badge-b','Bold'],
+  'bold+underline':['badge-u','Bold+GC'],
+  'exclude':       ['badge-s','Loại trừ'],
+  'text':          ['badge-t','Answer:'],
+  'colored':       ['badge-b','Màu chữ'],
+  'highlighted':   ['badge-t','Highlight'],
+  'manual':        ['badge-b','Thủ công','hand'],
+  // Cùng kiểu hiển thị nhưng gắn tiền tố "AI:" — đây là model vision TỰ SUY
+  // LUẬN từ ảnh (không đáng tin bằng đọc trực tiếp thuộc tính XML của docx),
+  // nên không dùng chung key với badge ở trên để người dùng biết cần kiểm
+  // tra lại kỹ hơn.
+  'ai-underline':      ['badge-u','AI: Gạch chân'],
+  'ai-bold':           ['badge-b','AI: Bold'],
+  'ai-bold+underline': ['badge-u','AI: Bold+GC'],
+  'ai-exclude':        ['badge-s','AI: Loại trừ'],
+};
+
+// ── syncFromAllQ: allQ là Single Source of Truth ──────────────────────────
+// Mọi thay đổi từ Preview (sửa text, chọn đáp án) đều ghi thẳng vào allQ,
+// rồi gọi hàm này để đồng bộ lại outputBox + stats + localStorage.
+// Không dùng split('\n\n') trên chuỗi thô — tránh lệch chỉ số khi câu hỏi
+// có dòng trống bên trong.
+function syncFromAllQ() {
+  const box = document.getElementById('outputBox');
+  if (box) box.textContent = toLearnsyText(allQ);
+  _updateStats();
+  saveToLocalStorage();
+}
+
+// Alias để không phá các call-site cũ bên trong buildCard / render
+function patchOutputLine(_idx) { syncFromAllQ(); }
+function syncOutputBox()       { syncFromAllQ(); }
+
+function _updateStats() {
+  const noAns = allQ.filter(q=>!q.ans).length;
+  document.getElementById('sTOTAL').textContent = allQ.length;
+  document.getElementById('sOK').textContent    = allQ.length - noAns;
+  document.getElementById('sNA').textContent    = noAns;
+}
+
+// ── buildCard: builds a single preview card DOM node (used by render + replaceWith) ──
+function buildCard(q, idx) {
+  const card = el('div','q-card');
+  const meta = el('div','q-meta');
+  const num  = el('div','q-num'); num.textContent = `Câu ${idx+1}`;
+  meta.appendChild(num);
+  if (q.source === 'tesseract') {
+    const ob = el('span','detect-badge badge-ocr'); ob.innerHTML = ICONS.camera + ' Tesseract';
+    meta.appendChild(ob);
+  } else if (q.source === 'workersai') {
+    const ob = el('span','detect-badge badge-ai'); ob.innerHTML = ICONS.bot + ' Workers AI';
+    meta.appendChild(ob);
+  } else if (q.source === 'pdf') {
+    const ob = el('span','detect-badge badge-pdf'); ob.innerHTML = ICONS.pdf + ' PDF';
+    meta.appendChild(ob);
+  }
+  if (q.how && BADGE[q.how]) {
+    const [cls,lbl,iconName] = BADGE[q.how];
+    const b = el('span',`detect-badge ${cls}`); b.innerHTML = (iconName ? ICONS[iconName] + ' ' : '') + lbl;
+    meta.appendChild(b);
+  } else if (!q.ans) {
+    const b = el('span','detect-badge badge-n'); b.textContent = 'Chưa xác định';
+    meta.appendChild(b);
+  }
+  card.appendChild(meta);
+
+  // Hint bar
+  const hint = el('div','edit-hint'); hint.innerHTML = ICONS.edit + ' Click vào nội dung để sửa — click vào chữ cái A/B/C/D để chọn đáp án đúng'; card.appendChild(hint);
+
+  // q-text — contenteditable
+  const qt = el('div','q-text');
+  qt.setAttribute('contenteditable','true');
+  qt.setAttribute('spellcheck','false');
+  qt.textContent = q.text;
+  qt.addEventListener('blur', () => { q.text = qt.textContent.trim(); patchOutputLine(idx); });
+  card.appendChild(qt);
+
+  const opts = el('div','opts');
+  q.opts.forEach(o => {
+    const d = el('div','opt' + (q.ans===o.key?' correct':'') + (o.s?' struck':''));
+
+    const badge = el('span','opt-key-badge' + (q.ans === o.key ? ' is-selected' : ''));
+    badge.textContent = o.key;
+    badge.title = 'Chạm để chọn làm đáp án đúng';
+    badge.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      q.ans = (q.ans === o.key) ? null : o.key;
+      q.how = q.ans ? 'manual' : null;
+      const newCard = buildCard(q, idx);
+      card.replaceWith(newCard);
+      patchOutputLine(idx);
+    });
+
+    const textSpan = document.createElement('span');
+    textSpan.className = 'opt-text';
+    textSpan.setAttribute('contenteditable','true');
+    textSpan.setAttribute('spellcheck','false');
+    textSpan.textContent = `${o.key}. ${o.text}`;
+    textSpan.addEventListener('blur', () => {
+      o.text = textSpan.textContent.trim().replace(/^[A-Ea-e][\.\)]\s*/, '');
+      patchOutputLine(idx);
+    });
+    textSpan.addEventListener('click', ev => ev.stopPropagation());
+    d.appendChild(badge); d.appendChild(textSpan);
+    opts.appendChild(d);
+  });
+  const pickHint = el('div','pick-ans-hint');
+  pickHint.innerHTML = q.ans
+    ? `Đáp án: ${q.ans} — click vào chữ cái để thay đổi`
+    : ICONS.alertTriangle + ' Chưa xác định — click vào A/B/C/D để chọn';
+  opts.appendChild(pickHint);
+  card.appendChild(opts);
+  return card;
+}
+
+function render(qs) {
+  const noAns = qs.filter(q=>!q.ans).length;
+  document.getElementById('sTOTAL').textContent = qs.length;
+  document.getElementById('sOK').textContent    = qs.length - noAns;
+  document.getElementById('sNA').textContent    = noAns;
+  showEl('stats');
+
+  if (noAns > 0) {
+    const wb = document.getElementById('warnBox');
+    wb.style.display = 'flex';
+    const noAnsImg = qs.filter(q=>!q.ans && (q.source==='tesseract'||q.source==='workersai')).length;
+    let msg = `${noAns} câu chưa phát hiện được đáp án (file gốc có thể thiếu hoặc dùng màu chữ/highlight).`;
+    if (noAnsImg > 0) msg += ` Trong đó ${noAnsImg} câu lấy từ ảnh — không có thông tin tô đậm/gạch chân nên cần bạn tự điền đáp án.`;
+    wb.innerHTML = ICONS.alertTriangle + `<span>${msg}</span>`;
+  }
+
+  document.getElementById('outputBox').textContent = toLearnsyText(qs);
+  showEl('outputBox'); showEl('outLabel'); showEl('tabRow');
+  document.getElementById('actions').style.display = 'flex';
+  document.getElementById('draftBanner')?.remove(); // ẩn banner sau khi load file mới
+  saveToLocalStorage(); // lưu ngay sau khi parse xong
+
+  // Build preview using buildCard
+  const c = document.getElementById('qPreview');
+  c.innerHTML = '';
+  qs.forEach((q,idx) => {
+    c.appendChild(buildCard(q, idx));
+  });
+  showEl('qPreview');
+}
+
+function switchTab(tab) {
+  document.getElementById('tabText').classList.toggle('active', tab==='text');
+  document.getElementById('tabPreview').classList.toggle('active', tab==='preview');
+  document.getElementById('outputBox').style.display  = tab==='text'?'block':'none';
+  document.getElementById('outLabel').style.display   = tab==='text'?'block':'none';
+  document.getElementById('qPreview').style.display   = tab==='preview'?'flex':'none';
+}
+
+function copyOutput() {
+  navigator.clipboard.writeText(document.getElementById('outputBox').textContent).then(() => {
+    const btn = document.getElementById('copyBtn');
+    setIconText(btn, 'checkCircle', 'Đã copy!');
+    setTimeout(() => setIconText(btn, 'clipboard', 'Copy tất cả'), 2000);
+  });
+}
+
+function resetAll() {
+  allQ = [];
+  currentZip = null;
+  currentPdfDoc = null; // bỏ tham chiếu PDF cũ — cho phép GC giải phóng
+  pdfThumbState = null;
+  ocrImages.forEach(im => im.url && URL.revokeObjectURL(im.url));
+  ocrImages = [];
+  ['stats','warnBox','outputBox','actions','qPreview','tabRow','outLabel','progress','ocrSection'].forEach(hideEl);
+  document.getElementById('fileInput').value = '';
+  clearLocalStorage(); // xoá bản nháp khi người dùng chủ động reset
+}
+
+function el(tag,cls) { const e=document.createElement(tag); e.className=cls; return e; }
+// showEl restores the element's intended display value. The map below lists
+// every element that needs 'flex' (all others default to 'block').
+const FLEX_ELS = new Set(['stats','warnBox','warn-box','actions','ocr-progress','tab-row','tabRow','qPreview','q-preview']);
+function showEl(id) {
+  const e = document.getElementById(id);
+  if (!e) return;
+  const cls = [...e.classList];
+  const needsFlex = FLEX_ELS.has(id) || cls.some(c => FLEX_ELS.has(c));
+  e.style.display = needsFlex ? 'flex' : 'block';
+}
+function hideEl(id) { const e = document.getElementById(id); if (e) e.style.display = 'none'; }
+</script>
+</body>
+</html>
