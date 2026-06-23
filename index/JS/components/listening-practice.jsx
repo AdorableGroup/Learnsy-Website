@@ -1,57 +1,161 @@
 import React from 'react';
 
 /* ══════════════════════════════════════════════════════════════════
-   LISTENING-PRACTICE.JSX
-   Trang luyện tập Listening độc lập cho học sinh — KHÔNG thuộc bài học nào.
-   Đọc dữ liệu trực tiếp từ bảng Supabase: listening_items
-   (cùng cấu trúc với bên admin: text + wordBox + answers + statements)
-
-   Exports (window globals):
-     window.ListeningPractice — Component: Trang luyện Listening
-
-   Phụ thuộc:
-     - React (window.React)
-     - window.supa (Supabase client)
+   LISTENING-PRACTICE.JSX - v2.3 (fix + improvement)
+   - Sửa rò rỉ timeout trong handleRateChange
+   - Tối ưu splitPassage dùng split capturing group, loại bỏ infinite loop
+   - Thêm trạng thái pulse khi phát lại
+   [v2.2]
+   - splitPassage: trim chunk trước khi test regex → không bỏ sót blank có khoảng trắng thừa
+   - Fallback blank: dùng capturing group giữ dấu câu gốc (.!?), sửa câu bị dính nhau ở nhánh else
+   - useEffect: ép kiểu Array.isArray() an toàn cho answers/wordBox/statements
+   - isBad: hiển thị đỏ + tooltip khi ô trống (val === '')
+   - speak: regex ▁{3,} trong TTS plain text
+   [v2.3]
+   - Fix: tooltip z-index, aria-label cho inputs, shimmer dùng chung
+   - Fix: chặn double‑speak khi bấm play liên tục nhờ speakPendingRef
+   - Tối ưu key cho passage parts
 ══════════════════════════════════════════════════════════════════ */
+
 (function () {
   'use strict';
   try {
-    const { useState, useEffect, useMemo } = React;
+    const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
     const stripHTML = s => (s || '').replace(/<[^>]*>/g, '');
     const norm = s => (s || '').trim().toLowerCase();
 
+    /* ── Helper: tách đoạn văn – dùng split với capturing group ── */
+    function splitPassage(text, blankCount) {
+      const raw = stripHTML(text);
+      // Dùng split để tách và giữ lại các delimiter (___ hoặc ▁▁▁)
+      const parts = raw.split(/(_{3,}|▁{3,})/);
+      const result = [];
+      let blankIndex = 0;
+      for (let i = 0; i < parts.length; i++) {
+        const chunk = parts[i];
+        if (!chunk) continue;
+        const trimmed = chunk.trim();
+        // Nếu chunk khớp với blank pattern (sau khi trim khoảng trắng thừa)
+        if (/^_{3,}$/.test(trimmed) || /^▁{3,}$/.test(trimmed)) {
+          if (blankIndex < blankCount) {
+            result.push({ type: 'blank', index: blankIndex++ });
+          } else {
+            result.push({ type: 'text', content: chunk });
+          }
+        } else {
+          result.push({ type: 'text', content: chunk });
+        }
+      }
+      if (blankIndex === 0 && blankCount > 0) {
+        const sentParts = raw.split(/([.!?]\s+)/);
+        const newResult = [];
+        let cnt = 0;
+        for (let i = 0; i < sentParts.length; i++) {
+          const chunk = sentParts[i];
+          if (!chunk) continue;
+          if (/^[.!?]\s+$/.test(chunk)) {
+            newResult.push({ type: 'text', content: chunk });
+            continue;
+          }
+          if (cnt < blankCount) {
+            const words = chunk.trim().split(' ').filter(Boolean);
+            if (words.length > 4) {
+              const mid = Math.floor(words.length / 2);
+              newResult.push({ type: 'text', content: words.slice(0, mid).join(' ') + ' ' });
+              newResult.push({ type: 'blank', index: cnt++ });
+              newResult.push({ type: 'text', content: ' ' + words.slice(mid).join(' ') });
+            } else {
+              newResult.push({ type: 'text', content: chunk + ' ' });
+              newResult.push({ type: 'blank', index: cnt++ });
+            }
+          } else {
+            newResult.push({ type: 'text', content: chunk });
+          }
+        }
+        return newResult.filter(p => p.content !== undefined || p.type === 'blank');
+      }
+      return result;
+    }
+
+    /* ── Skeleton Loading (dùng chung keyframes) ── */
+    function SkeletonCard({ dark }) {
+      const bg = dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
+      const shimmer = dark
+        ? 'linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%)'
+        : 'linear-gradient(90deg, rgba(0,0,0,0.04) 25%, rgba(0,0,0,0.07) 50%, rgba(0,0,0,0.04) 75%)';
+      return (
+        <div style={{
+          padding: '14px 16px',
+          borderRadius: 18,
+          background: bg,
+          border: `1.5px solid ${dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
+          position: 'relative',
+          overflow: 'hidden',
+          height: 72,
+        }}>
+          <div
+            className="skeleton-shimmer"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: shimmer,
+              backgroundSize: '200% 100%',
+            }}
+          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 30, height: 30, borderRadius: '50%', background: bg, flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ height: 14, width: '75%', borderRadius: 6, background: bg }} />
+              <div style={{ height: 12, width: '45%', borderRadius: 6, background: bg, marginTop: 8 }} />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ── Component chính ── */
     function ListeningPractice({ dark, onBack }) {
       const [items, setItems] = useState([]);
       const [loading, setLoading] = useState(true);
       const [loadError, setLoadError] = useState(false);
 
-      const [selected, setSelected] = useState(null); // item đang luyện tập
-      const [blanks, setBlanks] = useState([]);        // câu trả lời điền từ
-      const [stmtSel, setStmtSel] = useState([]);      // lựa chọn True/False/NM
+      const [selected, setSelected] = useState(null);
+      const [blanks, setBlanks] = useState([]);
+      const [stmtSel, setStmtSel] = useState([]);
       const [submitted, setSubmitted] = useState(false);
 
+      const [isPlaying, setIsPlaying] = useState(false);
+      const [speechRate, setSpeechRate] = useState(1.0);
+      const [isRestarting, setIsRestarting] = useState(false);
+
+      const utteranceRef = useRef(null);
+      const synthRef = useRef(null);
+      const timerRef = useRef(null);
+      const speakPendingRef = useRef(false); // tránh double‑speak
+
+      const inputRefs = useRef([]);
+      const inputRefCallbacks = useRef({});
+
+      // Khởi tạo tham chiếu Web Speech API trong useEffect riêng — tránh
+      // đụng vào `window` ngay trong thân render.
       useEffect(() => {
-        const supa = window.supa;
-        if (!supa) {
-          setLoading(false);
-          setLoadError(true);
-          return;
+        synthRef.current = window.speechSynthesis || null;
+      }, []);
+
+      // Callback ref ổn định cho từng input theo index. Tránh anti-pattern
+      // `ref={el => ...}` (arrow function inline bị tạo lại mỗi lần render,
+      // khiến React gọi ref cũ với null rồi gọi ref mới với node ở mỗi update).
+      const getInputRef = useCallback((bi) => {
+        let cb = inputRefCallbacks.current[bi];
+        if (!cb) {
+          cb = (el) => {
+            if (el) inputRefs.current[bi] = el;
+            else delete inputRefs.current[bi];
+          };
+          inputRefCallbacks.current[bi] = cb;
         }
-        supa.from('listening_items').select('*').order('created_at').then(({ data, error }) => {
-          if (error) {
-            console.error('[ListeningPractice] load error:', error);
-            setLoadError(true);
-          } else {
-            setItems((data || []).map(r => ({
-              id: r.id,
-              text: r.text || '',
-              wordBox: r.word_box || [],
-              answers: r.answers || [],              statements: r.statements || []
-            })));
-          }
-          setLoading(false);
-        });
+        return cb;
       }, []);
 
       const LC = useMemo(() => ({
@@ -71,32 +175,158 @@ import React from 'react';
         cardShadow: dark ? '0 2px 16px rgba(0,0,0,0.35)' : '0 2px 16px rgba(168,85,247,0.08)',
       }), [dark]);
 
-      const openItem = (it) => {
+      // Load dữ liệu
+      useEffect(() => {
+        const supa = window.supa;
+        if (!supa) {
+          setLoading(false);
+          setLoadError(true);
+          return;
+        }
+        supa.from('listening_items').select('*').order('created_at').then(({ data, error }) => {
+          if (error) {
+            console.error('[ListeningPractice] load error:', error);
+            setLoadError(true);
+          } else {
+            setItems((data || []).map(r => ({
+              id: r.id,
+              text: r.text || '',
+              wordBox: Array.isArray(r.word_box) ? r.word_box : [],
+              answers: Array.isArray(r.answers) ? r.answers : [],
+              statements: Array.isArray(r.statements) ? r.statements : [],
+            })));
+          }
+          setLoading(false);
+        });
+      }, []);
+
+      // Mở bài
+      const openItem = useCallback((it) => {
+        if (synthRef.current) {
+          synthRef.current.cancel();
+          setIsPlaying(false);
+        }
+        if (timerRef.current) {
+          clearTimeout(timerRef.current);
+          timerRef.current = null;
+        }
+        speakPendingRef.current = false;
+        setIsRestarting(false);
         setSelected(it);
         setBlanks(it.answers.map(() => ''));
         setStmtSel(it.statements.map(() => null));
         setSubmitted(false);
-      };
+        inputRefs.current = [];
+      }, []);
 
-      const backToList = () => {
-        setSelected(null);
-        setSubmitted(false);
-      };
+      // ── Audio Controls ──
+      // Handler sự kiện của utterance khai báo ổn định bằng useCallback
+      // (deps rỗng) — tránh tạo closure mới mỗi lần gọi speak().
+      const handleSpeechStart = useCallback(() => {
+        setIsPlaying(true);
+        setIsRestarting(false);
+        speakPendingRef.current = false;
+      }, []);
 
-      const speak = (raw) => {
+      const handleSpeechEnd = useCallback(() => {
+        setIsPlaying(false);
+        setIsRestarting(false);
+        speakPendingRef.current = false;
+      }, []);
+
+      const handleSpeechError = useCallback(() => {
+        setIsPlaying(false);
+        setIsRestarting(false);
+        speakPendingRef.current = false;
+      }, []);
+
+      const speak = useCallback((raw, rate = speechRate) => {
         if (!raw || !raw.trim()) return;
         if (!window.speechSynthesis) return;
         try {
           window.speechSynthesis.cancel();
-          const plain = stripHTML(raw).replace(/_{3,}/g, ' blank ').replace(/\s+/g, ' ').trim();
+          const plain = stripHTML(raw).replace(/_{3,}|▁{3,}/g, ' blank ').replace(/\s+/g, ' ').trim();
           const u = new SpeechSynthesisUtterance(plain);
           u.lang = 'en-US';
+          u.rate = rate;
+          utteranceRef.current = u;
+          speakPendingRef.current = true; // đánh dấu đang chờ phát
+          u.onstart = handleSpeechStart;
+          u.onend = handleSpeechEnd;
+          u.onerror = handleSpeechError;
           window.speechSynthesis.speak(u);
-        } catch (e) { }
-      };
+        } catch (e) {
+          setIsPlaying(false);
+          setIsRestarting(false);
+          speakPendingRef.current = false;
+        }
+      }, [speechRate, handleSpeechStart, handleSpeechEnd, handleSpeechError]);
 
+      const togglePlayPause = useCallback(() => {
+        const synth = synthRef.current;
+        if (!synth) return;
+        if (speakPendingRef.current) return; // tránh gọi speak thêm lần nữa
+        if (synth.speaking && !synth.paused) {
+          synth.pause();
+          setIsPlaying(false);
+        } else if (synth.paused) {
+          synth.resume();
+          setIsPlaying(true);
+        } else {
+          if (selected) speak(selected.text);
+        }
+      }, [selected, speak]);
+
+      const handleRateChange = useCallback((e) => {
+        const val = parseFloat(e.target.value);
+        setSpeechRate(val);
+        if (timerRef.current) {
+          clearTimeout(timerRef.current);
+          timerRef.current = null;
+        }
+        if (synthRef.current && (synthRef.current.speaking || synthRef.current.paused)) {
+          synthRef.current.cancel();
+          setIsPlaying(false);
+          if (selected) {
+            setIsRestarting(true);
+            timerRef.current = setTimeout(() => {
+              speak(selected.text, val);
+              timerRef.current = null;
+            }, 50);
+          }
+        }
+      }, [selected, speak]);
+
+      const handleRestart = useCallback(() => {
+        if (selected) {
+          if (timerRef.current) {
+            clearTimeout(timerRef.current);
+            timerRef.current = null;
+          }
+          if (synthRef.current) {
+            synthRef.current.cancel();
+          }
+          setIsPlaying(false);
+          setIsRestarting(true);
+          speak(selected.text, speechRate);
+        }
+      }, [selected, speak, speechRate]);
+
+      useEffect(() => {
+        return () => {
+          if (synthRef.current) synthRef.current.cancel();
+          if (timerRef.current) {
+            clearTimeout(timerRef.current);
+            timerRef.current = null;
+          }
+          speakPendingRef.current = false;
+        };
+      }, []);
+
+      // ── Handlers ──
       const setBlank = (i, v) => setBlanks(p => p.map((b, idx) => idx === i ? v : b));
       const setStmt = (i, v) => setStmtSel(p => p.map((s, idx) => idx === i ? v : s));
+
       const score = useMemo(() => {
         if (!selected) return { correct: 0, total: 0 };
         let correct = 0, total = 0;
@@ -114,25 +344,124 @@ import React from 'react';
       const ANS_LABEL = { 'True': 'Đúng', 'False': 'Sai', 'Not Mentioned': 'NM' };
       const ANS_COLOR = { 'True': '#10B981', 'False': '#EF4444', 'Not Mentioned': '#818CF8' };
 
-      /* ══════════ DANH SÁCH ══════════ */
+      // ── Render Passage với Inline Inputs ──
+      const renderPassage = useCallback(() => {
+        if (!selected) return null;
+        const parts = splitPassage(selected.text, selected.answers.length);
+        const blankCount = selected.answers.length;
+
+        return parts.map((part, idx) => {
+          if (part.type === 'text') {
+            return <span key={`text-${idx}`} style={{ color: LC.text2, lineHeight: 1.75 }}>{part.content}</span>;
+          }
+          if (part.type === 'blank') {
+            const bi = part.index;
+            if (bi >= blankCount) return <span key={`blank-over-${idx}`} style={{ color: LC.textMid }}>___</span>;
+            const val = blanks[bi] || '';
+            const isOk = submitted && norm(val) === norm(selected.answers[bi]);
+            const isBad = submitted && !isOk;
+
+            return (
+              <span key={`blank-${bi}-${idx}`} style={{ display: 'inline-block', position: 'relative', margin: '0 2px' }}>
+                <input
+                  ref={getInputRef(bi)}
+                  value={val}
+                  disabled={submitted}
+                  onChange={e => setBlank(bi, e.target.value)}
+                  onFocus={e => e.target.select()}
+                  placeholder="..."
+                  aria-label={`Blank ${bi + 1}`}
+                  style={{
+                    width: Math.max(60, (selected.answers[bi]?.length || 4) * 12 + 20),
+                    padding: '4px 8px',
+                    borderRadius: 8,
+                    fontSize: 13.5,
+                    fontWeight: 700,
+                    fontFamily: 'inherit',
+                    color: isOk ? '#10B981' : isBad ? '#EF4444' : LC.inputColor,
+                    background: isOk ? 'rgba(16,185,129,0.10)' : isBad ? 'rgba(239,68,68,0.08)' : LC.inputBg,
+                    border: '1.5px solid ' + (isOk ? '#10B981' : isBad ? '#EF4444' : LC.inputBorder),
+                    outline: 'none',
+                    textAlign: 'center',
+                    transition: 'border-color 0.15s, background 0.15s, transform 0.1s',
+                    transform: 'scale(1)',
+                  }}
+                  className="inline-blank"
+                />
+                {submitted && isBad && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    fontSize: 9,
+                    fontWeight: 800,
+                    color: '#FCA5A5',
+                    whiteSpace: 'nowrap',
+                    background: dark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.95)',
+                    padding: '1px 6px',
+                    borderRadius: 4,
+                    marginTop: 1,
+                    pointerEvents: 'none',
+                    zIndex: 10, // đảm bảo hiển thị trên các phần tử khác
+                  }}>
+                    {selected.answers[bi]}
+                  </span>
+                )}
+              </span>
+            );
+          }
+          return null;
+        });
+      }, [selected, blanks, submitted, LC, dark]);
+
+      /* ════════════════════════════════════════
+         DANH SÁCH
+         ════════════════════════════════════════ */
       if (!selected) {
         return (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', position: 'relative' }}>
+            {/* Shimmer animation dùng chung */}
+            <style>{`
+              .skeleton-shimmer {
+                animation: shimmer 1.8s infinite;
+              }
+              @keyframes shimmer {
+                0% { background-position: -200% 0; }
+                100% { background-position: 200% 0; }
+              }
+            `}</style>
+            {/* Header */}
             <div style={{
-              padding: '11px 15px 10px', background: LC.surfaceQ,
+              padding: '11px 15px 10px',
+              background: LC.surfaceQ,
               borderBottom: `1px solid ${LC.border}`,
-              position: 'sticky', top: 0, zIndex: 50, backdropFilter: 'blur(20px)'
+              position: 'sticky',
+              top: 0,
+              zIndex: 50,
+              backdropFilter: 'blur(20px)',
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 {onBack ? (
                   <button onClick={onBack}
                     style={{
-                      padding: '6px 14px', borderRadius: 999,
+                      padding: '6px 14px',
+                      borderRadius: 999,
                       border: `1.5px solid ${LC.navBtnBorder}`,
-                      background: LC.navBtn, color: LC.navBtnText,
-                      fontSize: 12, fontWeight: 800, cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', gap: 4
-                    }}>
+                      background: LC.navBtn,
+                      color: LC.navBtnText,
+                      fontSize: 12,
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      transition: 'transform 0.1s',
+                    }}
+                    onMouseDown={e => e.currentTarget.style.transform = 'scale(0.96)'}
+                    onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+                    onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                  >
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="15 18 9 12 15 6" />
                     </svg>
@@ -144,93 +473,167 @@ import React from 'react';
               </div>
             </div>
 
-            <div style={{ flex: 1, padding: '16px 14px 100px', display: 'flex', flexDirection: 'column', gap: 10 }} className="fade-up">
-              {loadError && (                <div style={{
-                  padding: '12px 14px', borderRadius: 14,
+            {/* Nội dung danh sách */}
+            <div style={{ flex: 1, padding: '16px 14px 100px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {loadError && (
+                <div style={{
+                  padding: '12px 14px',
+                  borderRadius: 14,
                   background: 'rgba(239,68,68,0.08)',
                   border: '1.5px solid rgba(239,68,68,0.25)',
-                  color: '#EF4444', fontSize: 12.5, fontWeight: 700
+                  color: '#EF4444',
+                  fontSize: 12.5,
+                  fontWeight: 700,
                 }}>
                   Không tải được danh sách Listening. Thử lại sau nhé!
                 </div>
               )}
+
               {loading ? (
-                <div style={{ textAlign: 'center', padding: '40px 10px', color: LC.textMid, fontSize: 13, fontWeight: 700 }}>
-                  Đang tải...
-                </div>
+                <>
+                  <SkeletonCard dark={dark} />
+                  <SkeletonCard dark={dark} />
+                  <SkeletonCard dark={dark} />
+                  <SkeletonCard dark={dark} />
+                </>
               ) : items.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '40px 10px', color: LC.textMid, fontSize: 13, fontWeight: 700 }}>
                   Chưa có bài Listening nào. Quay lại sau nhé! 🎧
                 </div>
-              ) : items.map((it, idx) => (
-                <button key={it.id} onClick={() => openItem(it)}
-                  style={{
-                    textAlign: 'left', padding: '14px 16px', borderRadius: 18,
-                    border: `1.5px solid ${LC.borderQ}`,
-                    background: LC.surfaceQ, boxShadow: LC.cardShadow, cursor: 'pointer'
-                  }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                    <span style={{
-                      width: 30, height: 30, borderRadius: '50%',
-                      background: 'rgba(176,124,240,0.18)', color: '#B07CF0',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 12, fontWeight: 900, flexShrink: 0
-                    }}>{idx + 1}</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{
-                        fontSize: 13.5, fontWeight: 700, color: LC.text, lineHeight: 1.55,
-                        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
-                      }}>
-                        {stripHTML(it.text)}
+              ) : (
+                items.map((it, idx) => (
+                  <button key={it.id} onClick={() => openItem(it)}
+                    style={{
+                      textAlign: 'left',
+                      padding: '14px 16px',
+                      borderRadius: 18,
+                      border: `1.5px solid ${LC.borderQ}`,
+                      background: LC.surfaceQ,
+                      boxShadow: LC.cardShadow,
+                      cursor: 'pointer',
+                      transition: 'transform 0.12s, box-shadow 0.2s',
+                    }}
+                    onMouseDown={e => e.currentTarget.style.transform = 'scale(0.98)'}
+                    onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+                    onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                      <span style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: '50%',
+                        background: 'rgba(176,124,240,0.18)',
+                        color: '#B07CF0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 12,
+                        fontWeight: 900,
+                        flexShrink: 0,
+                      }}>{idx + 1}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          fontSize: 13.5,
+                          fontWeight: 700,
+                          color: LC.text,
+                          lineHeight: 1.55,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                        }}>
+                          {stripHTML(it.text)}
+                        </div>
+                        <div style={{ display: 'flex', gap: 5, marginTop: 6, flexWrap: 'wrap' }}>
+                          {it.answers.length > 0 && (
+                            <span style={{
+                              fontSize: 10,
+                              fontWeight: 800,
+                              color: '#10B981',
+                              background: 'rgba(16,185,129,.1)',
+                              border: '1px solid rgba(16,185,129,.3)',
+                              borderRadius: 99,
+                              padding: '2px 7px',
+                            }}>{it.answers.length} chỗ trống</span>
+                          )}
+                          {it.statements.length > 0 && (
+                            <span style={{
+                              fontSize: 10,
+                              fontWeight: 800,
+                              color: '#818CF8',
+                              background: 'rgba(129,140,248,.1)',
+                              border: '1px solid rgba(129,140,248,.3)',
+                              borderRadius: 99,
+                              padding: '2px 7px',
+                            }}>{it.statements.length} câu T/F/NM</span>
+                          )}
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', gap: 5, marginTop: 6, flexWrap: 'wrap' }}>
-                        {it.answers.length > 0 && (
-                          <span style={{
-                            fontSize: 10, fontWeight: 800, color: '#10B981',
-                            background: 'rgba(16,185,129,.1)',
-                            border: '1px solid rgba(16,185,129,.3)',
-                            borderRadius: 99, padding: '2px 7px'
-                          }}>{it.answers.length} chỗ trống</span>
-                        )}
-                        {it.statements.length > 0 && (
-                          <span style={{
-                            fontSize: 10, fontWeight: 800, color: '#818CF8',                            background: 'rgba(129,140,248,.1)',
-                            border: '1px solid rgba(129,140,248,.3)',
-                            borderRadius: 99, padding: '2px 7px'
-                          }}>{it.statements.length} câu T/F/NM</span>
-                        )}
-                      </div>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={LC.textMid} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 6 }}>
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
                     </div>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={LC.textMid} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 6 }}>
-                      <polyline points="9 18 15 12 9 6" />
-                    </svg>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                ))
+              )}
             </div>
           </div>
         );
       }
 
-      /* ══════════ LUYỆN TẬP 1 CÂU ══════════ */
-      const passageDisplay = stripHTML(selected.text).replace(/_{3,}/g, '▁▁▁▁');
-
+      /* ════════════════════════════════════════
+         LUYỆN TẬP CHI TIẾT
+         ════════════════════════════════════════ */
       return (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', position: 'relative' }}>
+          {/* Shimmer animation dùng chung (có thể bỏ nếu không dùng skeleton ở đây) */}
+          <style>{`
+            .skeleton-shimmer {
+              animation: shimmer 1.8s infinite;
+            }
+            @keyframes shimmer {
+              0% { background-position: -200% 0; }
+              100% { background-position: 200% 0; }
+            }
+          `}</style>
+          {/* Header */}
           <div style={{
-            padding: '11px 15px 10px', background: LC.surfaceQ,
+            padding: '11px 15px 10px',
+            background: LC.surfaceQ,
             borderBottom: `1px solid ${LC.border}`,
-            position: 'sticky', top: 0, zIndex: 50, backdropFilter: 'blur(20px)'
+            position: 'sticky',
+            top: 0,
+            zIndex: 50,
+            backdropFilter: 'blur(20px)',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <button onClick={backToList}
+              <button onClick={() => {
+                if (synthRef.current) synthRef.current.cancel();
+                if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+                speakPendingRef.current = false;
+                setIsPlaying(false);
+                setIsRestarting(false);
+                setSelected(null);
+                setSubmitted(false);
+              }}
                 style={{
-                  padding: '6px 14px', borderRadius: 999,
+                  padding: '6px 14px',
+                  borderRadius: 999,
                   border: `1.5px solid ${LC.navBtnBorder}`,
-                  background: LC.navBtn, color: LC.navBtnText,
-                  fontSize: 12, fontWeight: 800, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: 4
-                }}>
+                  background: LC.navBtn,
+                  color: LC.navBtnText,
+                  fontSize: 12,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  transition: 'transform 0.1s',
+                }}
+                onMouseDown={e => e.currentTarget.style.transform = 'scale(0.96)'}
+                onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+              >
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="15 18 9 12 15 6" />
                 </svg>
@@ -239,117 +642,181 @@ import React from 'react';
               <div style={{ fontSize: 13, fontWeight: 900, color: LC.text }}>🎧 Listening</div>
               {submitted ? (
                 <div style={{
-                  padding: '5px 13px', borderRadius: 999, fontSize: 12, fontWeight: 900,
-                  color: '#fff', background: 'linear-gradient(135deg,#10B981,#34D399)'
+                  padding: '5px 13px',
+                  borderRadius: 999,
+                  fontSize: 12,
+                  fontWeight: 900,
+                  color: '#fff',
+                  background: 'linear-gradient(135deg,#10B981,#34D399)',
                 }}>{score.correct}/{score.total}</div>
               ) : <div style={{ width: 80 }} />}
-            </div>          </div>
+            </div>
+          </div>
 
-          <div style={{ flex: 1, padding: '16px 14px 100px', display: 'flex', flexDirection: 'column', gap: 13 }} className="fade-up">
+          {/* Nội dung */}
+          <div style={{ flex: 1, padding: '16px 14px 100px', display: 'flex', flexDirection: 'column', gap: 13 }}>
 
-            {/* Nút nghe */}
-            <button onClick={() => speak(selected.text)}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                padding: '14px', borderRadius: 18, border: 'none',
-                background: 'linear-gradient(135deg,#10B981,#34D399)',
-                color: '#fff', fontSize: 14, fontWeight: 900, cursor: 'pointer',
-                boxShadow: '0 4px 16px rgba(16,185,129,0.3)'
-              }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-              Nghe đoạn văn
-            </button>
-
-            {/* Đoạn văn (chỗ trống hiện ▁▁▁▁) */}
+            {/* ── Audio Controls ── */}
             <div style={{
-              background: LC.surfaceQ, border: `1.5px solid ${LC.borderQ}`,
-              borderRadius: 18, padding: '15px 17px', boxShadow: LC.cardShadow
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              flexWrap: 'wrap',
+              background: LC.surfaceQ,
+              border: `1.5px solid ${isRestarting ? '#F59E0B' : LC.borderQ}`,
+              borderRadius: 18,
+              padding: '10px 14px',
+              boxShadow: LC.cardShadow,
+              transition: 'border-color 0.3s, box-shadow 0.3s',
+              ...(isRestarting && { boxShadow: '0 0 0 3px rgba(245,158,11,0.3)' }),
             }}>
-              <div style={{ fontSize: 10, fontWeight: 900, color: '#B07CF0', letterSpacing: 1.2, marginBottom: 8 }}>
-                ĐOẠN VĂN
+              <button onClick={togglePlayPause}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 42,
+                  height: 42,
+                  borderRadius: '50%',
+                  border: 'none',
+                  background: isPlaying ? 'linear-gradient(135deg,#F59E0B,#F97316)' : 'linear-gradient(135deg,#10B981,#34D399)',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  transition: 'transform 0.1s',
+                }}
+                onMouseDown={e => e.currentTarget.style.transform = 'scale(0.92)'}
+                onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                {isPlaying ? (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="6" y="4" width="4" height="16" />
+                    <rect x="14" y="4" width="4" height="16" />
+                  </svg>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                )}
+              </button>
+
+              <div style={{ flex: 1, minWidth: 80 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, fontWeight: 700, color: LC.textMid, marginBottom: 2 }}>
+                  <span>0.8x</span>
+                  <span style={{ color: LC.text }}>{speechRate.toFixed(1)}x</span>
+                  <span>1.2x</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.8"
+                  max="1.2"
+                  step="0.05"
+                  value={speechRate}
+                  onChange={handleRateChange}
+                  style={{
+                    width: '100%',
+                    height: 4,
+                    borderRadius: 2,
+                    background: `linear-gradient(to right, #B07CF0 0%, #B07CF0 ${((speechRate - 0.8) / 0.4) * 100}%, ${dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'} ${((speechRate - 0.8) / 0.4) * 100}%)`,
+                    outline: 'none',
+                    cursor: 'pointer',
+                    accentColor: '#B07CF0',
+                  }}
+                />
               </div>
-              <p style={{ fontStyle: 'italic', color: LC.text2, lineHeight: 1.75, margin: 0 }}>
-                {passageDisplay}
-              </p>
+
+              <button onClick={handleRestart}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: 999,
+                  border: `1.5px solid ${isRestarting ? '#F59E0B' : LC.borderQ}`,
+                  background: isRestarting ? 'rgba(245,158,11,0.15)' : 'transparent',
+                  color: isRestarting ? '#F59E0B' : LC.text2,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'transform 0.1s, background 0.2s, border-color 0.2s, color 0.2s',
+                  flexShrink: 0,
+                }}
+                onMouseDown={e => e.currentTarget.style.transform = 'scale(0.96)'}
+                onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                {isRestarting ? '⏳ Đang tải...' : '↻ Phát lại'}
+              </button>
             </div>
 
-            {/* Word Box */}
+            {/* ── Đoạn văn với Inline Inputs ── */}
+            <div style={{
+              background: LC.surfaceQ,
+              border: `1.5px solid ${LC.borderQ}`,
+              borderRadius: 18,
+              padding: '15px 17px',
+              boxShadow: LC.cardShadow,
+            }}>
+              <div style={{ fontSize: 10, fontWeight: 900, color: '#B07CF0', letterSpacing: 1.2, marginBottom: 8 }}>
+                📖 ĐOẠN VĂN
+              </div>
+              <div style={{ fontSize: 13.5, lineHeight: 2.1, color: LC.text2 }}>
+                {renderPassage()}
+              </div>
+            </div>
+
+            {/* ── Word Box ── */}
             {selected.wordBox.length > 0 && (
               <div style={{
                 background: 'rgba(99,102,241,.06)',
                 border: '1.5px solid rgba(99,102,241,.22)',
-                borderRadius: 16, padding: '12px 14px'
+                borderRadius: 16,
+                padding: '12px 14px',
               }}>
                 <div style={{ fontSize: 10, fontWeight: 900, color: '#6366f1', letterSpacing: 1, marginBottom: 8 }}>
-                  WORD BOX
+                  📦 WORD BOX
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
                   {selected.wordBox.map((w, i) => (
                     <span key={i} style={{
-                      fontSize: 12.5, fontWeight: 700, color: '#4338ca',
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      color: '#4338ca',
                       background: 'rgba(99,102,241,.12)',
-                      borderRadius: 99, padding: '5px 12px'
+                      borderRadius: 99,
+                      padding: '5px 12px',
                     }}>{w}</span>
-                  ))}                </div>
+                  ))}
+                </div>
               </div>
             )}
 
-            {/* Chỗ trống — điền theo thứ tự */}
-            {selected.answers.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {selected.answers.map((ans, i) => {
-                  const ok = submitted && norm(blanks[i]) === norm(ans);
-                  const bad = submitted && norm(blanks[i]) !== norm(ans);
-                  return (
-                    <div key={i}>
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                        <span style={{ fontSize: 12, fontWeight: 900, color: '#B07CF0', minWidth: 22 }}>({i + 1})</span>
-                        <input
-                          value={blanks[i]}
-                          disabled={submitted}
-                          onChange={e => setBlank(i, e.target.value)}
-                          placeholder={`Chỗ trống ${i + 1}`}
-                          style={{
-                            flex: 1, padding: '11px 14px', borderRadius: 14,
-                            fontSize: 13.5, fontWeight: 700, fontFamily: 'inherit',
-                            color: ok ? '#10B981' : bad ? '#EF4444' : LC.inputColor,
-                            background: ok ? 'rgba(16,185,129,0.1)' : bad ? 'rgba(239,68,68,0.08)' : LC.inputBg,
-                            border: '1.5px solid ' + (ok ? '#10B981' : bad ? '#EF4444' : LC.inputBorder),
-                            outline: 'none'
-                          }}
-                        />
-                      </div>
-                      {bad && (
-                        <div style={{ marginTop: 4, marginLeft: 30, fontSize: 11.5, fontWeight: 800, color: '#FCA5A5' }}>
-                          Đáp án đúng: {ans}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* True/False/Not Mentioned */}
+            {/* ── True/False/Not Mentioned ── */}
             {selected.statements.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
                 {selected.statements.map((st, i) => {
                   const sel = stmtSel[i];
                   const ok = submitted && sel === st.answer;
-                  const bad = submitted && sel !== st.answer;
+                  const bad = submitted && sel !== st.answer && sel !== null;
                   return (
                     <div key={i} style={{
-                      background: ok ? 'rgba(16,185,129,0.1)' : bad ? 'rgba(239,68,68,0.08)' : LC.surfaceQ,                      border: '1.5px solid ' + (ok ? '#10B981' : bad ? '#EF4444' : LC.borderQ),
-                      borderRadius: 16, padding: '13px 14px'
+                      background: ok ? 'rgba(16,185,129,0.08)' : bad ? 'rgba(239,68,68,0.06)' : LC.surfaceQ,
+                      border: '1.5px solid ' + (ok ? '#10B981' : bad ? '#EF4444' : LC.borderQ),
+                      borderRadius: 16,
+                      padding: '13px 14px',
+                      transition: 'border-color 0.2s, background 0.2s',
                     }}>
                       <div style={{ display: 'flex', gap: 9, marginBottom: 10 }}>
                         <span style={{
-                          minWidth: 22, height: 22, borderRadius: '50%',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 11, fontWeight: 900,
-                          background: 'rgba(176,124,240,0.18)', color: '#B07CF0', flexShrink: 0
+                          minWidth: 22,
+                          height: 22,
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 11,
+                          fontWeight: 900,
+                          background: 'rgba(176,124,240,0.18)',
+                          color: '#B07CF0',
+                          flexShrink: 0,
                         }}>{i + 1}</span>
                         <p style={{ margin: 0, color: LC.text2, lineHeight: 1.65, fontWeight: 600, fontSize: 13 }}>
                           {st.statement}
@@ -362,24 +829,34 @@ import React from 'react';
                           return (
                             <button key={key} disabled={submitted} onClick={() => setStmt(i, key)}
                               style={{
-                                padding: '8px 0', borderRadius: 11,
-                                fontSize: 11.5, fontWeight: 800,
+                                padding: '8px 0',
+                                borderRadius: 11,
+                                fontSize: 11.5,
+                                fontWeight: 800,
                                 cursor: submitted ? 'default' : 'pointer',
                                 background: isSel ? col + '2a' : 'transparent',
                                 color: isSel ? col : LC.textMid,
-                                border: '1.5px solid ' + (isSel ? col : LC.borderQ)
-                              }}>
+                                border: '1.5px solid ' + (isSel ? col : LC.borderQ),
+                                transition: 'transform 0.08s, background 0.15s, border-color 0.15s',
+                              }}
+                              onMouseDown={!submitted ? e => e.currentTarget.style.transform = 'scale(0.95)' : undefined}
+                              onMouseUp={!submitted ? e => e.currentTarget.style.transform = 'scale(1)' : undefined}
+                              onMouseLeave={!submitted ? e => e.currentTarget.style.transform = 'scale(1)' : undefined}
+                            >
                               {ANS_LABEL[key]}
                             </button>
                           );
                         })}
                       </div>
-                      {bad && (
+                      {submitted && bad && (
                         <div style={{ marginTop: 7, textAlign: 'right' }}>
                           <span style={{
-                            fontSize: 11, fontWeight: 800, color: '#C084FC',
+                            fontSize: 11,
+                            fontWeight: 800,
+                            color: '#C084FC',
                             background: 'rgba(196,181,253,0.15)',
-                            padding: '2px 9px', borderRadius: 999
+                            padding: '2px 9px',
+                            borderRadius: 999,
                           }}>
                             Đáp án: {ANS_LABEL[st.answer]}
                           </span>
@@ -390,26 +867,52 @@ import React from 'react';
                 })}
               </div>
             )}
-            {/* Nộp / Làm lại */}
+
+            {/* ── Nút Nộp bài / Làm lại ── */}
             {!submitted ? (
-              <button onClick={() => setSubmitted(true)}
+              <button onClick={() => {
+                setSubmitted(true);
+                if (navigator.vibrate) navigator.vibrate(10);
+              }}
                 style={{
-                  padding: '14px', borderRadius: 999, border: 'none',
+                  padding: '14px',
+                  borderRadius: 999,
+                  border: 'none',
                   background: 'linear-gradient(135deg,#F472B6,#A855F7)',
-                  color: '#fff', fontSize: 14, fontWeight: 900, cursor: 'pointer',
-                  boxShadow: '0 4px 16px rgba(168,85,247,0.3)'
-                }}>
-                Nộp bài
+                  color: '#fff',
+                  fontSize: 14,
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 16px rgba(168,85,247,0.3)',
+                  transition: 'transform 0.1s',
+                }}
+                onMouseDown={e => e.currentTarget.style.transform = 'scale(0.97)'}
+                onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                ✅ Nộp bài
               </button>
             ) : (
-              <button onClick={() => openItem(selected)}
+              <button onClick={() => {
+                openItem(selected);
+                if (navigator.vibrate) navigator.vibrate(5);
+              }}
                 style={{
-                  padding: '14px', borderRadius: 999,
+                  padding: '14px',
+                  borderRadius: 999,
                   border: `1.5px solid ${LC.navBtnBorder}`,
-                  background: LC.navBtn, color: LC.navBtnText,
-                  fontSize: 14, fontWeight: 900, cursor: 'pointer'
-                }}>
-                Làm lại
+                  background: LC.navBtn,
+                  color: LC.navBtnText,
+                  fontSize: 14,
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                  transition: 'transform 0.1s',
+                }}
+                onMouseDown={e => e.currentTarget.style.transform = 'scale(0.97)'}
+                onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                🔄 Làm lại
               </button>
             )}
           </div>
@@ -417,10 +920,9 @@ import React from 'react';
       );
     }
 
-    /* ══ EXPORT GLOBALS ══ */
     window.ListeningPractice = ListeningPractice;
-    console.log('[listening-practice] ✓ loaded');
+
   } catch (e) {
-    console.error('[listening-practice] INIT ERROR:', e);
+    console.error('[ListeningPractice] initialization error:', e);
   }
 })();
