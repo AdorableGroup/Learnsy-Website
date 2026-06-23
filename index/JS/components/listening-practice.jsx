@@ -114,6 +114,63 @@ import React from 'react';
       );
     }
 
+    /* ── Icon set (thay emoji) ── */
+    function IconHeadphones({ size = 14, color = 'currentColor' }) {
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+          <path d="M3 14v-2a9 9 0 0 1 18 0v2" />
+          <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3v5z" />
+          <path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3v5z" />
+        </svg>
+      );
+    }
+
+    function IconBook({ size = 11, color = 'currentColor' }) {
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+          <path d="M2 4.5C2 3.67 2.67 3 3.5 3H10a2 2 0 0 1 2 2v15a1.5 1.5 0 0 0-1.5-1.5H2v-14z" />
+          <path d="M22 4.5c0-.83-.67-1.5-1.5-1.5H14a2 2 0 0 0-2 2v15a1.5 1.5 0 0 1 1.5-1.5H22v-14z" />
+        </svg>
+      );
+    }
+
+    function IconBox({ size = 11, color = 'currentColor' }) {
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+          <path d="M21 8a1 1 0 0 0-.5-.87l-8-4.6a1 1 0 0 0-1 0l-8 4.6A1 1 0 0 0 3 8v8a1 1 0 0 0 .5.87l8 4.6a1 1 0 0 0 1 0l8-4.6A1 1 0 0 0 21 16V8z" />
+          <path d="M3.27 7.13 12 12l8.73-4.87" />
+          <path d="M12 22.5V12" />
+        </svg>
+      );
+    }
+
+    function IconCheck({ size = 13, color = 'currentColor' }) {
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      );
+    }
+
+    function IconRedo({ size = 13, color = 'currentColor' }) {
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+          <path d="M3 12a9 9 0 1 0 3-6.7" />
+          <polyline points="3 3 3 6.5 6.5 6.5" />
+        </svg>
+      );
+    }
+
+    function IconRefresh({ size = 12, color = 'currentColor', spin = false }) {
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
+          style={{ flexShrink: 0, animation: spin ? 'spin 0.9s linear infinite' : 'none' }}>
+          <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+          <polyline points="21 3 21 9 15 9" />
+        </svg>
+      );
+    }
+
     /* ── Component chính ── */
     function ListeningPractice({ dark, onBack }) {
       const [items, setItems] = useState([]);
@@ -437,6 +494,10 @@ import React from 'react';
                 0% { background-position: -200% 0; }
                 100% { background-position: 200% 0; }
               }
+              @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+              }
             `}</style>
             {/* Header */}
             <div style={{
@@ -475,7 +536,10 @@ import React from 'react';
                     Quay lại
                   </button>
                 ) : <div style={{ width: 70 }} />}
-                <div style={{ fontSize: 14, fontWeight: 900, color: LC.text }}>🎧 Listening</div>
+                <div style={{ fontSize: 14, fontWeight: 900, color: LC.text, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <IconHeadphones size={15} color={LC.text} />
+                  Listening
+                </div>
                 <div style={{ width: 70 }} />
               </div>
             </div>
@@ -504,8 +568,9 @@ import React from 'react';
                   <SkeletonCard dark={dark} />
                 </>
               ) : items.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px 10px', color: LC.textMid, fontSize: 13, fontWeight: 700 }}>
-                  Chưa có bài Listening nào. Quay lại sau nhé! 🎧
+                <div style={{ textAlign: 'center', padding: '40px 10px', color: LC.textMid, fontSize: 13, fontWeight: 700, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                  <IconHeadphones size={20} color={LC.textMid} />
+                  Chưa có bài Listening nào. Quay lại sau nhé!
                 </div>
               ) : (
                 items.map((it, idx) => (
@@ -602,6 +667,10 @@ import React from 'react';
               0% { background-position: -200% 0; }
               100% { background-position: 200% 0; }
             }
+            @keyframes spin {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
           `}</style>
           {/* Header */}
           <div style={{
@@ -646,7 +715,10 @@ import React from 'react';
                 </svg>
                 Danh sách
               </button>
-              <div style={{ fontSize: 13, fontWeight: 900, color: LC.text }}>🎧 Listening</div>
+              <div style={{ fontSize: 13, fontWeight: 900, color: LC.text, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <IconHeadphones size={14} color={LC.text} />
+                Listening
+              </div>
               {submitted ? (
                 <div style={{
                   padding: '5px 13px',
@@ -750,7 +822,13 @@ import React from 'react';
                 onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
                 onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
               >
-                {isRestarting ? '⏳ Đang tải...' : '↻ Phát lại'}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  {isRestarting ? (
+                    <><IconRefresh size={11} color="#F59E0B" spin /> Đang tải...</>
+                  ) : (
+                    <><IconRedo size={11} color={LC.text2} /> Phát lại</>
+                  )}
+                </span>
               </button>
             </div>
 
@@ -762,8 +840,9 @@ import React from 'react';
               padding: '15px 17px',
               boxShadow: LC.cardShadow,
             }}>
-              <div style={{ fontSize: 10, fontWeight: 900, color: '#B07CF0', letterSpacing: 1.2, marginBottom: 8 }}>
-                📖 ĐOẠN VĂN
+              <div style={{ fontSize: 10, fontWeight: 900, color: '#B07CF0', letterSpacing: 1.2, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <IconBook size={11} color="#B07CF0" />
+                ĐOẠN VĂN
               </div>
               <div style={{ fontSize: 13.5, lineHeight: 2.1, color: LC.text2 }}>
                 {renderPassage()}
@@ -778,8 +857,9 @@ import React from 'react';
                 borderRadius: 16,
                 padding: '12px 14px',
               }}>
-                <div style={{ fontSize: 10, fontWeight: 900, color: '#6366f1', letterSpacing: 1, marginBottom: 8 }}>
-                  📦 WORD BOX
+                <div style={{ fontSize: 10, fontWeight: 900, color: '#6366f1', letterSpacing: 1, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <IconBox size={11} color="#6366f1" />
+                  WORD BOX
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
                   {selected.wordBox.map((w, i) => (
@@ -897,7 +977,10 @@ import React from 'react';
                 onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
                 onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
               >
-                ✅ Nộp bài
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <IconCheck size={13} color="#fff" />
+                  Nộp bài
+                </span>
               </button>
             ) : (
               <button onClick={() => {
@@ -919,7 +1002,10 @@ import React from 'react';
                 onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
                 onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
               >
-                🔄 Làm lại
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <IconRedo size={13} color={LC.navBtnText} />
+                  Làm lại
+                </span>
               </button>
             )}
           </div>
