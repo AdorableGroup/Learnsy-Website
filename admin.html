@@ -159,7 +159,13 @@ body.dark [contenteditable][data-ph]:empty:before{color:#5A3050;}
 <div id="root"></div>
 <div id="toastContainer"></div>
 
-<!-- ★★★ CHỈ 1 DÒNG — Vite lo hết ★★★ -->
-<script type="module" src="admin/JS/main.jsx"></script>
+<!-- ★★★ Chờ supa sẵn sàng rồi mới load admin ★★★ -->
+<script type="module">
+  await window.__configReady;
+  if(!window.supa){
+    console.error('[admin] supa vẫn undefined sau __configReady — kiểm tra /api/config');
+  }
+  await import('./admin/JS/main.jsx');
+</script>
 </body>
 </html>
