@@ -56,19 +56,19 @@ function LoginScreen({onAuth, dark}){
     setLoading(false);
   };
 
-  // ── Colors ──
-  const bg    = dark ? '#180A10' : '#FFF0F7';
-  const card  = dark ? 'rgba(38,16,24,0.97)' : 'rgba(255,255,255,0.96)';
-  const bord  = dark ? 'rgba(255,100,150,0.15)' : '#F5D5E8';
-  const bord2 = dark ? 'rgba(255,100,150,0.10)' : '#EFD0E5';
-  const tMain = dark ? '#F0DCE8' : '#3D1830';
-  const tSub  = dark ? '#8A6080' : '#A07090';
-  const inBg  = dark ? 'rgba(255,255,255,0.05)' : 'rgba(255,240,248,0.7)';
-  const inBgF = dark ? 'rgba(255,255,255,0.09)' : '#fff';
-  const lockBg = dark ? 'rgba(255,100,150,0.08)' : 'linear-gradient(135deg,#FFE4ED,#F0E6FF)';
-  const blob1 = dark ? 'rgba(255,80,120,0.07)' : 'rgba(255,182,203,0.22)';
-  const blob2 = dark ? 'rgba(160,100,255,0.06)' : 'rgba(196,181,253,0.18)';
-  const blob3 = dark ? 'rgba(80,200,140,0.04)' : 'rgba(167,243,208,0.13)';
+  // ── Colors (Indigo/Violet — mirror student-login) ──
+  const bg    = dark
+    ? 'radial-gradient(at 20% 20%, rgba(99,102,241,0.15) 0px, transparent 50%), radial-gradient(at 80% 80%, rgba(139,92,246,0.15) 0px, transparent 50%), #0f172a'
+    : 'radial-gradient(at 20% 20%, rgba(199,210,254,0.6) 0px, transparent 50%), radial-gradient(at 80% 80%, rgba(221,214,254,0.6) 0px, transparent 50%), #f8fafc';
+  const card  = dark ? 'rgba(30,41,59,0.7)'        : 'rgba(255,255,255,0.75)';
+  const bord  = dark ? 'rgba(255,255,255,0.08)'     : 'rgba(255,255,255,0.9)';
+  const bord2 = dark ? 'rgba(255,255,255,0.06)'     : 'rgba(99,102,241,0.15)';
+  const tMain = dark ? '#f1f5f9'                    : '#1e293b';
+  const tSub  = dark ? '#94a3b8'                    : '#64748b';
+  const inBg  = dark ? 'rgba(15,23,42,0.6)'         : 'rgba(241,245,249,0.8)';
+  const inBgF = dark ? 'rgba(15,23,42,0.8)'         : '#fff';
+  const lockBg = dark ? 'rgba(99,102,241,0.12)'     : 'linear-gradient(135deg,#e0e7ff,#ede9fe)';
+  const _unused = [blob1, blob2, blob3]; void _unused; // kept for potential future use
 
   const canSubmit = !loading && email.trim() && pw;
 
@@ -89,8 +89,8 @@ function LoginScreen({onAuth, dark}){
   });
 
   const inputFocusStyle = (e) => {
-    e.target.style.borderColor = '#F472B6';
-    e.target.style.boxShadow = '0 0 0 3px rgba(244,114,182,0.15)';
+    e.target.style.borderColor = '#6366f1';
+    e.target.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.15)';
     e.target.style.background = inBgF;
   };
 
@@ -113,24 +113,22 @@ function LoginScreen({onAuth, dark}){
       fontFamily: "'Nunito',sans-serif",
     }}>
 
-      {/* ── SVG background ── */}
-      <svg
-        style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}
-        preserveAspectRatio="xMidYMid slice"
-      >
-        <defs>
-          <filter id="ls-bb"><feGaussianBlur stdDeviation="55" /></filter>
-        </defs>
-        <ellipse cx="12%" cy="18%" rx="22%" ry="18%" fill={blob1} filter="url(#ls-bb)" />
-        <ellipse cx="88%" cy="10%" rx="20%" ry="16%" fill={blob2} filter="url(#ls-bb)" />
-        <ellipse cx="50%" cy="85%" rx="28%" ry="18%" fill={blob3} filter="url(#ls-bb)" />
-        <ellipse cx="92%" cy="70%" rx="18%" ry="14%" fill={dark ? 'rgba(250,150,60,0.04)' : 'rgba(253,186,116,0.10)'} filter="url(#ls-bb)" />
-        <circle cx="5%"  cy="42%" r="4"   fill={dark ? 'rgba(244,114,182,0.15)' : 'rgba(244,114,182,0.30)'} />
-        <circle cx="7%"  cy="45%" r="2.5" fill={dark ? 'rgba(168,85,247,0.12)' : 'rgba(168,85,247,0.22)'} />
-        <circle cx="95%" cy="58%" r="3.5" fill={dark ? 'rgba(244,114,182,0.12)' : 'rgba(244,114,182,0.25)'} />
-        <circle cx="93%" cy="62%" r="2"   fill={dark ? 'rgba(99,102,241,0.10)' : 'rgba(99,102,241,0.20)'} />
-        <circle cx="4%"  cy="78%" r="5"   fill={dark ? 'rgba(16,185,129,0.07)' : 'rgba(16,185,129,0.15)'} />
-      </svg>
+      {/* ── Decorative floating dots (mirror student-login) ── */}
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
+        {[...Array(6)].map((_, i) => (
+          <div key={i} style={{
+            position: 'absolute',
+            width: `${10 + i * 4}px`,
+            height: `${10 + i * 4}px`,
+            borderRadius: '50%',
+            background: dark ? 'rgba(139,92,246,0.15)' : 'rgba(99,102,241,0.15)',
+            top: `${15 + i * 12}%`,
+            left: `${10 + i * 15}%`,
+            animation: `ls-float ${3 + i}s ease-in-out ${i * 0.5}s infinite`,
+          }} />
+        ))}
+      </div>
+      <style>{`@keyframes ls-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}`}</style>
 
       <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 360, animation: 'fadeUp .28s ease both' }}>
 
@@ -141,8 +139,8 @@ function LoginScreen({onAuth, dark}){
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <defs>
                   <linearGradient id="ls-lg1" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#f472b6" />
-                    <stop offset="100%" stopColor="#6366f1" />
+                    <stop offset="0%" stopColor="#6366f1" />
+                    <stop offset="100%" stopColor="#a855f7" />
                   </linearGradient>
                 </defs>
                 <path stroke="url(#ls-lg1)" d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
@@ -157,9 +155,9 @@ function LoginScreen({onAuth, dark}){
             </span>
           </div>
           <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 900, color: '#A855F7',
-            background: dark ? 'rgba(168,85,247,0.12)' : '#F0E6FF',
-            border: `1.5px solid ${dark ? 'rgba(168,85,247,0.20)' : '#E8DCFF'}`,
+            display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 900, color: '#6366f1',
+            background: dark ? 'rgba(99,102,241,0.12)' : '#e0e7ff',
+            border: `1.5px solid ${dark ? 'rgba(99,102,241,0.20)' : '#c7d2fe'}`,
             borderRadius: 99, padding: '3px 12px',
           }}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -174,7 +172,7 @@ function LoginScreen({onAuth, dark}){
         <div style={{
           background: card, border: `1.5px solid ${bord}`, borderRadius: 28,
           padding: '26px 24px 22px',
-          boxShadow: dark ? '0 20px 60px rgba(0,0,0,0.45)' : '0 8px 48px rgba(244,114,182,0.13)',
+          boxShadow: dark ? '0 25px 50px -12px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.05)' : '0 25px 50px -12px rgba(99,102,241,0.25),inset 0 1px 0 rgba(255,255,255,0.9)',
           animation: 'pop .28s ease both',
         }}>
 
@@ -184,13 +182,13 @@ function LoginScreen({onAuth, dark}){
               width: 54, height: 54, borderRadius: 17, background: lockBg,
               border: `1.5px solid ${bord2}`, display: 'flex', alignItems: 'center',
               justifyContent: 'center', margin: '0 auto 12px',
-              boxShadow: '0 4px 16px rgba(244,114,182,0.12)',
+              boxShadow: '0 4px 16px rgba(99,102,241,0.15)',
             }}>
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <defs>
                   <linearGradient id="ls-lg2" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#F472B6" />
-                    <stop offset="100%" stopColor="#A855F7" />
+                    <stop offset="0%" stopColor="#6366f1" />
+                    <stop offset="100%" stopColor="#8b5cf6" />
                   </linearGradient>
                 </defs>
                 <rect stroke="url(#ls-lg2)" x="3" y="11" width="18" height="11" rx="2" />
@@ -288,11 +286,11 @@ function LoginScreen({onAuth, dark}){
             disabled={!canSubmit}
             style={{
               width: '100%', padding: '13px', borderRadius: 999, border: 'none',
-              background: canSubmit ? 'linear-gradient(135deg,#F472B6,#A855F7)' : 'rgba(168,85,247,0.22)',
+              background: canSubmit ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(99,102,241,0.22)',
               color: canSubmit ? '#fff' : 'rgba(255,255,255,0.45)',
               fontSize: 14, fontWeight: 900, fontFamily: "'Nunito',sans-serif",
               cursor: canSubmit ? 'pointer' : 'not-allowed',
-              boxShadow: canSubmit ? '0 4px 20px rgba(168,85,247,0.32)' : 'none',
+              boxShadow: canSubmit ? '0 10px 25px -5px rgba(99,102,241,0.5),0 8px 10px -6px rgba(139,92,246,0.4)' : 'none',
               transition: 'all .2s',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
             }}
