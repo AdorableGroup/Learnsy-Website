@@ -4,6 +4,16 @@ import React from 'react';
 //  SAVE-RESULT.JSX  ·  Learnsy · Lưu & load kết quả quiz
 //  Exports: window.saveQuizResult, window.flushPendingResults,
 //           window.loadQuizHistory
+//
+//  FIXES v2:
+//  🔴 FIX 1 — lesson_id: UUID nếu có, fallback null (không dùng
+//             lessonTitle làm lesson_id vì type mismatch UUID column)
+//  🔴 FIX 2 — onConflict đổi sang 'student_id,lesson_title' để
+//             upsert đúng khi lesson_id null (bài không có id)
+//  🟡 FIX 3 — loadQuizHistory: thêm 'pct','taken_at','submitted_at'
+//             vào select, fallback ts đúng thứ tự
+//  🟡 FIX 4 — _getStudent: ưu tiên sessionStorage ls_student
+//             (đây là nguồn sự thật của App.js)
 // ══════════════════════════════════════════════════════════════════
 (function () {
   'use strict';
@@ -12,7 +22,8 @@ import React from 'react';
     // ── Guard chống double-save ───────────────────────────────────
     const _inFlight = new Set();
 
-    // ── Lấy thông tin học sinh từ session/localStorage ────────────
+    // ── Lấy thông tin học sinh từ session ────────────────────────
+    // FIX 🟡: ưu tiên ls_student (nguồn sự thật của App.js)
     function _getStudent() {
       try {
         const ss = JSON.parse(sessionStorage.getItem('ls_student') || 'null');
@@ -86,8 +97,10 @@ import React from 'react';
       try {
         const key = 'learnsy_pending_results';
         const arr = JSON.parse(localStorage.getItem(key) || '[]');
+        // FIX 🔴: dùng lesson_title làm key fallback (lesson_id có thể null)
         const idx = arr.findIndex(r =>
-          r.student_id === payload.student_id && r.lesson_id === payload.lesson_id);
+          r.student_id === payload.student_id &&
+          r.lesson_title === payload.lesson_title);
         const entry = { ...payload, saved_at: new Date().toISOString() };
         if (idx >= 0) arr[idx] = entry;
         else arr.push(entry);
@@ -113,8 +126,13 @@ import React from 'react';
 
       const { name: studentName, id: studentId } = _getStudent();
 
-      // Guard double-save
-      const flightKey = `${studentId || 'anon'}_${lessonId}`;
+      // FIX 🔴: lesson_id chỉ dùng khi là UUID hợp lệ, fallback null
+      const _isUUID = v => typeof v === 'string' &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+      const safeId = _isUUID(lessonId) ? lessonId : null;
+
+      // Guard double-save — dùng lesson_title thay vì lesson_id để an toàn hơn
+      const flightKey = `${studentId || 'anon'}_${lessonTitle}`;
       if (_inFlight.has(flightKey)) {
         console.warn('[saveQuizResult] Bỏ qua, đang lưu:', flightKey);
         return { ok: false, error: 'duplicate' };
@@ -123,15 +141,20 @@ import React from 'react';
 
       try {
         const perQArr = perQ ?? (questions.length ? _buildPerQ(questions, answers) : []);
+        const scoreNum = Math.round((Number(score) || 0) * 100) / 100;
+        const totalNum = Math.round(Number(totalOpt || questions.length) || 1);
+        const pct      = totalNum > 0 ? Math.round(scoreNum / totalNum * 100) : 0;
 
         const payload = {
           student_name: studentName,
           student_id:   studentId,
-          lesson_id:    String(lessonId || lessonTitle || 'unknown'),
+          lesson_id:    safeId,                          // FIX 🔴: UUID hoặc null
           lesson_title: String(lessonTitle || 'Không rõ'),
-          score:        Math.round((Number(score) || 0) * 100) / 100,
-          total:        Math.round(Number(totalOpt || questions.length) || 1),
+          score:        scoreNum,
+          total:        totalNum,
+          pct,                                           // FIX 🟡: lưu sẵn pct
           per_q:        perQArr,
+          taken_at:     new Date().toISOString(),        // FIX 🟡: luôn có taken_at
         };
 
         if (!_supaReady()) {
@@ -139,19 +162,25 @@ import React from 'react';
           return { ok: false, error: 'supa_not_ready' };
         }
 
+        // FIX 🔴: onConflict dùng 'student_id,lesson_title' thay vì
+        // 'student_id,lesson_id' — vì lesson_id có thể null (null != null trong SQL)
         const { data, error } = await window.supa
           .from('quiz_results')
-          .upsert(payload, { onConflict: 'student_id,lesson_id', ignoreDuplicates: false })
+          .upsert(payload, {
+            onConflict: 'student_id,lesson_title',
+            ignoreDuplicates: false,
+          })
           .select('id')
           .single();
 
         if (error) {
-          console.warn('[saveQuizResult] Supabase error:', error.code, error.message, error.details);
+          console.warn('[saveQuizResult] Supabase error:',
+            error.code, '|', error.message, '|', error.details ?? '', '|', error.hint ?? '');
           _fallbackSave(payload);
           return { ok: false, error: error.message };
         }
 
-        console.log('[saveQuizResult] ✅ Upserted id:', data?.id);
+        console.log('[saveQuizResult] ✅ Upserted id:', data?.id, '| pct:', pct);
         return { ok: true, id: data?.id };
 
       } catch (e) {
@@ -174,7 +203,10 @@ import React from 'react';
 
         const { error } = await window.supa
           .from('quiz_results')
-          .upsert(arr, { onConflict: 'student_id,lesson_id', ignoreDuplicates: false });
+          .upsert(arr, {
+            onConflict: 'student_id,lesson_title',  // FIX 🔴: khớp với saveQuizResult
+            ignoreDuplicates: false,
+          });
 
         if (error) {
           console.warn('[flushPendingResults] Lỗi flush:', error.code, error.message);
@@ -196,11 +228,12 @@ import React from 'react';
       if (!_supaReady()) return [];
 
       try {
+        // FIX 🟡: thêm pct, taken_at vào select; bỏ submitted_at (cột không tồn tại)
         const { data, error } = await window.supa
           .from('quiz_results')
-          .select('id, lesson_title, score, total, per_q, created_at, submitted_at')
+          .select('id, lesson_title, score, total, pct, per_q, taken_at, created_at')
           .eq('student_id', String(studentId))
-          .order('created_at', { ascending: false })
+          .order('taken_at', { ascending: false })
           .limit(50);
 
         if (error) {
@@ -213,11 +246,11 @@ import React from 'react';
 
         return data.map(r => ({
           id:          r.id,
-          ts:          r.submitted_at || r.created_at,
+          ts:          r.taken_at || r.created_at,   // FIX 🟡: taken_at trước
           lessonTitle: r.lesson_title,
           score:       r.score,
           total:       r.total,
-          pct:         r.total > 0 ? Math.round(r.score / r.total * 100) : 0,
+          pct:         r.pct ?? (r.total > 0 ? Math.round(r.score / r.total * 100) : 0),
           qCount:      r.total,
           perQ:        r.per_q || [],
         }));
@@ -236,7 +269,7 @@ import React from 'react';
     window.flushPendingResults = flushPendingResults;
     window.loadQuizHistory     = loadQuizHistory;
 
-    console.log('[save-result] ✓ loaded');
+    console.log('[save-result] ✓ v2 loaded');
   } catch (e) {
     console.error('[save-result] INIT ERROR:', e);
   }
