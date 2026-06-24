@@ -2,6 +2,9 @@
 // Thay thế toàn bộ babel-loader.js + loadModule chain
 // Giữ nguyên thứ tự load y chang cũ
 
+import * as Tone from 'tone'
+window.Tone = Tone
+
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 
