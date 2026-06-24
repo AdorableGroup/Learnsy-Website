@@ -1,6 +1,6 @@
 import React from 'react';
 
-/* ══ ADMIN LOGIN SCREEN — SVG-style layout + Supabase Auth (enhanced + forgot password) ════════════ */
+/* ══ ADMIN LOGIN SCREEN — SVG-style layout + Supabase Auth (no forgot password) ════════════ */
 (function(){
 const {useState, useRef, useEffect, useCallback} = React;
 
@@ -11,30 +11,14 @@ function LoginScreen({onAuth, dark}){
   const [loading, setLoading] = useState(false);
   const [show, setShow] = useState(false);
   const [shake, setShake] = useState(false);
-
-  // Forgot password states
-  const [forgotMode, setForgotMode] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState('');
-  const [forgotLoading, setForgotLoading] = useState(false);
-  const [forgotMsg, setForgotMsg] = useState({ type: '', text: '' });
-
   const emailRef = useRef();
-  const forgotEmailRef = useRef();
 
   useEffect(() => {
     const timer = setTimeout(() => emailRef.current?.focus(), 120);
     return () => clearTimeout(timer);
   }, []);
 
-  // focus forgot email input when entering forgot mode
-  useEffect(() => {
-    if (forgotMode) {
-      const timer = setTimeout(() => forgotEmailRef.current?.focus(), 80);
-      return () => clearTimeout(timer);
-    }
-  }, [forgotMode]);
-
-  // clear error when user types in main form
+  // clear error when user types
   useEffect(() => {
     if (err) setErr('');
   }, [email, pw]);
@@ -75,43 +59,6 @@ function LoginScreen({onAuth, dark}){
       doShake();
     }
     setLoading(false);
-  };
-
-  const handleForgotPassword = async () => {
-    if (forgotLoading) return;
-    if (!forgotEmail.trim()) {
-      setForgotMsg({ type: 'error', text: 'Vui lòng nhập email của bạn.' });
-      return;
-    }
-    setForgotLoading(true);
-    setForgotMsg({ type: '', text: '' });
-    try {
-      const { error } = await window.supa.auth.resetPasswordForEmail(
-        forgotEmail.trim().toLowerCase(),
-        { redirectTo: window.location.origin + '/admin?reset=true' }
-      );
-      if (error) {
-        setForgotMsg({ type: 'error', text: error.message });
-      } else {
-        setForgotMsg({
-          type: 'success',
-          text: '📩 Đã gửi hướng dẫn đặt lại mật khẩu. Vui lòng kiểm tra email!',
-        });
-      }
-    } catch (e) {
-      setForgotMsg({ type: 'error', text: 'Lỗi kết nối, thử lại nhé!' });
-    }
-    setForgotLoading(false);
-  };
-
-  const switchToForgot = () => {
-    setForgotMode(true);
-    setForgotEmail(email); // pre-fill if user typed something
-    setForgotMsg({ type: '', text: '' });
-  };
-
-  const switchToLogin = () => {
-    setForgotMode(false);
   };
 
   // ── Colors (Indigo/Violet) ──
@@ -157,7 +104,7 @@ function LoginScreen({onAuth, dark}){
     e.target.style.background = inBg;
   };
 
-  // ── SVG Icons (components for clarity) ──
+  // ── SVG Icons (enhanced) ──
   const IconBook = () => (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <defs>
@@ -212,13 +159,6 @@ function LoginScreen({onAuth, dark}){
     </svg>
   );
 
-  const IconSuccess = () => (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-      <polyline points="22 4 12 14.01 9 11.01" />
-    </svg>
-  );
-
   const IconArrowRight = () => (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
@@ -235,7 +175,6 @@ function LoginScreen({onAuth, dark}){
     </span>
   );
 
-  // ── Render ──
   return (
     <div style={{
       minHeight: '100vh',
@@ -248,7 +187,8 @@ function LoginScreen({onAuth, dark}){
       overflow: 'hidden',
       fontFamily: "'Nunito',sans-serif",
     }}>
-      {/* Floating dots */}
+
+      {/* ── Decorative floating dots ── */}
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
         {[...Array(6)].map((_, i) => (
           <div key={i} style={{
@@ -266,7 +206,8 @@ function LoginScreen({onAuth, dark}){
       <style>{`@keyframes ls-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}`}</style>
 
       <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 360, animation: 'fadeUp .28s ease both' }}>
-        {/* Logo */}
+
+        {/* ── Logo ── */}
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
             <span className="logo-fl"><IconBook /></span>
@@ -294,201 +235,127 @@ function LoginScreen({onAuth, dark}){
           boxShadow: dark ? '0 25px 50px -12px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.05)' : '0 25px 50px -12px rgba(99,102,241,0.25),inset 0 1px 0 rgba(255,255,255,0.9)',
           animation: 'pop .28s ease both',
         }}>
-          {!forgotMode ? (
-            // ─── LOGIN FORM ───
-            <>
-              <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                <div style={{
-                  width: 54, height: 54, borderRadius: 17, background: lockBg,
-                  border: `1.5px solid ${bord2}`, display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', margin: '0 auto 12px',
-                  boxShadow: '0 4px 16px rgba(99,102,241,0.15)',
-                }}>
-                  <IconLockShield />
-                </div>
-                <div style={{ fontSize: 16, fontWeight: 900, color: tMain, marginBottom: 3 }}>Xin chào, giáo viên! 👋</div>
-                <div style={{ fontSize: 12, color: tSub, fontWeight: 600 }}>Nhập thông tin để vào trang quản trị</div>
-              </div>
 
-              <div style={{ height: 1, background: `linear-gradient(90deg,transparent,${bord},transparent)`, marginBottom: 20 }} />
+          {/* Lock icon + heading */}
+          <div style={{ textAlign: 'center', marginBottom: 20 }}>
+            <div style={{
+              width: 54, height: 54, borderRadius: 17, background: lockBg,
+              border: `1.5px solid ${bord2}`, display: 'flex', alignItems: 'center',
+              justifyContent: 'center', margin: '0 auto 12px',
+              boxShadow: '0 4px 16px rgba(99,102,241,0.15)',
+            }}>
+              <IconLockShield />
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 900, color: tMain, marginBottom: 3 }}>Xin chào, giáo viên! 👋</div>
+            <div style={{ fontSize: 12, color: tSub, fontWeight: 600 }}>Nhập thông tin để vào trang quản trị</div>
+          </div>
 
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ display: 'block', fontSize: 10, fontWeight: 900, color: tSub, letterSpacing: '.8', textTransform: 'uppercase', marginBottom: 5 }}>Email</label>
-                <input
-                  ref={emailRef}
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && doLogin()}
-                  placeholder="admin@truong.edu.vn"
-                  autoComplete="email"
-                  style={inputBaseStyle(!!err)}
-                  onFocus={inputFocusStyle}
-                  onBlur={e => inputBlurStyle(e, !!err)}
-                />
-              </div>
+          {/* Divider */}
+          <div style={{ height: 1, background: `linear-gradient(90deg,transparent,${bord},transparent)`, marginBottom: 20 }} />
 
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: 'block', fontSize: 10, fontWeight: 900, color: tSub, letterSpacing: '.8', textTransform: 'uppercase', marginBottom: 5 }}>Mật khẩu</label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type={show ? 'text' : 'password'}
-                    value={pw}
-                    onChange={e => setPw(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && doLogin()}
-                    placeholder="••••••••"
-                    autoComplete="current-password"
-                    className={shake ? 'do-shake' : ''}
-                    style={inputBaseStyle(!!err)}
-                    onFocus={inputFocusStyle}
-                    onBlur={e => inputBlurStyle(e, !!err)}
-                  />
-                  <button
-                    onClick={() => setShow(s => !s)}
-                    tabIndex={-1}
-                    style={{
-                      position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)',
-                      background: 'none', border: 'none', cursor: 'pointer', padding: 4,
-                      color: tSub, display: 'flex', alignItems: 'center', lineHeight: 0,
-                    }}
-                    aria-label={show ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                  >
-                    {show ? <IconEyeClosed /> : <IconEyeOpen />}
-                  </button>
-                </div>
-              </div>
+          {/* Email */}
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ display: 'block', fontSize: 10, fontWeight: 900, color: tSub, letterSpacing: '.8', textTransform: 'uppercase', marginBottom: 5 }}>
+              Email
+            </label>
+            <input
+              ref={emailRef}
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && doLogin()}
+              placeholder="admin@truong.edu.vn"
+              autoComplete="email"
+              style={inputBaseStyle(!!err)}
+              onFocus={inputFocusStyle}
+              onBlur={e => inputBlurStyle(e, !!err)}
+            />
+          </div>
 
-              {err && (
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: '#EF4444',
-                  background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)',
-                  borderRadius: 10, padding: '7px 12px', marginBottom: 12,
-                }}>
-                  <IconError /> {err}
-                </div>
-              )}
-
+          {/* Password */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'block', fontSize: 10, fontWeight: 900, color: tSub, letterSpacing: '.8', textTransform: 'uppercase', marginBottom: 5 }}>
+              Mật khẩu
+            </label>
+            <div style={{ position: 'relative' }}>
+              <input
+                type={show ? 'text' : 'password'}
+                value={pw}
+                onChange={e => setPw(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && doLogin()}
+                placeholder="••••••••"
+                autoComplete="current-password"
+                className={shake ? 'do-shake' : ''}
+                style={inputBaseStyle(!!err)}
+                onFocus={inputFocusStyle}
+                onBlur={e => inputBlurStyle(e, !!err)}
+              />
               <button
-                onClick={doLogin}
-                disabled={!canSubmit}
+                onClick={() => setShow(s => !s)}
+                tabIndex={-1}
                 style={{
-                  width: '100%', padding: '13px', borderRadius: 999, border: 'none',
-                  background: canSubmit ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(99,102,241,0.22)',
-                  color: canSubmit ? '#fff' : 'rgba(255,255,255,0.45)',
-                  fontSize: 14, fontWeight: 900, fontFamily: "'Nunito',sans-serif",
-                  cursor: canSubmit ? 'pointer' : 'not-allowed',
-                  boxShadow: canSubmit ? '0 10px 25px -5px rgba(99,102,241,0.5),0 8px 10px -6px rgba(139,92,246,0.4)' : 'none',
-                  transition: 'all .2s',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                  position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)',
+                  background: 'none', border: 'none', cursor: 'pointer', padding: 4,
+                  color: tSub, display: 'flex', alignItems: 'center', lineHeight: 0,
                 }}
+                aria-label={show ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
               >
-                {loading ? (<><IconSpinner /> Đang đăng nhập...</>) : (<><IconArrowRight /> Đăng nhập</>)}
+                {show ? <IconEyeClosed /> : <IconEyeOpen />}
               </button>
+            </div>
+          </div>
 
-              <div style={{ textAlign: 'center', marginTop: 12 }}>
-                <span
-                  onClick={switchToForgot}
-                  style={{ fontSize: 11, color: tSub, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', opacity: 0.7 }}
-                >
-                  Quên mật khẩu?
-                </span>
-              </div>
-
-              <div style={{
-                textAlign: 'center', marginTop: 14, fontSize: 10, color: tSub, fontWeight: 600, opacity: .8,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-              }}>
-                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="11" width="18" height="11" rx="2" />
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                </svg>
-                Xác thực qua Supabase Auth
-              </div>
-            </>
-          ) : (
-            // ─── FORGOT PASSWORD FORM ───
-            <>
-              <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                <div style={{
-                  width: 54, height: 54, borderRadius: 17, background: lockBg,
-                  border: `1.5px solid ${bord2}`, display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', margin: '0 auto 12px',
-                  boxShadow: '0 4px 16px rgba(99,102,241,0.15)',
-                }}>
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <defs>
-                      <linearGradient id="ls-lg3" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#6366f1" />
-                        <stop offset="100%" stopColor="#8b5cf6" />
-                      </linearGradient>
-                    </defs>
-                    <circle cx="12" cy="12" r="10" stroke="url(#ls-lg3)" />
-                    <path stroke="url(#ls-lg3)" d="M12 16v-4M12 8h.01" />
-                  </svg>
-                </div>
-                <div style={{ fontSize: 16, fontWeight: 900, color: tMain, marginBottom: 3 }}>Quên mật khẩu?</div>
-                <div style={{ fontSize: 12, color: tSub, fontWeight: 600 }}>Nhập email để nhận hướng dẫn đặt lại</div>
-              </div>
-
-              <div style={{ height: 1, background: `linear-gradient(90deg,transparent,${bord},transparent)`, marginBottom: 20 }} />
-
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ display: 'block', fontSize: 10, fontWeight: 900, color: tSub, letterSpacing: '.8', textTransform: 'uppercase', marginBottom: 5 }}>Email</label>
-                <input
-                  ref={forgotEmailRef}
-                  type="email"
-                  value={forgotEmail}
-                  onChange={e => { setForgotEmail(e.target.value); setForgotMsg({ type: '', text: '' }); }}
-                  onKeyDown={e => e.key === 'Enter' && handleForgotPassword()}
-                  placeholder="admin@truong.edu.vn"
-                  autoComplete="email"
-                  style={inputBaseStyle(forgotMsg.type === 'error')}
-                  onFocus={inputFocusStyle}
-                  onBlur={e => inputBlurStyle(e, forgotMsg.type === 'error')}
-                />
-              </div>
-
-              {forgotMsg.text && (
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700,
-                  color: forgotMsg.type === 'error' ? '#EF4444' : '#059669',
-                  background: forgotMsg.type === 'error' ? 'rgba(239,68,68,0.07)' : 'rgba(5,150,105,0.07)',
-                  border: `1px solid ${forgotMsg.type === 'error' ? 'rgba(239,68,68,0.2)' : 'rgba(5,150,105,0.2)'}`,
-                  borderRadius: 10, padding: '7px 12px', marginBottom: 12,
-                }}>
-                  {forgotMsg.type === 'error' ? <IconError /> : <IconSuccess />}
-                  {forgotMsg.text}
-                </div>
-              )}
-
-              <button
-                onClick={handleForgotPassword}
-                disabled={forgotLoading || !forgotEmail.trim()}
-                style={{
-                  width: '100%', padding: '13px', borderRadius: 999, border: 'none',
-                  background: (forgotEmail.trim() && !forgotLoading) ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(99,102,241,0.22)',
-                  color: (forgotEmail.trim() && !forgotLoading) ? '#fff' : 'rgba(255,255,255,0.45)',
-                  fontSize: 14, fontWeight: 900, fontFamily: "'Nunito',sans-serif",
-                  cursor: (forgotEmail.trim() && !forgotLoading) ? 'pointer' : 'not-allowed',
-                  boxShadow: (forgotEmail.trim() && !forgotLoading) ? '0 10px 25px -5px rgba(99,102,241,0.5),0 8px 10px -6px rgba(139,92,246,0.4)' : 'none',
-                  transition: 'all .2s',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                  marginBottom: 12,
-                }}
-              >
-                {forgotLoading ? (<><IconSpinner /> Đang gửi...</>) : ('📩 Gửi yêu cầu')}
-              </button>
-
-              <div style={{ textAlign: 'center' }}>
-                <span
-                  onClick={switchToLogin}
-                  style={{ fontSize: 11, color: tSub, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', opacity: 0.7 }}
-                >
-                  ← Quay lại đăng nhập
-                </span>
-              </div>
-            </>
+          {/* Error */}
+          {err && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: '#EF4444',
+              background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)',
+              borderRadius: 10, padding: '7px 12px', marginBottom: 12,
+            }}>
+              <IconError />
+              {err}
+            </div>
           )}
+
+          {/* Button */}
+          <button
+            onClick={doLogin}
+            disabled={!canSubmit}
+            style={{
+              width: '100%', padding: '13px', borderRadius: 999, border: 'none',
+              background: canSubmit ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(99,102,241,0.22)',
+              color: canSubmit ? '#fff' : 'rgba(255,255,255,0.45)',
+              fontSize: 14, fontWeight: 900, fontFamily: "'Nunito',sans-serif",
+              cursor: canSubmit ? 'pointer' : 'not-allowed',
+              boxShadow: canSubmit ? '0 10px 25px -5px rgba(99,102,241,0.5),0 8px 10px -6px rgba(139,92,246,0.4)' : 'none',
+              transition: 'all .2s',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+            }}
+          >
+            {loading ? (
+              <>
+                <IconSpinner />
+                Đang đăng nhập...
+              </>
+            ) : (
+              <>
+                <IconArrowRight />
+                Đăng nhập
+              </>
+            )}
+          </button>
+
+          {/* Footer */}
+          <div style={{
+            textAlign: 'center', marginTop: 14, fontSize: 10, color: tSub, fontWeight: 600, opacity: .8,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+          }}>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            Xác thực qua Supabase Auth
+          </div>
         </div>
 
         <div style={{ textAlign: 'center', marginTop: 16, fontSize: 11, color: tSub, opacity: .6, fontWeight: 600 }}>
@@ -500,5 +367,5 @@ function LoginScreen({onAuth, dark}){
 }
 
 window.LoginScreen = LoginScreen;
-console.log('[login] ✓ loaded (Supabase Auth + forgot password + enhanced SVG)');
+console.log('[login] ✓ loaded (Supabase Auth + enhanced SVG)');
 })();
