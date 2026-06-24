@@ -1,8 +1,8 @@
 import React from 'react';
 
-/* ══ ADMIN LOGIN SCREEN — SVG-style layout + Supabase Auth ════════════ */
+/* ══ ADMIN LOGIN SCREEN — SVG-style layout + Supabase Auth (enhanced + forgot password) ════════════ */
 (function(){
-const {useState, useRef, useEffect} = React;
+const {useState, useRef, useEffect, useCallback} = React;
 
 function LoginScreen({onAuth, dark}){
   const [email, setEmail] = useState('');
@@ -11,17 +11,38 @@ function LoginScreen({onAuth, dark}){
   const [loading, setLoading] = useState(false);
   const [show, setShow] = useState(false);
   const [shake, setShake] = useState(false);
+
+  // Forgot password states
+  const [forgotMode, setForgotMode] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMsg, setForgotMsg] = useState({ type: '', text: '' });
+
   const emailRef = useRef();
+  const forgotEmailRef = useRef();
 
   useEffect(() => {
     const timer = setTimeout(() => emailRef.current?.focus(), 120);
     return () => clearTimeout(timer);
   }, []);
 
-  const doShake = () => {
+  // focus forgot email input when entering forgot mode
+  useEffect(() => {
+    if (forgotMode) {
+      const timer = setTimeout(() => forgotEmailRef.current?.focus(), 80);
+      return () => clearTimeout(timer);
+    }
+  }, [forgotMode]);
+
+  // clear error when user types in main form
+  useEffect(() => {
+    if (err) setErr('');
+  }, [email, pw]);
+
+  const doShake = useCallback(() => {
     setShake(true);
     setTimeout(() => setShake(false), 400);
-  };
+  }, []);
 
   const doLogin = async () => {
     if (loading) return;
@@ -56,7 +77,44 @@ function LoginScreen({onAuth, dark}){
     setLoading(false);
   };
 
-  // ── Colors (Indigo/Violet — mirror student-login) ──
+  const handleForgotPassword = async () => {
+    if (forgotLoading) return;
+    if (!forgotEmail.trim()) {
+      setForgotMsg({ type: 'error', text: 'Vui lòng nhập email của bạn.' });
+      return;
+    }
+    setForgotLoading(true);
+    setForgotMsg({ type: '', text: '' });
+    try {
+      const { error } = await window.supa.auth.resetPasswordForEmail(
+        forgotEmail.trim().toLowerCase(),
+        { redirectTo: window.location.origin + '/admin?reset=true' }
+      );
+      if (error) {
+        setForgotMsg({ type: 'error', text: error.message });
+      } else {
+        setForgotMsg({
+          type: 'success',
+          text: '📩 Đã gửi hướng dẫn đặt lại mật khẩu. Vui lòng kiểm tra email!',
+        });
+      }
+    } catch (e) {
+      setForgotMsg({ type: 'error', text: 'Lỗi kết nối, thử lại nhé!' });
+    }
+    setForgotLoading(false);
+  };
+
+  const switchToForgot = () => {
+    setForgotMode(true);
+    setForgotEmail(email); // pre-fill if user typed something
+    setForgotMsg({ type: '', text: '' });
+  };
+
+  const switchToLogin = () => {
+    setForgotMode(false);
+  };
+
+  // ── Colors (Indigo/Violet) ──
   const bg    = dark
     ? 'radial-gradient(at 20% 20%, rgba(99,102,241,0.15) 0px, transparent 50%), radial-gradient(at 80% 80%, rgba(139,92,246,0.15) 0px, transparent 50%), #0f172a'
     : 'radial-gradient(at 20% 20%, rgba(199,210,254,0.6) 0px, transparent 50%), radial-gradient(at 80% 80%, rgba(221,214,254,0.6) 0px, transparent 50%), #f8fafc';
@@ -68,7 +126,6 @@ function LoginScreen({onAuth, dark}){
   const inBg  = dark ? 'rgba(15,23,42,0.6)'         : 'rgba(241,245,249,0.8)';
   const inBgF = dark ? 'rgba(15,23,42,0.8)'         : '#fff';
   const lockBg = dark ? 'rgba(99,102,241,0.12)'     : 'linear-gradient(135deg,#e0e7ff,#ede9fe)';
-  const _unused = [blob1, blob2, blob3]; void _unused; // kept for potential future use
 
   const canSubmit = !loading && email.trim() && pw;
 
@@ -100,6 +157,85 @@ function LoginScreen({onAuth, dark}){
     e.target.style.background = inBg;
   };
 
+  // ── SVG Icons (components for clarity) ──
+  const IconBook = () => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <defs>
+        <linearGradient id="ls-lg1" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#6366f1" />
+          <stop offset="100%" stopColor="#a855f7" />
+        </linearGradient>
+      </defs>
+      <path stroke="url(#ls-lg1)" d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+      <path stroke="url(#ls-lg1)" d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+    </svg>
+  );
+
+  const IconSparkle = () => (
+    <svg width="13" height="13" viewBox="0 0 20 20" fill="#6366f1" opacity=".7">
+      <path d="M10 0 L11.5 8.5 L20 10 L11.5 11.5 L10 20 L8.5 11.5 L0 10 L8.5 8.5 Z" />
+    </svg>
+  );
+
+  const IconLockShield = () => (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <defs>
+        <linearGradient id="ls-lg2" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#6366f1" />
+          <stop offset="100%" stopColor="#8b5cf6" />
+        </linearGradient>
+      </defs>
+      <path stroke="url(#ls-lg2)" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <path stroke="url(#ls-lg2)" d="M9 12l2 2 4-4" />
+    </svg>
+  );
+
+  const IconEyeOpen = () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+
+  const IconEyeClosed = () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+      <line x1="1" y1="1" x2="23" y2="23" />
+    </svg>
+  );
+
+  const IconError = () => (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
+    </svg>
+  );
+
+  const IconSuccess = () => (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+  );
+
+  const IconArrowRight = () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+      <polyline points="10 17 15 12 10 7" />
+      <line x1="15" y1="12" x2="3" y2="12" />
+    </svg>
+  );
+
+  const IconSpinner = () => (
+    <span className="spin" style={{ display: 'inline-flex' }}>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+      </svg>
+    </span>
+  );
+
+  // ── Render ──
   return (
     <div style={{
       minHeight: '100vh',
@@ -112,8 +248,7 @@ function LoginScreen({onAuth, dark}){
       overflow: 'hidden',
       fontFamily: "'Nunito',sans-serif",
     }}>
-
-      {/* ── Decorative floating dots (mirror student-login) ── */}
+      {/* Floating dots */}
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
         {[...Array(6)].map((_, i) => (
           <div key={i} style={{
@@ -131,28 +266,12 @@ function LoginScreen({onAuth, dark}){
       <style>{`@keyframes ls-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}`}</style>
 
       <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 360, animation: 'fadeUp .28s ease both' }}>
-
-        {/* ── Logo ── */}
+        {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <span className="logo-fl">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <defs>
-                  <linearGradient id="ls-lg1" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#6366f1" />
-                    <stop offset="100%" stopColor="#a855f7" />
-                  </linearGradient>
-                </defs>
-                <path stroke="url(#ls-lg1)" d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-                <path stroke="url(#ls-lg1)" d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-              </svg>
-            </span>
+            <span className="logo-fl"><IconBook /></span>
             <span className="logo-learnsy" style={{ fontSize: 28 }}>Learnsy</span>
-            <span className="logo-flb">
-              <svg width="13" height="13" viewBox="0 0 20 20" fill="#6366f1" opacity=".7">
-                <path d="M10 0 L11.5 8.5 L20 10 L11.5 11.5 L10 20 L8.5 11.5 L0 10 L8.5 8.5 Z" />
-              </svg>
-            </span>
+            <span className="logo-flb"><IconSparkle /></span>
           </div>
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 900, color: '#6366f1',
@@ -175,158 +294,201 @@ function LoginScreen({onAuth, dark}){
           boxShadow: dark ? '0 25px 50px -12px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.05)' : '0 25px 50px -12px rgba(99,102,241,0.25),inset 0 1px 0 rgba(255,255,255,0.9)',
           animation: 'pop .28s ease both',
         }}>
+          {!forgotMode ? (
+            // ─── LOGIN FORM ───
+            <>
+              <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                <div style={{
+                  width: 54, height: 54, borderRadius: 17, background: lockBg,
+                  border: `1.5px solid ${bord2}`, display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', margin: '0 auto 12px',
+                  boxShadow: '0 4px 16px rgba(99,102,241,0.15)',
+                }}>
+                  <IconLockShield />
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: tMain, marginBottom: 3 }}>Xin chào, giáo viên! 👋</div>
+                <div style={{ fontSize: 12, color: tSub, fontWeight: 600 }}>Nhập thông tin để vào trang quản trị</div>
+              </div>
 
-          {/* Lock icon + heading */}
-          <div style={{ textAlign: 'center', marginBottom: 20 }}>
-            <div style={{
-              width: 54, height: 54, borderRadius: 17, background: lockBg,
-              border: `1.5px solid ${bord2}`, display: 'flex', alignItems: 'center',
-              justifyContent: 'center', margin: '0 auto 12px',
-              boxShadow: '0 4px 16px rgba(99,102,241,0.15)',
-            }}>
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <defs>
-                  <linearGradient id="ls-lg2" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#6366f1" />
-                    <stop offset="100%" stopColor="#8b5cf6" />
-                  </linearGradient>
-                </defs>
-                <rect stroke="url(#ls-lg2)" x="3" y="11" width="18" height="11" rx="2" />
-                <path stroke="url(#ls-lg2)" d="M7 11V7a5 5 0 0 1 10 0v4" />
-              </svg>
-            </div>
-            <div style={{ fontSize: 16, fontWeight: 900, color: tMain, marginBottom: 3 }}>Xin chào, giáo viên! 👋</div>
-            <div style={{ fontSize: 12, color: tSub, fontWeight: 600 }}>Nhập thông tin để vào trang quản trị</div>
-          </div>
+              <div style={{ height: 1, background: `linear-gradient(90deg,transparent,${bord},transparent)`, marginBottom: 20 }} />
 
-          {/* Divider */}
-          <div style={{ height: 1, background: `linear-gradient(90deg,transparent,${bord},transparent)`, marginBottom: 20 }} />
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 900, color: tSub, letterSpacing: '.8', textTransform: 'uppercase', marginBottom: 5 }}>Email</label>
+                <input
+                  ref={emailRef}
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && doLogin()}
+                  placeholder="admin@truong.edu.vn"
+                  autoComplete="email"
+                  style={inputBaseStyle(!!err)}
+                  onFocus={inputFocusStyle}
+                  onBlur={e => inputBlurStyle(e, !!err)}
+                />
+              </div>
 
-          {/* Email */}
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ display: 'block', fontSize: 10, fontWeight: 900, color: tSub, letterSpacing: '.8', textTransform: 'uppercase', marginBottom: 5 }}>
-              Email
-            </label>
-            <input
-              ref={emailRef}
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && doLogin()}
-              placeholder="admin@truong.edu.vn"
-              autoComplete="email"
-              style={inputBaseStyle(!!err)}
-              onFocus={inputFocusStyle}
-              onBlur={e => inputBlurStyle(e, !!err)}
-            />
-          </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 900, color: tSub, letterSpacing: '.8', textTransform: 'uppercase', marginBottom: 5 }}>Mật khẩu</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={show ? 'text' : 'password'}
+                    value={pw}
+                    onChange={e => setPw(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && doLogin()}
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                    className={shake ? 'do-shake' : ''}
+                    style={inputBaseStyle(!!err)}
+                    onFocus={inputFocusStyle}
+                    onBlur={e => inputBlurStyle(e, !!err)}
+                  />
+                  <button
+                    onClick={() => setShow(s => !s)}
+                    tabIndex={-1}
+                    style={{
+                      position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)',
+                      background: 'none', border: 'none', cursor: 'pointer', padding: 4,
+                      color: tSub, display: 'flex', alignItems: 'center', lineHeight: 0,
+                    }}
+                    aria-label={show ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                  >
+                    {show ? <IconEyeClosed /> : <IconEyeOpen />}
+                  </button>
+                </div>
+              </div>
 
-          {/* Password */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 10, fontWeight: 900, color: tSub, letterSpacing: '.8', textTransform: 'uppercase', marginBottom: 5 }}>
-              Mật khẩu
-            </label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type={show ? 'text' : 'password'}
-                value={pw}
-                onChange={e => setPw(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && doLogin()}
-                placeholder="••••••••"
-                autoComplete="current-password"
-                className={shake ? 'do-shake' : ''}
-                style={inputBaseStyle(!!err)}
-                onFocus={inputFocusStyle}
-                onBlur={e => inputBlurStyle(e, !!err)}
-              />
+              {err && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: '#EF4444',
+                  background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)',
+                  borderRadius: 10, padding: '7px 12px', marginBottom: 12,
+                }}>
+                  <IconError /> {err}
+                </div>
+              )}
+
               <button
-                onClick={() => setShow(s => !s)}
-                tabIndex={-1}
+                onClick={doLogin}
+                disabled={!canSubmit}
                 style={{
-                  position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)',
-                  background: 'none', border: 'none', cursor: 'pointer', padding: 4,
-                  color: tSub, display: 'flex', alignItems: 'center', lineHeight: 0,
+                  width: '100%', padding: '13px', borderRadius: 999, border: 'none',
+                  background: canSubmit ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(99,102,241,0.22)',
+                  color: canSubmit ? '#fff' : 'rgba(255,255,255,0.45)',
+                  fontSize: 14, fontWeight: 900, fontFamily: "'Nunito',sans-serif",
+                  cursor: canSubmit ? 'pointer' : 'not-allowed',
+                  boxShadow: canSubmit ? '0 10px 25px -5px rgba(99,102,241,0.5),0 8px 10px -6px rgba(139,92,246,0.4)' : 'none',
+                  transition: 'all .2s',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
                 }}
-                aria-label={show ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
               >
-                {show ? (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                    <line x1="1" y1="1" x2="23" y2="23" />
-                  </svg>
-                ) : (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
-                )}
+                {loading ? (<><IconSpinner /> Đang đăng nhập...</>) : (<><IconArrowRight /> Đăng nhập</>)}
               </button>
-            </div>
-          </div>
 
-          {/* Error */}
-          {err && (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: '#EF4444',
-              background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)',
-              borderRadius: 10, padding: '7px 12px', marginBottom: 12,
-            }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
-              {err}
-            </div>
-          )}
-
-          {/* Button */}
-          <button
-            onClick={doLogin}
-            disabled={!canSubmit}
-            style={{
-              width: '100%', padding: '13px', borderRadius: 999, border: 'none',
-              background: canSubmit ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(99,102,241,0.22)',
-              color: canSubmit ? '#fff' : 'rgba(255,255,255,0.45)',
-              fontSize: 14, fontWeight: 900, fontFamily: "'Nunito',sans-serif",
-              cursor: canSubmit ? 'pointer' : 'not-allowed',
-              boxShadow: canSubmit ? '0 10px 25px -5px rgba(99,102,241,0.5),0 8px 10px -6px rgba(139,92,246,0.4)' : 'none',
-              transition: 'all .2s',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-            }}
-          >
-            {loading ? (
-              <>
-                <span className="spin" style={{ display: 'inline-flex' }}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-                  </svg>
+              <div style={{ textAlign: 'center', marginTop: 12 }}>
+                <span
+                  onClick={switchToForgot}
+                  style={{ fontSize: 11, color: tSub, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', opacity: 0.7 }}
+                >
+                  Quên mật khẩu?
                 </span>
-                Đang đăng nhập...
-              </>
-            ) : (
-              <>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-                  <polyline points="10 17 15 12 10 7" />
-                  <line x1="15" y1="12" x2="3" y2="12" />
-                </svg>
-                Đăng nhập
-              </>
-            )}
-          </button>
+              </div>
 
-          {/* Footer */}
-          <div style={{
-            textAlign: 'center', marginTop: 14, fontSize: 10, color: tSub, fontWeight: 600, opacity: .8,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-          }}>
-            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" />
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
-            Xác thực qua Supabase Auth
-          </div>
+              <div style={{
+                textAlign: 'center', marginTop: 14, fontSize: 10, color: tSub, fontWeight: 600, opacity: .8,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+              }}>
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+                Xác thực qua Supabase Auth
+              </div>
+            </>
+          ) : (
+            // ─── FORGOT PASSWORD FORM ───
+            <>
+              <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                <div style={{
+                  width: 54, height: 54, borderRadius: 17, background: lockBg,
+                  border: `1.5px solid ${bord2}`, display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', margin: '0 auto 12px',
+                  boxShadow: '0 4px 16px rgba(99,102,241,0.15)',
+                }}>
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <defs>
+                      <linearGradient id="ls-lg3" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#6366f1" />
+                        <stop offset="100%" stopColor="#8b5cf6" />
+                      </linearGradient>
+                    </defs>
+                    <circle cx="12" cy="12" r="10" stroke="url(#ls-lg3)" />
+                    <path stroke="url(#ls-lg3)" d="M12 16v-4M12 8h.01" />
+                  </svg>
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: tMain, marginBottom: 3 }}>Quên mật khẩu?</div>
+                <div style={{ fontSize: 12, color: tSub, fontWeight: 600 }}>Nhập email để nhận hướng dẫn đặt lại</div>
+              </div>
+
+              <div style={{ height: 1, background: `linear-gradient(90deg,transparent,${bord},transparent)`, marginBottom: 20 }} />
+
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 900, color: tSub, letterSpacing: '.8', textTransform: 'uppercase', marginBottom: 5 }}>Email</label>
+                <input
+                  ref={forgotEmailRef}
+                  type="email"
+                  value={forgotEmail}
+                  onChange={e => { setForgotEmail(e.target.value); setForgotMsg({ type: '', text: '' }); }}
+                  onKeyDown={e => e.key === 'Enter' && handleForgotPassword()}
+                  placeholder="admin@truong.edu.vn"
+                  autoComplete="email"
+                  style={inputBaseStyle(forgotMsg.type === 'error')}
+                  onFocus={inputFocusStyle}
+                  onBlur={e => inputBlurStyle(e, forgotMsg.type === 'error')}
+                />
+              </div>
+
+              {forgotMsg.text && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700,
+                  color: forgotMsg.type === 'error' ? '#EF4444' : '#059669',
+                  background: forgotMsg.type === 'error' ? 'rgba(239,68,68,0.07)' : 'rgba(5,150,105,0.07)',
+                  border: `1px solid ${forgotMsg.type === 'error' ? 'rgba(239,68,68,0.2)' : 'rgba(5,150,105,0.2)'}`,
+                  borderRadius: 10, padding: '7px 12px', marginBottom: 12,
+                }}>
+                  {forgotMsg.type === 'error' ? <IconError /> : <IconSuccess />}
+                  {forgotMsg.text}
+                </div>
+              )}
+
+              <button
+                onClick={handleForgotPassword}
+                disabled={forgotLoading || !forgotEmail.trim()}
+                style={{
+                  width: '100%', padding: '13px', borderRadius: 999, border: 'none',
+                  background: (forgotEmail.trim() && !forgotLoading) ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(99,102,241,0.22)',
+                  color: (forgotEmail.trim() && !forgotLoading) ? '#fff' : 'rgba(255,255,255,0.45)',
+                  fontSize: 14, fontWeight: 900, fontFamily: "'Nunito',sans-serif",
+                  cursor: (forgotEmail.trim() && !forgotLoading) ? 'pointer' : 'not-allowed',
+                  boxShadow: (forgotEmail.trim() && !forgotLoading) ? '0 10px 25px -5px rgba(99,102,241,0.5),0 8px 10px -6px rgba(139,92,246,0.4)' : 'none',
+                  transition: 'all .2s',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                  marginBottom: 12,
+                }}
+              >
+                {forgotLoading ? (<><IconSpinner /> Đang gửi...</>) : ('📩 Gửi yêu cầu')}
+              </button>
+
+              <div style={{ textAlign: 'center' }}>
+                <span
+                  onClick={switchToLogin}
+                  style={{ fontSize: 11, color: tSub, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', opacity: 0.7 }}
+                >
+                  ← Quay lại đăng nhập
+                </span>
+              </div>
+            </>
+          )}
         </div>
 
         <div style={{ textAlign: 'center', marginTop: 16, fontSize: 11, color: tSub, opacity: .6, fontWeight: 600 }}>
@@ -338,5 +500,5 @@ function LoginScreen({onAuth, dark}){
 }
 
 window.LoginScreen = LoginScreen;
-console.log('[login] ✓ loaded (Supabase Auth + SVG-style)');
+console.log('[login] ✓ loaded (Supabase Auth + forgot password + enhanced SVG)');
 })();
