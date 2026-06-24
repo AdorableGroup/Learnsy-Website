@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="color-scheme" content="light">
+<meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#FFE2EC">
 <title>DOCX / PDF → Quiz Parser</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -49,6 +49,43 @@
 
   color-scheme: light;
 }
+
+/* ── Dark mode ──────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg-grad-start: #1A1215;
+  --bg-grad-mid:   #1E1318;
+  --bg-grad-end:   #1C1510;
+
+  --surface: #2A1E22;
+  --surface-soft: #32242A;
+  --surface-strong: #3A2B30;
+
+  --line: #4A3038;
+  --line-soft: #3D2830;
+
+  --ink: #F0DDD8;
+  --ink-soft: #A88880;
+  --ink-faint: #6B4E48;
+
+  --coral: #FF9B7A;
+  --rose: #FF85A5;
+  --accent-soft-bg: #3D2030;
+
+  --success-bg: #182E20; --success-text: #5EC47A; --success-strong: #4DB86A;
+  --warning-bg: #2A2010; --warning-text: #E8A030;
+  --danger-bg:  #2E1518; --danger-text:  #F07090;
+  --info-bg:    #1E1A30; --info-text:    #A088E8;
+  --ocr-bg:     #2E2010; --ocr-text:     #F0A060;
+  --neutral-bg: #242020; --neutral-text: #907870;
+  --pdf-bg:     #151D38; --pdf-text:     #6888E0;
+
+  --shadow-soft: 0 6px 18px rgba(0,0,0,.4);
+  --shadow-tiny: 0 2px 8px rgba(0,0,0,.3);
+
+  color-scheme: dark;
+}
+
+/* Dark mode theme-color handled via JS */
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html { -webkit-text-size-adjust: 100%; }
@@ -269,9 +306,47 @@ input[type=file] { display: none; }
 .engine-btn.recommended { position: relative; }
 .engine-btn.recommended::after { content: '✦'; position: absolute; top: -4px; right: -4px; font-size: 0.55rem; background: var(--rose); color: #fff; border-radius: 50%; width: 14px; height: 14px; display: flex; align-items: center; justify-content: center; line-height: 1; }
 
+/* ── Dark mode toggle ───────────────────────────────────────────── */
+.theme-toggle {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  right: max(14px, env(safe-area-inset-right));
+  z-index: 999;
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-tiny);
+  transition: background .2s, border-color .2s, color .2s, transform .1s;
+  touch-action: manipulation;
+}
+.theme-toggle:active { transform: scale(0.9); }
+.theme-toggle .icon { width: 20px; height: 20px; }
+.theme-toggle .icon-moon { display: none; }
+.theme-toggle .icon-sun  { display: block; }
+[data-theme="dark"] .theme-toggle .icon-moon { display: block; }
+[data-theme="dark"] .theme-toggle .icon-sun  { display: none; }
+[data-theme="dark"] .theme-toggle { color: var(--rose); border-color: var(--rose); background: var(--surface-soft); }
+
 </style>
 </head>
 <body>
+<!-- Dark mode toggle -->
+<button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Chuyển chế độ sáng/tối" aria-label="Toggle dark mode">
+  <!-- Sun icon (shown in dark mode) -->
+  <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="4"/>
+    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+  </svg>
+  <!-- Moon icon (shown in light mode) -->
+  <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+  </svg>
+</button>
+
 <h1><svg class="icon" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5z"/><path d="M14 2v6h6"/><path d="M9 13h6"/><path d="M9 17h6"/></svg> DOCX → Quiz</h1>
 <p class="sub">Upload file Word — tự nhận dạng trắc nghiệm nhiều định dạng</p>
 
@@ -2728,6 +2803,27 @@ function showEl(id) {
   e.style.display = needsFlex ? 'flex' : 'block';
 }
 function hideEl(id) { const e = document.getElementById(id); if (e) e.style.display = 'none'; }
+
+// ── Dark mode ─────────────────────────────────────────────────────────────────
+(function initTheme() {
+  const saved = localStorage.getItem('learnsy_theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const theme = saved || (prefersDark ? 'dark' : 'light');
+  applyTheme(theme, false);
+})();
+
+function applyTheme(theme, save = true) {
+  document.documentElement.setAttribute('data-theme', theme);
+  document.querySelector('meta[name="color-scheme"]').content = theme;
+  document.querySelector('meta[name="theme-color"]').content =
+    theme === 'dark' ? '#1E1318' : '#FFE2EC';
+  if (save) localStorage.setItem('learnsy_theme', theme);
+}
+
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme');
+  applyTheme(cur === 'dark' ? 'light' : 'dark');
+}
 </script>
 </body>
 </html>
