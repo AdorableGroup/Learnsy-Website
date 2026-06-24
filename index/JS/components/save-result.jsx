@@ -1,18 +1,23 @@
-import React from 'react';
+import { createClient } from '@supabase/supabase-js'
 
 // ══════════════════════════════════════════════════════════════════
 //  SAVE-RESULT.JSX  ·  Learnsy · Lưu & load kết quả quiz
 //  Exports: window.saveQuizResult, window.flushPendingResults,
 //           window.loadQuizHistory
 //
-//  v3 — khớp schema thật:
-//    lesson_id    text  (không phải uuid)
-//    submitted_at timestamptz  (thay vì taken_at)
-//    diem10       numeric      (điểm thang 10)
-//    xep_loai     text         (xếp loại)
-//    student_id   uuid
+//  v5 — Tự tạo Supabase client, không phụ thuộc window.supa
 // ══════════════════════════════════════════════════════════════════
-(function () {
+
+const supaUrl = import.meta.env.VITE_SUPABASE_URL
+const supaKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+if (!supaUrl || !supaKey) {
+  console.error('[save-result] Thiếu VITE_SUPABASE_URL hoặc VITE_SUPABASE_ANON_KEY trong file .env')
+}
+
+const supa = createClient(supaUrl, supaKey)
+
+;(function () {
   'use strict';
   try {
 
@@ -36,11 +41,6 @@ import React from 'react';
       } catch {
         return { name: 'Ẩn danh', id: null };
       }
-    }
-
-    function _supaReady() {
-      if (!window.supa) { console.warn('[save-result] window.supa chưa init'); return false; }
-      return true;
     }
 
     // ── Tính xếp loại từ pct ──────────────────────────────────────
@@ -136,22 +136,18 @@ import React from 'react';
         const payload = {
           student_name:  studentName,
           student_id:    studentId,
-          lesson_id:     lessonId ? String(lessonId) : null, // text, có thể null
+          lesson_id:     lessonId ? String(lessonId) : null,
           lesson_title:  String(lessonTitle || 'Không rõ'),
           score:         scoreNum,
           total:         totalNum,
           diem10,
           xep_loai:      _xepLoai(pct),
           per_q:         perQArr,
-          submitted_at:  new Date().toISOString(),          // khớp tên cột thật
+          submitted_at:  new Date().toISOString(),
         };
 
-        if (!_supaReady()) {
-          _fallbackSave(payload);
-          return { ok: false, error: 'supa_not_ready' };
-        }
-
-        const { data, error } = await window.supa
+        // Dùng trực tiếp biến supa đã khởi tạo
+        const { data, error } = await supa
           .from('quiz_results')
           .upsert(payload, {
             onConflict: 'student_id,lesson_title',
@@ -182,13 +178,12 @@ import React from 'react';
     //  flushPendingResults()
     // ════════════════════════════════════════════════════════════
     async function flushPendingResults() {
-      if (!_supaReady()) return;
       try {
         const key = 'learnsy_pending_results';
         const arr = JSON.parse(localStorage.getItem(key) || '[]');
         if (!arr.length) return;
 
-        const { error } = await window.supa
+        const { error } = await supa
           .from('quiz_results')
           .upsert(arr, { onConflict: 'student_id,lesson_title', ignoreDuplicates: false });
 
@@ -204,9 +199,9 @@ import React from 'react';
     //  loadQuizHistory(studentId)
     // ════════════════════════════════════════════════════════════
     async function loadQuizHistory(studentId) {
-      if (!studentId || !_supaReady()) return [];
+      if (!studentId) return [];
       try {
-        const { data, error } = await window.supa
+        const { data, error } = await supa
           .from('quiz_results')
           .select('id, lesson_title, score, total, diem10, xep_loai, per_q, submitted_at, created_at')
           .eq('student_id', String(studentId))
@@ -246,7 +241,7 @@ import React from 'react';
     window.flushPendingResults = flushPendingResults;
     window.loadQuizHistory     = loadQuizHistory;
 
-    console.log('[save-result] ✓ v3 loaded');
+    console.log('[save-result] ✅ v5 loaded (built-in supa client)');
   } catch (e) {
     console.error('[save-result] INIT ERROR:', e);
   }
