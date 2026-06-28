@@ -379,6 +379,7 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
     const [editingId,   setEditingId]   = useState(null);
     const [text,        setText]        = useState('');
     const [wordBox,     setWordBox]     = useState([]);
+    const [wbShuffled,  setWbShuffled]  = useState(false);
     const [wbInput,     setWbInput]     = useState('');
     const [answers,     setAnswers]     = useState([]);
     const [statements,  setStatements]  = useState([]);
@@ -411,7 +412,7 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
 
     // ── Reset form ──
     const resetForm = useCallback(()=>{
-      setEditingId(null); setText(''); setWordBox([]); setWbInput('');
+      setEditingId(null); setText(''); setWordBox([]); setWbInput(''); setWbShuffled(false);
       setAnswers([]); setStatements([]); setShuffleStatements(false); setTags([]); setTagInput('');
     },[]);
 
@@ -1078,9 +1079,9 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
                 <span style={{fontSize:11,fontWeight:900,color:'#4338ca'}}>Word Box — từ cho học sinh chọn</span>
                 <div style={{display:'flex',gap:6}}>
                   {wordBox.length>1 && (
-                    <button onClick={()=>setWordBox(prev=>{let n;do{n=shuffleArr(prev);}while(n.every((w,i)=>w.id===prev[i].id));return n;})}
+                    <button onClick={()=>{setWordBox(prev=>{let n;do{n=shuffleArr(prev);}while(n.every((w,i)=>w.id===prev[i].id));return n;});setWbShuffled(v=>!v);}}
                       title="Tráo thứ tự các từ trong Word Box"
-                      style={{...btnBase('#4338ca','rgba(67,56,202,.08)'),fontSize:10,display:'flex',alignItems:'center',gap:4}}>
+                      style={{...btnBase(wbShuffled?'#dc2626':'#4338ca',wbShuffled?'rgba(220,38,38,.08)':'rgba(67,56,202,.08)'),fontSize:10,display:'flex',alignItems:'center',gap:4,border:`1.5px solid ${wbShuffled?'rgba(220,38,38,.35)':'rgba(67,56,202,.25)'}`}}>
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
                       Tráo
                     </button>
