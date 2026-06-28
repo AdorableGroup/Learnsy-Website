@@ -832,23 +832,6 @@ import React from 'react';
               </button>
             </div>
 
-            {/* ── Đoạn văn với Inline Inputs ── */}
-            <div style={{
-              background: LC.surfaceQ,
-              border: `1.5px solid ${LC.borderQ}`,
-              borderRadius: 18,
-              padding: '15px 17px',
-              boxShadow: LC.cardShadow,
-            }}>
-              <div style={{ fontSize: 10, fontWeight: 900, color: '#B07CF0', letterSpacing: 1.2, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
-                <IconBook size={11} color="#B07CF0" />
-                ĐOẠN VĂN
-              </div>
-              <div style={{ fontSize: 13.5, lineHeight: 2.1, color: LC.text2 }}>
-                {renderPassage()}
-              </div>
-            </div>
-
             {/* ── Word Box ── */}
             {selected.wordBox.length > 0 && (
               <div style={{
@@ -875,6 +858,23 @@ import React from 'react';
                 </div>
               </div>
             )}
+
+            {/* ── Đoạn văn với Inline Inputs ── */}
+            <div style={{
+              background: LC.surfaceQ,
+              border: `1.5px solid ${LC.borderQ}`,
+              borderRadius: 18,
+              padding: '15px 17px',
+              boxShadow: LC.cardShadow,
+            }}>
+              <div style={{ fontSize: 10, fontWeight: 900, color: '#B07CF0', letterSpacing: 1.2, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <IconBook size={11} color="#B07CF0" />
+                ĐOẠN VĂN
+              </div>
+              <div style={{ fontSize: 13.5, lineHeight: 2.1, color: LC.text2 }}>
+                {renderPassage()}
+              </div>
+            </div>
 
             {/* ── True/False/Not Mentioned ── */}
             {selected.statements.length > 0 && (
