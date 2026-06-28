@@ -12,6 +12,7 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
 //      answers:[],           // đáp án đúng theo thứ tự (1),(2),(3)...
 //      statements:[],        // [{statement, answer:'True'|'False'|'Not Mentioned'}]
 //      shuffle_statements:bool, // [v3] true = tự tráo thứ tự nhận định T/F/NM mỗi lần học sinh làm
+//      shuffle_word_box:bool,   // [v4] true = tự tráo thứ tự Word Box mỗi lần học sinh làm
 //      sort_order:number,    // [v2] thứ tự sắp xếp
 //      tags:[],              // [v2] nhãn phân loại
 //      created_at }
@@ -31,6 +32,7 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
 //    alter table listening_items add column if not exists sort_order integer default 0;
 //    alter table listening_items add column if not exists tags jsonb default '[]';
 //    alter table listening_items add column if not exists shuffle_statements boolean default false;
+//    alter table listening_items add column if not exists shuffle_word_box boolean default false;
 //
 //  Props nhận từ app.js:
 //    dark, C            — theme
@@ -85,7 +87,8 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
     wordBox: r.word_box||[],
     answers: r.answers||[],
     statements: r.statements||[],
-    shuffleStatements: !!r.shuffle_statements, // [v3] tự tráo thứ tự nhận định T/F/NM mỗi lần học sinh làm
+    shuffleStatements: !!r.shuffle_statements,
+    shuffleWordBox: !!r.shuffle_word_box,    // [v4]
     sortOrder: r.sort_order ?? 0,
     tags: r.tags||[],
     created_at: r.created_at,
@@ -95,7 +98,7 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
     const an = Array.isArray(it.answers)    ? it.answers    : [];
     const st = Array.isArray(it.statements) ? it.statements : [];
     const tg = Array.isArray(it.tags)       ? it.tags       : [];
-    return {id:it.id, text:it.text, word_box:wb, answers:an, statements:st, shuffle_statements:!!it.shuffleStatements, sort_order:it.sortOrder??0, tags:tg};
+    return {id:it.id, text:it.text, word_box:wb, answers:an, statements:st, shuffle_statements:!!it.shuffleStatements, shuffle_word_box:!!it.shuffleWordBox, sort_order:it.sortOrder??0, tags:tg};
   };
 
   // xáo trộn mảng (Fisher-Yates) — dùng để tráo thứ tự nhận định T/F/NM khi hiển thị cho học sinh
@@ -116,7 +119,7 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
     const [checked, setChecked] = useState(false);
     const [ttsSpeed, setTtsSpeed] = useState(1);
     const [ttsSpeaking, setTtsSpeaking] = useState(false);
-    const [wordBoxOrder, setWordBoxOrder] = useState(()=>shuffleArr(item.wordBox||[]));
+    const [wordBoxOrder, setWordBoxOrder] = useState(()=> item.shuffleWordBox ? shuffleArr(item.wordBox||[]) : (item.wordBox||[]));
     const reshuffleWordBox = () => setWordBoxOrder(prev=>{
       if(prev.length<=1) return prev;
       let next;
@@ -379,7 +382,7 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
     const [editingId,   setEditingId]   = useState(null);
     const [text,        setText]        = useState('');
     const [wordBox,     setWordBox]     = useState([]);
-    const [wbShuffled,  setWbShuffled]  = useState(false);
+    const [shuffleWordBox, setShuffleWordBox] = useState(false); // [v4] tự tráo Word Box cho học sinh
     const [wbInput,     setWbInput]     = useState('');
     const [answers,     setAnswers]     = useState([]);
     const [statements,  setStatements]  = useState([]);
@@ -412,7 +415,7 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
 
     // ── Reset form ──
     const resetForm = useCallback(()=>{
-      setEditingId(null); setText(''); setWordBox([]); setWbInput(''); setWbShuffled(false);
+      setEditingId(null); setText(''); setWordBox([]); setWbInput(''); setShuffleWordBox(false);
       setAnswers([]); setStatements([]); setShuffleStatements(false); setTags([]); setTagInput('');
     },[]);
 
@@ -424,6 +427,7 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
         setAnswers(Array.isArray(it.answers)?it.answers.map((a,i)=>({id:i+'_'+Date.now(),val:a})):[]);
         setStatements(Array.isArray(it.statements)?it.statements.map((s,i)=>({...s,id:i+'_'+Date.now()})):[]);
         setShuffleStatements(!!it.shuffleStatements);
+        setShuffleWordBox(!!it.shuffleWordBox);
         setTags(Array.isArray(it.tags)?[...it.tags]:[]);
       } else {
         resetForm();
@@ -565,14 +569,14 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
         setSaving(true);
         try{
           if(editingId){
-            const payload={text:cleanText,wordBox:cleanWordBox,answers:cleanAnswers,statements:cleanStatements,shuffleStatements,tags:cleanTags};
+            const payload={text:cleanText,wordBox:cleanWordBox,answers:cleanAnswers,statements:cleanStatements,shuffleStatements,shuffleWordBox,tags:cleanTags};
             const {error}=await supa.from('listening_items').update(toRow({id:editingId,...payload})).eq('id',editingId);
             if(error) throw error;
             setItems(p=>p.map(it=>it.id===editingId?{...it,...payload}:it));
             toast_&&toast_('+ Đã cập nhật câu Listening!');
           } else {
             const sortMax = items.reduce((m,it)=>Math.max(m,it.sortOrder||0),0);
-            const newItem={id:'ls'+Date.now()+Math.random(),text:cleanText,wordBox:cleanWordBox,answers:cleanAnswers,statements:cleanStatements,shuffleStatements,tags:cleanTags,sortOrder:sortMax+1};
+            const newItem={id:'ls'+Date.now()+Math.random(),text:cleanText,wordBox:cleanWordBox,answers:cleanAnswers,statements:cleanStatements,shuffleStatements,shuffleWordBox,tags:cleanTags,sortOrder:sortMax+1};
             const {error}=await supa.from('listening_items').insert(toRow(newItem));
             if(error) throw error;
             setItems(p=>[...p,newItem]);
@@ -1079,9 +1083,9 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
                 <span style={{fontSize:11,fontWeight:900,color:'#4338ca'}}>Word Box — từ cho học sinh chọn</span>
                 <div style={{display:'flex',gap:6}}>
                   {wordBox.length>1 && (
-                    <button onClick={()=>{setWordBox(prev=>{let n;do{n=shuffleArr(prev);}while(n.every((w,i)=>w.id===prev[i].id));return n;});setWbShuffled(v=>!v);}}
-                      title="Tráo thứ tự các từ trong Word Box"
-                      style={{...btnBase(wbShuffled?'#dc2626':'#4338ca',wbShuffled?'rgba(220,38,38,.08)':'rgba(67,56,202,.08)'),fontSize:10,display:'flex',alignItems:'center',gap:4,border:`1.5px solid ${wbShuffled?'rgba(220,38,38,.35)':'rgba(67,56,202,.25)'}`}}>
+                    <button onClick={()=>setShuffleWordBox(v=>!v)}
+                      title="Tự tráo thứ tự Word Box mỗi lần học sinh làm"
+                      style={{...btnBase(shuffleWordBox?'#dc2626':'#4338ca',shuffleWordBox?'rgba(220,38,38,.08)':'rgba(67,56,202,.08)'),fontSize:10,display:'flex',alignItems:'center',gap:4,border:`1.5px solid ${shuffleWordBox?'rgba(220,38,38,.35)':'rgba(67,56,202,.25)'}`}}>
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
                       Tráo
                     </button>
