@@ -218,15 +218,15 @@ const _kawaiiIcons = {
   const s=document.createElement('style');
   s.id='bb-di-toast-css';
   s.textContent=`
-    @keyframes _di-in  {
+    @keyframes _di-in {
       0%  { width:36px;  height:36px;  border-radius:50%;  opacity:0; transform:translateX(-50%) scaleY(.6); }
       20% { width:36px;  height:36px;  border-radius:50%;  opacity:1; transform:translateX(-50%) scaleY(1); }
-      55% { width:252px; height:50px;  border-radius:25px; opacity:1; transform:translateX(-50%) scaleY(1); }
-      100%{ width:272px; height:56px;  border-radius:28px; opacity:1; transform:translateX(-50%) scaleY(1); }
+      55% { width:270px; height:52px;  border-radius:26px; opacity:1; transform:translateX(-50%) scaleY(1); }
+      100%{ width:290px; height:56px;  border-radius:28px; opacity:1; transform:translateX(-50%) scaleY(1); }
     }
     @keyframes _di-out {
-      0%  { width:272px; height:56px;  border-radius:28px; opacity:1; transform:translateX(-50%) scaleY(1); }
-      40% { width:252px; height:50px;  border-radius:25px; opacity:1; transform:translateX(-50%) scaleY(1); }
+      0%  { width:290px; height:56px;  border-radius:28px; opacity:1; transform:translateX(-50%) scaleY(1); }
+      40% { width:270px; height:52px;  border-radius:26px; opacity:1; transform:translateX(-50%) scaleY(1); }
       75% { width:36px;  height:36px;  border-radius:50%;  opacity:1; transform:translateX(-50%) scaleY(1); }
       100%{ width:36px;  height:36px;  border-radius:50%;  opacity:0; transform:translateX(-50%) scaleY(.6); }
     }
@@ -234,73 +234,84 @@ const _kawaiiIcons = {
       0%,40%{ opacity:0; transform:scale(.85) translateY(3px); }
       100%  { opacity:1; transform:scale(1) translateY(0); }
     }
-    @keyframes _di-icon-pulse { 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.18); } }
-    @keyframes _di-glow       { 0%,100%{ opacity:.35; } 50%{ opacity:.8; } }
     ._di-pill {
-      position:fixed; top:10px; left:50%;
+      position:fixed; top:12px; left:50%;
       transform:translateX(-50%); transform-origin:center top;
       z-index:999999;
-      background:linear-gradient(135deg,rgba(14,4,10,.97),rgba(26,8,18,.97));
-      display:flex; align-items:center; justify-content:center;
-      gap:9px; padding:0 14px; cursor:pointer; user-select:none; overflow:hidden;
+      background:linear-gradient(135deg,rgba(14,6,14,.97) 0%,rgba(26,10,20,.97) 100%);
+      display:flex; align-items:center;
+      gap:11px; padding:0 16px; cursor:pointer; user-select:none; overflow:hidden;
       will-change:width,height,border-radius,opacity;
-      box-shadow:0 0 0 1.5px rgba(255,255,255,.07), 0 8px 28px rgba(0,0,0,.55);
     }
-    ._di-glow {
-      position:absolute; left:13px; top:50%; transform:translateY(-50%);
+    ._di-halo {
+      position:absolute; left:14px; top:50%; transform:translateY(-50%);
       width:30px; height:30px; border-radius:50%;
-      opacity:.15; filter:blur(7px); pointer-events:none;
-      animation:_di-glow 1.2s ease-in-out infinite;
+      opacity:.15; filter:blur(9px); pointer-events:none;
     }
-    ._di-icon { flex-shrink:0; font-size:18px; position:relative; z-index:1; line-height:1;
-      animation:_di-icon-pulse 1s ease-in-out infinite; }
-    ._di-body { flex:1; min-width:0; position:relative; z-index:1;
-      animation:_di-content-in .52s cubic-bezier(.34,1.3,.64,1) both; }
-    ._di-label { font-size:9px; font-weight:800; letter-spacing:.7px; text-transform:uppercase;
-      font-family:Nunito,sans-serif; margin-bottom:1px; }
-    ._di-msg   { font-size:13px; font-weight:800; color:#fce4f0;
-      font-family:'Baloo 2',cursive; overflow:hidden; text-overflow:ellipsis;
-      white-space:nowrap; line-height:1.15; }
-    ._di-dot   { flex-shrink:0; width:5px; height:5px; border-radius:50%;
-      background:rgba(255,255,255,.22); position:relative; z-index:1; }
+    ._di-icon-box {
+      flex-shrink:0; position:relative; z-index:1;
+      display:flex; align-items:center; justify-content:center;
+      width:30px; height:30px; border-radius:10px;
+    }
+    ._di-icon-box svg { display:block; }
+    ._di-body {
+      flex:1; min-width:0; position:relative; z-index:1;
+      animation:_di-content-in .55s cubic-bezier(.34,1.3,.64,1) both;
+    }
+    ._di-label {
+      font-size:9px; font-weight:800; letter-spacing:.6px; text-transform:uppercase;
+      font-family:Nunito,sans-serif; margin-bottom:1px;
+    }
+    ._di-msg {
+      font-size:14px; font-weight:900; color:#f0e6ff;
+      font-family:Nunito,sans-serif; overflow:hidden; text-overflow:ellipsis;
+      white-space:nowrap; line-height:1.2;
+    }
+    ._di-dot {
+      flex-shrink:0; width:5px; height:5px; border-radius:50%;
+      background:rgba(255,255,255,.22); position:relative; z-index:1;
+    }
   `;
   document.head.appendChild(s);
 })();
 
-/* ══ TYPE → icon emoji + accent color ══ */
+/* ══ TYPE → SVG icon path + accent color ══ */
 const _diConfig={
-  success:{ emoji:'✅', color:'#34d399' },
-  error:  { emoji:'❌', color:'#f87171' },
-  warn:   { emoji:'⚠️', color:'#fbbf24' },
-  info:   { emoji:'✨', color:'#a78bfa' },
+  success:{ color:'#10B981', svg:'<polyline points="20 6 9 17 4 12" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>' },
+  error:  { color:'#f87171', svg:'<line x1="18" y1="6" x2="6" y2="18" stroke-width="2.6" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke-width="2.6" stroke-linecap="round"/>' },
+  warn:   { color:'#fbbf24', svg:'<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="9" x2="12" y2="13" stroke-width="2.5" stroke-linecap="round"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/>' },
+  info:   { color:'#a78bfa', svg:'<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>' },
 };
 
 /* ══ showDiToast — DOM-native Dynamic Island (không cần React) ══ */
 let _diActive=null;
 function showDiToast(msg, type='info', duration=3200){
-  /* Nếu đang có pill → dismiss trước */
   if(_diActive){ _diDismiss(_diActive,true); }
 
   const cfg=_diConfig[type]||_diConfig.info;
+  const c=cfg.color;
+
   const pill=document.createElement('div');
   pill.className='_di-pill';
-  pill.style.animation='_di-in .52s cubic-bezier(.34,1.3,.64,1) both';
-  pill.style.boxShadow+=`, 0 0 18px ${cfg.color}38`;
+  pill.style.cssText+=`box-shadow:0 0 0 1.5px rgba(255,255,255,.09),0 10px 32px rgba(0,0,0,.6),0 0 22px ${c}44;`;
+  pill.style.animation='_di-in .55s cubic-bezier(.34,1.3,.64,1) both';
 
-  const glow=document.createElement('div');
-  glow.className='_di-glow';
-  glow.style.background=cfg.color;
+  const halo=document.createElement('div');
+  halo.className='_di-halo';
+  halo.style.background=c;
 
-  const icon=document.createElement('span');
-  icon.className='_di-icon';
-  icon.textContent=cfg.emoji;
+  const iconBox=document.createElement('div');
+  iconBox.className='_di-icon-box';
+  iconBox.style.background=c+'22';
+  iconBox.style.border=`1.5px solid ${c}55`;
+  iconBox.innerHTML=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${c}">${cfg.svg}</svg>`;
 
   const body=document.createElement('div');
   body.className='_di-body';
 
   const lbl=document.createElement('div');
   lbl.className='_di-label';
-  lbl.style.color=cfg.color;
+  lbl.style.color=c;
   lbl.textContent='Learnsy';
 
   const txt=document.createElement('div');
@@ -311,12 +322,11 @@ function showDiToast(msg, type='info', duration=3200){
   dot.className='_di-dot';
 
   body.append(lbl,txt);
-  pill.append(glow,icon,body,dot);
+  pill.append(halo,iconBox,body,dot);
   document.body.appendChild(pill);
 
   pill.addEventListener('click',()=>_diDismiss(pill));
   _diActive=pill;
-
   const t=setTimeout(()=>_diDismiss(pill), duration);
   pill._diTimer=t;
 }
@@ -326,8 +336,8 @@ function _diDismiss(pill, immediate=false){
   if(pill._diTimer)clearTimeout(pill._diTimer);
   if(_diActive===pill)_diActive=null;
   if(immediate){ pill.remove(); return; }
-  pill.style.animation='_di-out .42s cubic-bezier(.55,0,.45,1) both';
-  setTimeout(()=>pill.remove(), 420);
+  pill.style.animation='_di-out .45s cubic-bezier(.55,0,.45,1) both';
+  setTimeout(()=>pill.remove(), 450);
 }
 
 /* ══ Expose globally ══ */
