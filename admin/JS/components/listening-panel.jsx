@@ -328,6 +328,7 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
     const formRef    = useRef(null);
     const wbInputRef = useRef(null);
     const tagInputRef= useRef(null);
+    const savingRef  = useRef(false); // chống bấm Lưu nhiều lần liên tiếp (đồng bộ, không chờ re-render)
 
     // ── Load ──
     useEffect(()=>{
@@ -447,6 +448,7 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
 
     // ── Save ──
     const save = useCallback(async()=>{
+      if(savingRef.current||saving) return; // chống bấm Lưu nhiều lần liên tiếp
       if(!text.trim()){ toast_&&toast_('! Nhập đoạn văn để đọc trước!'); return; }
       const supa=window.supa;
       if(!supa){ toast_&&toast_('x Chưa kết nối Supabase!'); return; }
@@ -459,9 +461,20 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
         .map(({id:_,...rest})=>({...rest,statement:cleanStr(rest.statement),answer:cleanStr(rest.answer)}));
       const cleanTags       = tags.filter(Boolean);
 
+      // Chống trùng tên: ở đây "tên" chính là nội dung đoạn văn (text) — so sánh
+      // không phân biệt hoa/thường và khoảng trắng, bỏ qua chính item đang sửa.
+      const normText = cleanText.toLowerCase();
+      const dup = items.find(it=>it.id!==editingId && cleanStr(it.text||'').toLowerCase()===normText);
+      if(dup){
+        toast_&&toast_('x Đã có câu Listening khác với nội dung giống y hệt!',4500);
+        return;
+      }
+
       const blankCount = countBlanks(cleanText);
 
       const doSave = async()=>{
+        if(savingRef.current) return; // khóa lần thứ 2
+        savingRef.current = true;
         setSaving(true);
         try{
           if(editingId){
@@ -483,6 +496,7 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
           console.error('Listening save error:',e);
           toast_&&toast_('x Lưu thất bại: '+(e.message||''),5000);
         }finally{
+          savingRef.current = false;
           setSaving(false);
         }
       };
@@ -499,7 +513,7 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
         return;
       }
       doSave();
-    },[text,wordBox,answers,statements,tags,editingId,items,toast_,confirm_,resetForm]);
+    },[text,wordBox,answers,statements,tags,editingId,items,saving,toast_,confirm_,resetForm]);
 
     // ── Remove ──
     const remove = useCallback(async(id)=>{
