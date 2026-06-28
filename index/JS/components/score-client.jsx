@@ -50,13 +50,18 @@ import React from 'react';
         questionCount,      } = opts || {};
 
       /* Lấy thông tin học sinh từ storage */
+      let _ss = null;
+      try { _ss = JSON.parse(sessionStorage.getItem('ls_student') || 'null'); } catch { }
+
       const studentName = (
+        _ss?.displayName || _ss?.username ||
         sessionStorage.getItem('learnsy_student_name') ||
         localStorage.getItem('learnsy_student_name') ||
         'Ẩn danh'
       ).trim();
 
       const studentId = (
+        _ss?.id ||
         sessionStorage.getItem('learnsy_student_id') ||
         localStorage.getItem('learnsy_student_id') ||
         null
