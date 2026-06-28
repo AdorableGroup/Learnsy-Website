@@ -455,6 +455,11 @@ import React from 'react';
       const timerRef = useRef(null);
       const speakPendingRef = useRef(false); // tránh double‑speak
 
+      // ── Edge TTS (giọng AI, free) ──
+      const audioRef = useRef(null);       // <audio> đang phát (nếu dùng remote TTS)
+      const audioCacheRef = useRef({});    // cache blob URL theo item.id, tránh gọi lại API
+      const ttsDownRef = useRef(false);     // bật lên khi remote TTS lỗi → dùng speechSynthesis cho phần còn lại của session
+
       const inputRefs = useRef([]);
       const inputRefCallbacks = useRef({});
 
@@ -523,6 +528,13 @@ import React from 'react';
 
       // Mở bài
       const openItem = useCallback((it) => {
+        if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current.onplay = null;
+          audioRef.current.onended = null;
+          audioRef.current.onerror = null;
+          audioRef.current = null;
+        }
         if (synthRef.current) {
           synthRef.current.cancel();
           setIsPlaying(false);
@@ -562,7 +574,8 @@ import React from 'react';
         speakPendingRef.current = false;
       }, []);
 
-      const speak = useCallback((raw, rate = speechRate) => {
+      // ── Giọng đọc AI (Edge TTS qua /api/tts) — fallback speechSynthesis nội bộ máy ──
+      const speakLocalSynth = useCallback((raw, rate) => {
         if (!raw || !raw.trim()) return;
         if (!window.speechSynthesis) return;
         try {
@@ -582,26 +595,79 @@ import React from 'react';
           setIsRestarting(false);
           speakPendingRef.current = false;
         }
-      }, [speechRate, handleSpeechStart, handleSpeechEnd, handleSpeechError]);
+      }, [handleSpeechStart, handleSpeechEnd, handleSpeechError]);
+
+      // Lấy (hoặc tải + cache) audio Edge TTS cho 1 item, rồi phát.
+      const playRemoteTTS = useCallback(async (item, rate) => {
+        let url = audioCacheRef.current[item.id];
+        if (!url) {
+          const plain = stripHTML(item.text).replace(/_{3,}|▁{3,}/g, ' blank ').replace(/\s+/g, ' ').trim();
+          const res = await fetch('/api/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: plain }),
+          });
+          if (!res.ok) throw new Error('tts http ' + res.status);
+          const blob = await res.blob();
+          if (!blob || blob.size === 0) throw new Error('tts empty');
+          url = URL.createObjectURL(blob);
+          audioCacheRef.current[item.id] = url;
+        }
+        if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current.onplay = null;
+          audioRef.current.onended = null;
+          audioRef.current.onerror = null;
+        }
+        const audio = new Audio(url);
+        audio.playbackRate = rate;
+        audio.onplay = handleSpeechStart;
+        audio.onended = handleSpeechEnd;
+        audio.onerror = handleSpeechError;
+        audioRef.current = audio;
+        await audio.play();
+      }, [handleSpeechStart, handleSpeechEnd, handleSpeechError]);
+
+      const speak = useCallback((raw, rate = speechRate) => {
+        if (!raw || !raw.trim() || !selected) return;
+        if (!ttsDownRef.current) {
+          speakPendingRef.current = true;
+          playRemoteTTS(selected, rate).catch((err) => {
+            console.warn('[ListeningPractice] Edge TTS lỗi, chuyển sang giọng máy:', err);
+            ttsDownRef.current = true; // không gọi API nữa cho phần còn lại của session
+            speakPendingRef.current = false;
+            speakLocalSynth(raw, rate);
+          });
+          return;
+        }
+        speakLocalSynth(raw, rate);
+      }, [selected, speechRate, playRemoteTTS, speakLocalSynth]);
 
       const togglePlayPause = useCallback(() => {
-        const synth = synthRef.current;
-        if (!synth) return;
-        if (speakPendingRef.current) return; // tránh gọi speak thêm lần nữa
-        if (synth.speaking && !synth.paused) {
-          synth.pause();
-          setIsPlaying(false);
-        } else if (synth.paused) {
-          synth.resume();
-          setIsPlaying(true);
-        } else {
-          if (selected) speak(selected.text);
+        if (speakPendingRef.current) return; // tránh gọi speak thêm lần nữa trong lúc đang tải
+        const audio = audioRef.current;
+        if (audio && !audio.ended) {
+          if (!audio.paused) { audio.pause(); setIsPlaying(false); }
+          else { audio.play(); setIsPlaying(true); }
+          return;
         }
+        const synth = synthRef.current;
+        if (synth && synth.speaking && !audio) {
+          if (!synth.paused) { synth.pause(); setIsPlaying(false); }
+          else { synth.resume(); setIsPlaying(true); }
+          return;
+        }
+        if (selected) speak(selected.text);
       }, [selected, speak]);
 
       const handleRateChange = useCallback((e) => {
         const val = parseFloat(e.target.value);
         setSpeechRate(val);
+        const audio = audioRef.current;
+        if (audio) {
+          audio.playbackRate = val; // Edge TTS: đổi tốc độ tức thì, không cần tải lại
+          return;
+        }
         if (timerRef.current) {
           clearTimeout(timerRef.current);
           timerRef.current = null;
@@ -620,28 +686,38 @@ import React from 'react';
       }, [selected, speak]);
 
       const handleRestart = useCallback(() => {
-        if (selected) {
-          if (timerRef.current) {
-            clearTimeout(timerRef.current);
-            timerRef.current = null;
-          }
-          if (synthRef.current) {
-            synthRef.current.cancel();
-          }
+        if (!selected) return;
+        if (timerRef.current) {
+          clearTimeout(timerRef.current);
+          timerRef.current = null;
+        }
+        const audio = audioRef.current;
+        if (audio) {
+          audio.pause();
+          audio.currentTime = 0;
           setIsPlaying(false);
           setIsRestarting(true);
-          speak(selected.text, speechRate);
+          audio.play().catch(() => setIsRestarting(false));
+          return;
         }
+        if (synthRef.current) synthRef.current.cancel();
+        setIsPlaying(false);
+        setIsRestarting(true);
+        speak(selected.text, speechRate);
       }, [selected, speak, speechRate]);
 
       useEffect(() => {
         return () => {
+          if (audioRef.current) audioRef.current.pause();
           if (synthRef.current) synthRef.current.cancel();
           if (timerRef.current) {
             clearTimeout(timerRef.current);
             timerRef.current = null;
           }
           speakPendingRef.current = false;
+          // Giải phóng các blob URL đã cache khi rời màn hình
+          Object.values(audioCacheRef.current).forEach((u) => { try { URL.revokeObjectURL(u); } catch {} });
+          audioCacheRef.current = {};
         };
       }, []);
 
