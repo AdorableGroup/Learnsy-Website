@@ -371,71 +371,8 @@ function showToast(msg, type = 'auto', duration = 3500) {
       type = 'info';
   }
 
-  /* ── Nếu không có #toastContainer → dùng Dynamic Island ── */
-  const container = document.getElementById('toastContainer');
-  if (!container){ showDiToast(msg, type, duration); return; }
-
-  const icon = _kawaiiIcons[type] || _kawaiiIcons.info;
-
-  // Giới hạn 2 toast cùng lúc — xóa toast cũ nhất nếu đầy
-  const MAX_TOASTS = 2;
-  const existing = container.querySelectorAll('.toast-item');
-  if (existing.length >= MAX_TOASTS) {
-    let toRemove = null;
-    for (const t of existing) {
-      if (t.classList.contains('toast-info') || t.classList.contains('toast-success')) {
-        toRemove = t; break;
-      }
-    }
-    if (!toRemove) toRemove = existing[0];
-    removeToast(toRemove);
-  }
-
-  // Deduplicate: không hiện toast giống hệt đang hiển thị
-  for (const t of container.querySelectorAll('.toast-item')) {
-    if (t.querySelector('.toast-msg')?.textContent === msg) {
-      t.style.animation = 'none';
-      t.offsetHeight; // reflow
-      t.style.animation = '';
-      t.style.transform = 'scale(1.06)';
-      setTimeout(() => { if (t.isConnected) t.style.transform = ''; }, 220);
-      return;
-    }
-  }
-
-  const toast = document.createElement('div');
-  toast.className = `toast-item toast-${type}`;
-
-  const iconSpan = document.createElement('span');
-  iconSpan.className = 'toast-icon';
-  iconSpan.innerHTML = icon; // Static internal SVG, safe
-
-  const msgSpan = document.createElement('span');
-  msgSpan.className = 'toast-msg';
-  msgSpan.textContent = msg; // textContent prevents XSS
-
-  const closeBtn = document.createElement('button');
-  closeBtn.className = 'toast-close';
-  closeBtn.innerHTML = `<svg width="9" height="9" viewBox="0 0 9 9" fill="none">
-    <path d="M1.5 1.5 L7.5 7.5 M7.5 1.5 L1.5 7.5"
-      stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-  </svg>`;
-  closeBtn.setAttribute('aria-label', 'Close');
-  closeBtn.onclick = (e) => { e.stopPropagation(); removeToast(toast); };
-
-  const progress = document.createElement('div');
-  progress.className = 'toast-progress';
-  progress.style.animationDuration = duration + 'ms';
-
-  toast.append(iconSpan, msgSpan, closeBtn, progress);
-  container.appendChild(toast);
-
-  toast.addEventListener('click', (e) => {
-    if (!e.target.closest('.toast-close')) removeToast(toast);
-  });
-
-  const timerId = setTimeout(() => removeToast(toast), duration);
-  toast._timerId = timerId;
+  /* ── Luôn dùng Dynamic Island ── */
+  showDiToast(msg, type, duration);
 }
 
 /* ══════════════════════════════════════════════════
