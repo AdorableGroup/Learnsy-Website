@@ -414,281 +414,120 @@ const _injectDIStyles=()=>{
   const s=document.createElement('style');
   s.id=id;
   s.textContent=`
-    /* Mở: pill ở giữa bung ra 2 bên (scaleX 0→1 + height 0→auto) */
-    @keyframes diOpen{
-      0%  {transform:translateX(-50%) scaleX(0.08) scaleY(0.6);opacity:0;}
-      45% {transform:translateX(-50%) scaleX(1.03) scaleY(1.02);opacity:1;}
-      65% {transform:translateX(-50%) scaleX(0.99) scaleY(1);}
-      100%{transform:translateX(-50%) scaleX(1) scaleY(1);opacity:1;}
+    @keyframes di-pill-in{
+      0%  {width:36px;height:36px;border-radius:50%;opacity:0;transform:translateX(-50%) scaleY(0.6);}
+      20% {width:36px;height:36px;border-radius:50%;opacity:1;transform:translateX(-50%) scaleY(1);}
+      55% {width:270px;height:52px;border-radius:26px;opacity:1;transform:translateX(-50%) scaleY(1);}
+      100%{width:290px;height:56px;border-radius:28px;opacity:1;transform:translateX(-50%) scaleY(1);}
     }
-    /* Đóng: kẹp từ 2 bên vào giữa thành pill rồi biến mất */
-    @keyframes diClose{
-      0%  {transform:translateX(-50%) scaleX(1) scaleY(1);opacity:1;}
-      40% {transform:translateX(-50%) scaleX(1.02) scaleY(1.02);opacity:1;}
-      100%{transform:translateX(-50%) scaleX(0.06) scaleY(0.5);opacity:0;}
+    @keyframes di-pill-out{
+      0%  {width:290px;height:56px;border-radius:28px;opacity:1;transform:translateX(-50%) scaleY(1);}
+      40% {width:270px;height:52px;border-radius:26px;opacity:1;transform:translateX(-50%) scaleY(1);}
+      75% {width:36px;height:36px;border-radius:50%;opacity:1;transform:translateX(-50%) scaleY(1);}
+      100%{width:36px;height:36px;border-radius:50%;opacity:0;transform:translateX(-50%) scaleY(0.6);}
     }
-    @keyframes diScorePop{
-      0%  {transform:scale(0.4);opacity:0;}
-      70% {transform:scale(1.2);}
-      100%{transform:scale(1);opacity:1;}
-    }
-    @keyframes diIconSpin{
-      0%  {transform:rotate(-25deg) scale(0);opacity:0;}
-      65% {transform:rotate(12deg) scale(1.12);}
-      100%{transform:rotate(0deg) scale(1);opacity:1;}
-    }
-    .di-island{
-      position:fixed;
-      top:16px;
-      left:50%;
-      transform:translateX(-50%);
-      transform-origin:center top;
-      z-index:10500;
-      width:min(92vw,390px);
-    }
-    .di-island.di-entering{
-      animation:diOpen .5s cubic-bezier(.28,1.24,.4,1) both;
-    }
-    .di-island.di-exiting{
-      animation:diClose .36s cubic-bezier(.6,0,.7,.9) both;
-    }
-    .di-score-num{
-      display:inline-block;
-      animation:diScorePop .38s cubic-bezier(.34,1.56,.64,1) both;
-      animation-delay:.42s;
-    }
-    .di-icon{
-      animation:diIconSpin .42s cubic-bezier(.34,1.56,.64,1) both;
-      animation-delay:.3s;
+    @keyframes di-content-in{
+      0%,40%{opacity:0;transform:scale(0.85) translateY(3px);}
+      100%  {opacity:1;transform:scale(1) translateY(0);}
     }
   `;
   document.head.appendChild(s);
 };
 
-/* ScoreIsland component
-   Flow: nộp bài → island xuất hiện với animation mở từ giữa ra
-         → ngay lập tức expanded (show full detail)
-         → sau 3s không tương tác → tự collapse thành pill nhỏ
-         → user tap pill → mở lại
-         → user tap backdrop hoặc bấm "Xem đáp án" → onClose
-*/
-function ScoreIsland({visible,onClose,onReset,pct,s,t,rc,dark,questions,answers,bestStreak}){
-  /* phase: hidden | entering | shown | exiting */
-  const [phase,setPhase]=useState('hidden');
-  const [expanded,setExpanded]=useState(false);
-  const phaseRef=useRef('hidden');
-  const idleTimerRef=useRef(null);
+/* ScoreIsland — compact pill giống AchievementToast của dashboard
+   Nộp bài → pill xuất hiện 3s → tự tắt. Tap để tắt sớm. */
+function ScoreIsland({visible,onClose,pct,s,t,rc,questions,answers}){
+  const [leaving,setLeaving]=useState(false);
+  const [mounted,setMounted]=useState(false);
 
-  useEffect(()=>{_injectDIStyles();},[]);
-
-  /* ── Bắt đầu idle countdown (reset khi user tương tác) ── */
-  const startIdleTimer=()=>{
-    clearTimeout(idleTimerRef.current);
-    idleTimerRef.current=setTimeout(()=>onClose(),3000);
-  };
-  const cancelIdleTimer=()=>clearTimeout(idleTimerRef.current);
-
-  /* ── Dọn timer khi unmount ── */
-  useEffect(()=>()=>clearTimeout(idleTimerRef.current),[]);
-
-  /* ── Visible → phase transition ── */
   useEffect(()=>{
-    if(visible&&phaseRef.current==='hidden'){
-      phaseRef.current='entering';
-      setPhase('entering');
-      /* Sau khi animation mở xong (520ms) → expand và bắt đầu idle */
-      const t1=setTimeout(()=>{
-        phaseRef.current='shown';
-        setPhase('shown');
-        // Giữ collapsed — user tap mới mở rộng
-      },520);
-      return()=>clearTimeout(t1);
-    }
-    if(!visible&&phaseRef.current!=='hidden'&&phaseRef.current!=='exiting'){
-      cancelIdleTimer();
-      phaseRef.current='exiting';
-      setPhase('exiting');
-      setExpanded(false);
-      const t2=setTimeout(()=>{
-        phaseRef.current='hidden';
-        setPhase('hidden');
-      },400);
-      return()=>clearTimeout(t2);
-    }
+    if(!visible)return;
+    setLeaving(false);
+    setMounted(true);
+    const leaveT=setTimeout(()=>setLeaving(true),3000);
+    const closeT=setTimeout(onClose,3500);
+    return()=>{clearTimeout(leaveT);clearTimeout(closeT);};
   },[visible]);
 
-  /* ── Toggle expand: user chủ động tap ── */
-  const handleToggle=()=>{
-    const next=!expanded;
-    setExpanded(next);
-    if(next) startIdleTimer();
-    else cancelIdleTimer();
-  };
+  const handleTap=()=>{setLeaving(true);setTimeout(onClose,450);};
 
-  if(phase==='hidden')return null;
+  if(!mounted||!visible&&!leaving)return null;
 
   const label=pct>=0.8?'Xuất sắc! 🎉':pct>=0.5?'Khá tốt! ✨':'Cần ôn thêm 📖';
-  const correct=questions.filter((q2,qi)=>isAnswerCorrect(q2,answers[qi]));
-  const wrong  =questions.filter((q2,qi)=>!isAnswerCorrect(q2,answers[qi]));
-
-  /* ── Màu theo dark mode ── */
-  const islandBg='linear-gradient(145deg,#1A1A1A 0%,#0D0D0D 100%)';
-  const borderColor='rgba(255,255,255,0.12)';
-  const textMain  ='#F0F0F0';
-  const textSub   ='rgba(255,255,255,0.38)';
-  const dividerC  ='rgba(255,255,255,0.08)';
-  const rowBg     ='rgba(255,255,255,0.05)';
-  const rowBorder ='rgba(255,255,255,0.09)';
-  const listItemBorder='rgba(255,255,255,0.06)';
+  const correct=questions.filter((q2,qi)=>isAnswerCorrect(q2,answers[qi])).length;
+  const wrong  =questions.length-correct;
+  const pillBg='linear-gradient(135deg,rgba(14,6,14,0.97) 0%,rgba(26,10,20,0.97) 100%)';
+  const glow=rc;
 
   return(
     <div
-      className={`di-island${phase==='entering'?' di-entering':phase==='exiting'?' di-exiting':''}`}
-      style={{left:'50%',transform:'translateX(-50%)'}}
+      onClick={handleTap}
+      style={{
+        position:'fixed',top:12,left:'50%',
+        zIndex:10500,
+        width:290,height:56,borderRadius:28,
+        transform:'translateX(-50%)',
+        transformOrigin:'center top',
+        background:pillBg,
+        boxShadow:`0 0 0 1.5px rgba(255,255,255,0.09), 0 10px 32px rgba(0,0,0,0.6), 0 0 22px ${glow}44`,
+        display:'flex',alignItems:'center',gap:11,padding:'0 16px',
+        cursor:'pointer',userSelect:'none',overflow:'hidden',
+        animation:leaving
+          ?'di-pill-out 0.45s cubic-bezier(.55,0,.45,1) both'
+          :'di-pill-in  0.55s cubic-bezier(.34,1.3,.64,1) both',
+        willChange:'width,height,border-radius,opacity',
+      }}
     >
-      {/* Backdrop — chỉ khi expanded, tap để đóng */}
-      {expanded&&(
-        <div
-          onClick={onClose}
-          style={{
-            position:'fixed',inset:0,zIndex:-1,
-            background:dark?'rgba(6,0,18,0.65)':'rgba(20,0,50,0.32)',
-            backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',
-          }}
-        />
-      )}
-
-      {/* Island card */}
+      {/* Glow halo */}
       <div style={{
-        background:islandBg,
-        border:`1.5px solid ${borderColor}`,
-        borderRadius:26,
-        boxShadow:dark
-          ?'0 16px 55px rgba(0,0,0,0.75),0 0 0 1px rgba(200,140,255,0.07)'
-          :'0 8px 40px rgba(140,60,220,0.18),0 0 0 1px rgba(180,100,255,0.12)',
-        overflow:'hidden',
+        position:'absolute',left:14,top:'50%',transform:'translateY(-50%)',
+        width:30,height:30,borderRadius:'50%',
+        background:glow,opacity:0.15,filter:'blur(9px)',pointerEvents:'none',
+      }}/>
+
+      {/* Icon */}
+      <div style={{flexShrink:0,position:'relative',zIndex:1,display:'flex',alignItems:'center',justifyContent:'center',
+        width:30,height:30,borderRadius:10,
+        background:pct>=0.8?'rgba(16,185,129,0.15)':pct>=0.5?'rgba(245,158,11,0.15)':'rgba(239,68,68,0.13)',
+        border:`1.5px solid ${rc}55`,
       }}>
+        {pct>=0.8
+          ?<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={rc} strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          :pct>=0.5
+            ?<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill={rc} opacity=".9"/></svg>
+            :<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={rc} strokeWidth="2.6" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="17" r="1" fill={rc}/></svg>
+        }
+      </div>
 
-        {/* ── Compact pill header (luôn thấy) ── */}
-        <div
-          onClick={handleToggle}
-          style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',cursor:'pointer',userSelect:'none'}}
-        >
-          {/* Icon badge */}
-          <div className={phase==='shown'?'':'di-icon'} style={{
-            width:34,height:34,borderRadius:12,flexShrink:0,
-            background:pct>=0.8?'rgba(16,185,129,0.13)':pct>=0.5?'rgba(245,158,11,0.13)':'rgba(239,68,68,0.12)',
-            border:`1.5px solid ${rc}55`,
-            display:'flex',alignItems:'center',justifyContent:'center',
-          }}>
-            {pct>=0.8
-              ?<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={rc} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              :pct>=0.5
-                ?<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={rc} strokeWidth="2.2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill={rc} opacity=".8"/></svg>
-                :<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={rc} strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="17" r="1" fill={rc}/></svg>
-            }
-          </div>
-
-          {/* Score + label + mini bar */}
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{display:'flex',alignItems:'baseline',gap:5,flexWrap:'wrap'}}>
-              <span className={phase==='shown'?'':'di-score-num'} style={{
-                fontSize:22,fontWeight:900,color:rc,lineHeight:1,letterSpacing:-0.5,
-              }}>{fmtS(pct*10)}</span>
-              <span style={{fontSize:11,color:textSub,fontWeight:700}}>/10</span>
-              <span style={{
-                fontSize:10,fontWeight:800,
-                color:pct>=0.8?'#10B981':pct>=0.5?'#B07A00':'#EF4444',
-                background:pct>=0.8?'rgba(16,185,129,0.1)':pct>=0.5?'rgba(252,211,77,0.15)':'rgba(239,68,68,0.09)',
-                padding:'1px 8px',borderRadius:999,border:`1px solid ${rc}28`,flexShrink:0,
-              }}>{label}</span>
-            </div>
-            {/* Mini progress bar */}
-            <div style={{height:3,background:dark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.07)',borderRadius:99,marginTop:6,overflow:'hidden'}}>
-              <div className={phase==='shown'?'':'di-bar-fill'} style={{
-                height:'100%',borderRadius:99,
-                width:`${pct*100}%`,
-                background:pct>=0.8?'linear-gradient(90deg,#10B981,#6EE7B7)':pct>=0.5?'linear-gradient(90deg,#F59E0B,#FCD34D)':'linear-gradient(90deg,#EF4444,#FCA5A5)',
-                transition:phase==='shown'?'none':'width .7s cubic-bezier(.4,0,.2,1) .55s',
-              }}/>
-            </div>
-          </div>
-
-          {/* Right: đúng/sai badges + chevron */}
-          <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4,flexShrink:0}}>
-            <div style={{display:'flex',gap:3}}>
-              <span style={{fontSize:10,fontWeight:800,color:'#10B981',background:'rgba(16,185,129,0.11)',padding:'2px 7px',borderRadius:999}}>{correct.length}✓</span>
-              <span style={{fontSize:10,fontWeight:800,color:'#EF4444',background:'rgba(239,68,68,0.09)',padding:'2px 7px',borderRadius:999}}>{wrong.length}✗</span>
-            </div>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-              stroke={dark?'rgba(255,255,255,0.3)':'rgba(0,0,0,0.25)'}
-              strokeWidth="2.3" strokeLinecap="round"
-              style={{transition:'transform .3s ease',transform:expanded?'rotate(180deg)':'rotate(0deg)'}}
-            ><polyline points="6 9 12 15 18 9"/></svg>
-          </div>
-        </div>
-
-        {/* ── Expanded detail panel ── */}
+      {/* Text */}
+      <div style={{
+        flex:1,minWidth:0,
+        animation:'di-content-in 0.55s cubic-bezier(.34,1.3,.64,1) both',
+        position:'relative',zIndex:1,
+      }}>
         <div style={{
-          overflow:'hidden',
-          maxHeight:expanded?'72vh':'0',
-          transition:'max-height .36s cubic-bezier(.4,0,.2,1)',
+          fontSize:9,fontWeight:800,color:rc,letterSpacing:'0.6px',
+          textTransform:'uppercase',marginBottom:1,fontFamily:'Nunito,sans-serif',
+        }}>Kết quả bài thi</div>
+        <div style={{
+          fontSize:14,fontWeight:900,color:'#f0e6ff',
+          whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',lineHeight:1.2,
+          fontFamily:'Nunito,sans-serif',
         }}>
-          <div style={{padding:'0 14px 16px',opacity:expanded?1:0,transition:'opacity .2s ease .1s'}}>
-
-            <div style={{height:1,background:dividerC,marginBottom:12}}/>
-
-            {/* Stats mini-cards */}
-            <div style={{display:'flex',gap:7,marginBottom:12}}>
-              {[
-                {l:'Câu đúng',v:`${s}/${t}`,c:'#10B981',bg:'rgba(16,185,129,0.08)'},
-                {l:'Điểm',    v:`${fmtS(pct*10)}/10`,c:rc,bg:dark?`${rc}18`:`${rc}11`},
-                ...(bestStreak>=3?[{l:'Streak',v:`${bestStreak}🔥`,c:'#EEB800',bg:'rgba(252,211,77,0.1)'}]:[]),
-              ].map(({l,v,c,bg})=>(
-                <div key={l} style={{flex:1,borderRadius:13,padding:'8px 5px',textAlign:'center',background:bg,border:`1px solid ${c}30`}}>
-                  <div style={{fontSize:7,fontWeight:800,color:textSub,letterSpacing:.7,marginBottom:3}}>{l.toUpperCase()}</div>
-                  <div style={{fontSize:14,fontWeight:900,color:c}}>{v}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Per-question list */}
-            <div style={{background:rowBg,border:`1px solid ${rowBorder}`,borderRadius:16,padding:'9px 11px',marginBottom:12,maxHeight:155,overflowY:'auto'}}>
-              {questions.map((q2,qi)=>{
-                const ok2=isAnswerCorrect(q2,answers[qi]);
-                return(
-                  <div key={qi} style={{borderBottom:qi<questions.length-1?`1px solid ${listItemBorder}`:'none',padding:'4px 0'}}>
-                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                      <span style={{fontSize:11,color:dark?'#A080C8':'#7050A0',fontWeight:600}}>Câu {qi+1}</span>
-                      <span style={{fontSize:10,fontWeight:800,color:ok2?'#10B981':'#EF4444',background:ok2?'rgba(16,185,129,0.09)':'rgba(239,68,68,0.08)',padding:'1px 7px',borderRadius:999}}>{ok2?'Đúng':'Sai'}</span>
-                    </div>
-                    {!ok2&&q2.explanation&&(
-                      <div style={{fontSize:10,color:dark?'rgba(196,181,253,0.62)':'rgba(120,70,170,0.85)',marginTop:2,lineHeight:1.5}}
-                        dangerouslySetInnerHTML={{__html:'💡 '+q2.explanation}}/>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Buttons */}
-            <div style={{display:'flex',gap:8}}>
-              <button onClick={onReset} style={{
-                flex:1,padding:'10px 0',borderRadius:999,
-                border:`1.5px solid ${dark?'rgba(255,150,200,0.3)':'rgba(220,80,120,0.28)'}`,
-                background:'transparent',color:dark?'#FBAFCE':'#D84070',
-                fontSize:12,fontWeight:800,cursor:'pointer',fontFamily:'Nunito,sans-serif',
-              }}>Làm lại</button>
-              <button onClick={onClose} style={{
-                flex:1,padding:'10px 0',borderRadius:999,border:'none',
-                background:'linear-gradient(135deg,#F472B6,#A855F7)',
-                color:'#fff',fontSize:12,fontWeight:800,cursor:'pointer',
-                boxShadow:'0 4px 16px rgba(168,85,247,0.38)',fontFamily:'Nunito,sans-serif',
-              }}>Xem đáp án</button>
-            </div>
-          </div>
+          {fmtS(pct*10)}/10 · {label}
         </div>
       </div>
+
+      {/* Đúng/sai badges */}
+      <div style={{flexShrink:0,display:'flex',flexDirection:'column',gap:3,position:'relative',zIndex:1,
+        animation:'di-content-in 0.55s cubic-bezier(.34,1.3,.64,1) both',
+      }}>
+        <span style={{fontSize:9,fontWeight:800,color:'#10B981',background:'rgba(16,185,129,0.15)',padding:'1px 6px',borderRadius:999}}>{correct}✓</span>
+        <span style={{fontSize:9,fontWeight:800,color:'#F87171',background:'rgba(239,68,68,0.15)',padding:'1px 6px',borderRadius:999}}>{wrong}✗</span>
+      </div>
+
+      {/* Dismiss dot */}
+      <div style={{flexShrink:0,width:5,height:5,borderRadius:'50%',background:'rgba(255,255,255,0.22)',position:'relative',zIndex:1}}/>
     </div>
   );
 }
@@ -1538,10 +1377,8 @@ function QuizPlayer({lesson,onBack,dark,setDark,onSaveHistory}){
       <ScoreIsland
         visible={modal}
         onClose={()=>setModal(false)}
-        onReset={resetQuiz}
-        pct={pct} s={s} t={t} rc={rc} dark={dark}
+        pct={pct} s={s} t={t} rc={rc}
         questions={questions} answers={answers}
-        bestStreak={bestStreak}
       />
 
       {/* ── Export bottom sheet ── */}
