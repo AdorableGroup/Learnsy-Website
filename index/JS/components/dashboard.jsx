@@ -1536,6 +1536,7 @@ function Dashboard(props){
   },[student]); // eslint-disable-line
 
   // ── Sync display_name từ Supabase (khớp với student-manager) ──
+  const [liveStudent1,setLiveStudent1]=useState(student);
   const fetchStudentInfo1=useCallback(async()=>{
     if(!student?.id&&!student?.username)return;
     try{
@@ -2264,6 +2265,7 @@ function DashboardEnhanced(props){
   },[student]); // eslint-disable-line
 
   // ── Sync display_name từ Supabase (khớp với student-manager) ──
+  const [liveStudent,setLiveStudent]=useState(student);
   const fetchStudentInfo=useCallback(async()=>{
     if(!student?.id&&!student?.username)return;
     try{
