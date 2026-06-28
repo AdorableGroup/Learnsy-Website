@@ -402,6 +402,364 @@ const NavDots=React.memo(function NavDots({questions,answers,cur,submitted,onJum
   );
 });
 
+/* ════════════════════════════════════════════════
+   SCORE DYNAMIC ISLAND TOAST
+   Mở từ giữa ra 2 bên  (di-open)
+   Đóng từ 2 bên vào giữa (di-close)
+   Compact pill → expand card → compact pill
+════════════════════════════════════════════════ */
+const _injectDIStyles=()=>{
+  const id='qp-di-styles';
+  if(document.getElementById(id))return;
+  const s=document.createElement('style');
+  s.id=id;
+  s.textContent=`
+    /* ── Dynamic Island open: grow from center-pill out ── */
+    @keyframes diOpen{
+      0%  {clip-path:inset(0 50% 0 50% round 999px);opacity:0;transform:scaleY(0.5);}
+      40% {clip-path:inset(0 0% 0 0% round 26px);opacity:1;transform:scaleY(1.04);}
+      60% {transform:scaleY(0.98);}
+      100%{clip-path:inset(0 0% 0 0% round 26px);opacity:1;transform:scaleY(1);}
+    }
+    /* ── Dynamic Island close: shrink to center-pill ── */
+    @keyframes diClose{
+      0%  {clip-path:inset(0 0% 0 0% round 26px);opacity:1;transform:scaleY(1);}
+      50% {clip-path:inset(0 0% 0 0% round 26px);opacity:1;transform:scaleY(1.03);}
+      100%{clip-path:inset(0 50% 0 50% round 999px);opacity:0;transform:scaleY(0.5);}
+    }
+    /* ── Nội dung fade-in sau khi island đã mở xong ── */
+    @keyframes diContentIn{
+      from{opacity:0;transform:translateY(6px);}
+      to  {opacity:1;transform:translateY(0);}
+    }
+    /* ── Progress bar fill ── */
+    @keyframes diBarFill{
+      from{width:0%;}
+    }
+    /* ── Score number count-up pop ── */
+    @keyframes diScorePop{
+      0%  {transform:scale(0.5);opacity:0;}
+      70% {transform:scale(1.18);}
+      100%{transform:scale(1);opacity:1;}
+    }
+    /* ── Icon spin ── */
+    @keyframes diIconSpin{
+      0%  {transform:rotate(-30deg) scale(0);}
+      60% {transform:rotate(20deg) scale(1.15);}
+      100%{transform:rotate(0deg) scale(1);}
+    }
+    /* ── Dot bounce ── */
+    @keyframes diDotBounce{
+      0%,100%{transform:scale(1);}
+      50%{transform:scale(1.5);}
+    }
+    .di-island{
+      position:fixed;
+      top:18px;
+      left:50%;
+      transform:translateX(-50%);
+      z-index:10500;
+      width:min(92vw,380px);
+      transform-origin:center top;
+    }
+    .di-island.di-entering{
+      animation:diOpen .52s cubic-bezier(.32,1.28,.42,1) both;
+    }
+    .di-island.di-exiting{
+      animation:diClose .38s cubic-bezier(.55,0,.68,.88) both;
+    }
+    .di-content{
+      animation:diContentIn .28s ease both;
+      animation-delay:.3s;
+      opacity:0;
+    }
+    .di-score-num{
+      animation:diScorePop .4s cubic-bezier(.34,1.56,.64,1) both;
+      animation-delay:.45s;
+    }
+    .di-icon{
+      animation:diIconSpin .45s cubic-bezier(.34,1.56,.64,1) both;
+      animation-delay:.35s;
+    }
+    .di-bar-fill{
+      animation:diBarFill .7s cubic-bezier(.4,0,.2,1) both;
+      animation-delay:.55s;
+    }
+  `;
+  document.head.appendChild(s);
+};
+
+/* ScoreIsland component */
+const ScoreIsland=React.memo(function ScoreIsland({
+  visible,onClose,onReset,pct,s,t,rc,dark,questions,answers,bestStreak
+}){
+  const [phase,setPhase]=useState('hidden'); // hidden | entering | visible | exiting
+  const [expanded,setExpanded]=useState(false);
+  const phaseRef=useRef('hidden');
+
+  useEffect(()=>{_injectDIStyles();},[]);
+
+  useEffect(()=>{
+    if(visible&&phaseRef.current==='hidden'){
+      phaseRef.current='entering';
+      setPhase('entering');
+      setExpanded(false);
+      // Sau 520ms animation xong → chuyển sang visible + expand
+      const t1=setTimeout(()=>{
+        phaseRef.current='visible';
+        setPhase('visible');
+        setExpanded(true);
+      },520);
+      return()=>clearTimeout(t1);
+    }
+    if(!visible&&phaseRef.current!=='hidden'&&phaseRef.current!=='exiting'){
+      phaseRef.current='exiting';
+      setPhase('exiting');
+      setExpanded(false);
+      const t2=setTimeout(()=>{
+        phaseRef.current='hidden';
+        setPhase('hidden');
+      },380);
+      return()=>clearTimeout(t2);
+    }
+  },[visible]);
+
+  if(phase==='hidden')return null;
+
+  const label=pct>=0.8?'Xuất sắc! 🎉':pct>=0.5?'Khá tốt! ✨':'Cần ôn thêm 📖';
+  const correct=questions.filter((q2,qi)=>isAnswerCorrect(q2,answers[qi]));
+  const wrong=questions.filter((q2,qi)=>!isAnswerCorrect(q2,answers[qi]));
+  const wrongWithExp=wrong.filter(q2=>q2.explanation);
+
+  const islandBg=dark
+    ?'linear-gradient(145deg,#1A0A35 0%,#0D0220 60%,#0A1830 100%)'
+    :'linear-gradient(145deg,#FFF0FA 0%,#F3E8FF 55%,#EEF2FF 100%)';
+  const borderColor=dark?'rgba(255,150,200,0.22)':'rgba(200,140,255,0.45)';
+
+  return(
+    <div
+      className={`di-island ${phase==='entering'?'di-entering':phase==='exiting'?'di-exiting':''}`}
+      style={{left:'50%',transform:'translateX(-50%)'}}
+    >
+      {/* ── Backdrop blur overlay (chỉ hiện khi expanded) ── */}
+      {expanded&&(
+        <div
+          onClick={onClose}
+          style={{
+            position:'fixed',inset:0,
+            background:'rgba(8,1,22,0.6)',
+            backdropFilter:'blur(12px)',
+            WebkitBackdropFilter:'blur(12px)',
+            zIndex:-1,
+          }}
+        />
+      )}
+
+      {/* ── Island card ── */}
+      <div
+        style={{
+          background:islandBg,
+          border:`1.5px solid ${borderColor}`,
+          borderRadius:26,
+          boxShadow:dark
+            ?'0 12px 50px rgba(0,0,0,0.7),0 0 0 1px rgba(255,150,200,0.08)'
+            :'0 12px 50px rgba(140,60,220,0.22),0 0 0 1px rgba(200,140,255,0.15)',
+          overflow:'hidden',
+          transition:'all .32s cubic-bezier(.4,0,.2,1)',
+        }}
+      >
+        {/* ── Compact header (luôn hiển thị) ── */}
+        <div
+          style={{
+            display:'flex',alignItems:'center',gap:10,
+            padding:'11px 14px',
+            cursor:'pointer',
+          }}
+          onClick={()=>setExpanded(e=>!e)}
+        >
+          {/* Icon */}
+          <div className="di-icon" style={{
+            width:34,height:34,borderRadius:12,flexShrink:0,
+            background:pct>=0.8?'rgba(16,185,129,0.15)':pct>=0.5?'rgba(245,158,11,0.15)':'rgba(239,68,68,0.13)',
+            border:`1.5px solid ${rc}44`,
+            display:'flex',alignItems:'center',justifyContent:'center',
+          }}>
+            {pct>=0.8?(
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={rc} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            ):pct>=0.5?(
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={rc} strokeWidth="2.2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+            ):(
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={rc} strokeWidth="2.5" strokeLinecap="round">
+                <line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="17" r="1" fill={rc}/>
+                <circle cx="12" cy="12" r="10"/>
+              </svg>
+            )}
+          </div>
+
+          {/* Compact score + label */}
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{display:'flex',alignItems:'baseline',gap:4}}>
+              <span className="di-score-num" style={{
+                fontSize:22,fontWeight:900,color:rc,lineHeight:1,letterSpacing:-0.5,
+              }}>{fmtS(pct*10)}</span>
+              <span style={{fontSize:12,color:dark?'rgba(255,255,255,0.28)':'rgba(0,0,0,0.22)',fontWeight:700}}>/10</span>
+              <span style={{
+                fontSize:11,fontWeight:800,
+                color:pct>=0.8?'#10B981':pct>=0.5?'#C89700':'#EF4444',
+                background:pct>=0.8?'rgba(16,185,129,0.12)':pct>=0.5?'rgba(252,211,77,0.14)':'rgba(239,68,68,0.1)',
+                padding:'1px 7px',borderRadius:999,marginLeft:2,
+                flexShrink:0,
+              }}>{label}</span>
+            </div>
+            {/* Mini progress bar */}
+            <div style={{
+              height:4,background:dark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.07)',
+              borderRadius:99,marginTop:5,overflow:'hidden',
+            }}>
+              <div className="di-bar-fill" style={{
+                height:'100%',borderRadius:99,
+                width:`${pct*100}%`,
+                background:pct>=0.8
+                  ?'linear-gradient(90deg,#10B981,#6EE7B7)'
+                  :pct>=0.5
+                    ?'linear-gradient(90deg,#F59E0B,#FCD34D)'
+                    :'linear-gradient(90deg,#EF4444,#FCA5A5)',
+              }}/>
+            </div>
+          </div>
+
+          {/* Dots: đúng/sai + chevron */}
+          <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:3,flexShrink:0}}>
+            <div style={{display:'flex',gap:3}}>
+              {/* Đúng */}
+              <span style={{
+                fontSize:10,fontWeight:800,color:'#10B981',
+                background:'rgba(16,185,129,0.12)',
+                padding:'2px 7px',borderRadius:999,
+              }}>{correct.length}✓</span>
+              {/* Sai */}
+              <span style={{
+                fontSize:10,fontWeight:800,color:'#EF4444',
+                background:'rgba(239,68,68,0.1)',
+                padding:'2px 7px',borderRadius:999,
+              }}>{wrong.length}✗</span>
+            </div>
+            {/* Chevron */}
+            <svg
+              width="14" height="14" viewBox="0 0 24 24" fill="none"
+              stroke={dark?'rgba(255,255,255,0.28)':'rgba(0,0,0,0.22)'}
+              strokeWidth="2.2" strokeLinecap="round"
+              style={{
+                transition:'transform .28s ease',
+                transform:expanded?'rotate(180deg)':'rotate(0deg)',
+              }}
+            >
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </div>
+        </div>
+
+        {/* ── Expanded detail panel ── */}
+        <div style={{
+          overflow:'hidden',
+          maxHeight:expanded?'70vh':'0px',
+          transition:'max-height .38s cubic-bezier(.4,0,.2,1)',
+        }}>
+          <div className="di-content" style={{padding:'0 14px 16px'}}>
+            {/* Divider */}
+            <div style={{
+              height:1,
+              background:dark?'rgba(255,255,255,0.06)':'rgba(180,100,255,0.12)',
+              marginBottom:13,
+            }}/>
+
+            {/* Stats row */}
+            <div style={{display:'flex',gap:7,marginBottom:13}}>
+              {[
+                {l:'Câu đúng', v:`${s}/${t}`, c:'#10B981', bg:'rgba(16,185,129,0.1)'},
+                {l:'Điểm',     v:`${fmtS(pct*10)}/10`, c:rc, bg:`${rc}18`},
+                bestStreak>=3?{l:'Streak', v:`${bestStreak}🔥`, c:'#FCD34D', bg:'rgba(252,211,77,0.12)'}:null,
+              ].filter(Boolean).map(({l,v,c,bg})=>(
+                <div key={l} style={{
+                  flex:1,borderRadius:14,padding:'8px 6px',textAlign:'center',
+                  background:bg,border:`1px solid ${c}28`,
+                }}>
+                  <div style={{fontSize:8,fontWeight:800,color:dark?'rgba(255,255,255,0.38)':'rgba(0,0,0,0.35)',letterSpacing:.6,marginBottom:3}}>{l.toUpperCase()}</div>
+                  <div style={{fontSize:14,fontWeight:900,color:c}}>{v}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Per-question list */}
+            <div style={{
+              background:dark?'rgba(255,255,255,0.033)':'rgba(176,124,240,0.06)',
+              border:`1px solid ${dark?'rgba(196,181,253,0.1)':'rgba(176,124,240,0.14)'}`,
+              borderRadius:16,padding:'9px 11px',
+              marginBottom:12,maxHeight:160,overflowY:'auto',
+            }}>
+              {questions.map((q2,qi)=>{
+                const ok2=isAnswerCorrect(q2,answers[qi]);
+                return(
+                  <div key={qi} style={{
+                    borderBottom:qi<questions.length-1
+                      ?`1px solid ${dark?'rgba(255,255,255,0.04)':'rgba(176,124,240,0.07)'}`
+                      :'none',
+                    padding:'4px 0',
+                  }}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                      <span style={{fontSize:11,color:dark?'#9B7FC0':'#8060A0',fontWeight:600}}>Câu {qi+1}</span>
+                      <span style={{
+                        fontSize:10,fontWeight:800,color:ok2?'#10B981':'#EF4444',
+                        background:ok2?'rgba(16,185,129,0.1)':'rgba(239,68,68,0.08)',
+                        padding:'1px 7px',borderRadius:999,
+                      }}>{ok2?'Đúng':'Sai'}</span>
+                    </div>
+                    {!ok2&&q2.explanation&&(
+                      <div style={{
+                        fontSize:10,color:dark?'rgba(196,181,253,0.65)':'rgba(130,80,180,0.85)',
+                        marginTop:2,lineHeight:1.5,
+                      }} dangerouslySetInnerHTML={{__html:'💡 '+q2.explanation}}/>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Action buttons */}
+            <div style={{display:'flex',gap:8}}>
+              <button
+                onClick={onReset}
+                style={{
+                  flex:1,padding:'10px 0',borderRadius:999,
+                  border:`1.5px solid ${dark?'rgba(255,150,200,0.28)':'rgba(232,84,122,0.3)'}`,
+                  background:'transparent',
+                  color:dark?'#FBAFCE':'#E8547A',
+                  fontSize:12,fontWeight:800,cursor:'pointer',
+                  transition:'all .18s',fontFamily:'Nunito,sans-serif',
+                }}
+              >Làm lại</button>
+              <button
+                onClick={onClose}
+                style={{
+                  flex:1,padding:'10px 0',borderRadius:999,border:'none',
+                  background:'linear-gradient(135deg,#F472B6,#A855F7)',
+                  color:'#fff',fontSize:12,fontWeight:800,cursor:'pointer',
+                  boxShadow:'0 4px 16px rgba(168,85,247,0.38)',
+                  fontFamily:'Nunito,sans-serif',
+                }}
+              >Xem đáp án</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 /* ════════════════════════════════════════════════ */
 function QuizPlayer({lesson,onBack,dark,setDark,onSaveHistory}){
   const {questions=[],title=''}=lesson;
@@ -1243,73 +1601,15 @@ function QuizPlayer({lesson,onBack,dark,setDark,onSaveHistory}){
         </div>
       )}
 
-      {/* Score modal */}
-      {modal&&(
-        <div style={{position:'fixed',inset:0,background:'rgba(8,1,22,0.88)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:10001,padding:20}}>
-          <style>{`@keyframes starSpin{0%{transform:rotate(0deg) scale(0)}60%{transform:rotate(200deg) scale(1.2)}100%{transform:rotate(360deg) scale(1)}}`}</style>
-          <div onClick={e=>e.stopPropagation()} style={{background:dark?'linear-gradient(160deg,#1A0640,#110228,#091020)':'linear-gradient(160deg,#FFF0F6,#F4E8FF,#EEF2FF)',border:`1.5px solid ${dark?'rgba(255,150,200,0.2)':'rgba(220,160,255,0.4)'}`,borderRadius:28,padding:'28px 22px 24px',maxWidth:330,width:'100%',textAlign:'center',animation:'scoreIn 0.55s cubic-bezier(0.34,1.56,0.64,1) both',boxShadow:dark?'0 24px 70px rgba(0,0,0,0.6)':'0 24px 70px rgba(140,60,220,0.18)'}}>
-            <div style={{marginBottom:14}}>
-              {pct>=0.8?(
-                <div style={{display:'inline-block',animation:'starSpin 0.7s ease both',animationDelay:'0.2s'}}>
-                  <svg width="72" height="72" viewBox="0 0 72 72">
-                    {[0,60,120,180,240,300].map((deg,i)=>(
-                      <ellipse key={i} cx="36" cy="14" rx="5" ry="10" fill={['#F472B6','#A855F7','#6EE7B7','#FCD34D','#FB923C','#60A5FA'][i]} opacity="0.85" transform={`rotate(${deg} 36 36)`}/>
-                    ))}
-                    <circle cx="36" cy="36" r="16" fill="rgba(16,185,129,0.2)" stroke="#10B981" strokeWidth="2.5"/>
-                    <polyline points="26 36 33 43 46 28" fill="none" stroke="#10B981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-              ):pct>=0.5?(
-                <div style={{animation:'starSpin 0.7s ease both',animationDelay:'0.2s',display:'inline-block'}}>
-                  <svg width="72" height="72" viewBox="0 0 72 72">
-                    <circle cx="36" cy="36" r="30" fill="rgba(245,158,11,0.12)" stroke="#F59E0B" strokeWidth="2.5"/>
-                    <path d="M36 18L40.9 29.1L53 30.7L44 39.4L46.2 51.5L36 45.9L25.8 51.5L28 39.4L19 30.7L31.1 29.1Z" fill="#F59E0B" opacity="0.9"/>
-                  </svg>
-                </div>
-              ):(
-                <div style={{display:'inline-block',animation:'scoreIn 0.5s ease both'}}>
-                  <svg width="72" height="72" viewBox="0 0 72 72">
-                    <circle cx="36" cy="36" r="30" fill="rgba(239,68,68,0.12)" stroke="#EF4444" strokeWidth="2.5"/>
-                    <path d="M36 20 Q38 32 36 38 Q34 32 36 20Z" fill="#EF4444" opacity="0.9"/>
-                    <circle cx="36" cy="46" r="3" fill="#EF4444"/>
-                  </svg>
-                </div>
-              )}
-            </div>
-            <div style={{fontSize:44,fontWeight:900,color:rc,marginBottom:3,animation:'scoreNum 0.5s ease both',animationDelay:'0.3s',lineHeight:1,letterSpacing:-1}}>
-              {fmtS(pct*10)}<span style={{fontSize:20,color:dark?'rgba(255,255,255,0.28)':'rgba(0,0,0,0.2)',fontWeight:700}}>/10</span>
-            </div>
-            <div style={{fontSize:12,color:dark?'rgba(255,255,255,0.38)':'rgba(0,0,0,0.38)',marginBottom:3}}>{s}/{t} câu đúng</div>
-            <div style={{height:7,background:dark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.07)',borderRadius:99,margin:'10px 0 8px',overflow:'hidden'}}>
-              <div style={{height:'100%',width:`${pct*100}%`,borderRadius:99,background:pct>=0.8?'linear-gradient(90deg,#10B981,#6EE7B7)':pct>=0.5?'linear-gradient(90deg,#F59E0B,#FCD34D)':'linear-gradient(90deg,#EF4444,#FCA5A5)',transition:'width 0.85s cubic-bezier(.4,0,.2,1) 0.45s'}}/>
-            </div>
-            <div style={{fontSize:14,fontWeight:800,color:pct>=0.8?'#10B981':pct>=0.5?'#C89700':'#EF4444',marginBottom:16,padding:'6px 14px',borderRadius:999,background:pct>=0.8?'rgba(16,185,129,0.1)':pct>=0.5?'rgba(252,211,77,0.1)':'rgba(239,68,68,0.08)',display:'inline-block'}}>
-              {pct>=0.8?'Xuất sắc! Giỏi lắm!':pct>=0.5?'Khá tốt, cố lên!':'Cần ôn lại nhé!'}
-            </div>
-            <div style={{background:dark?'rgba(255,255,255,0.035)':'rgba(176,124,240,0.06)',border:`1px solid ${dark?'rgba(196,181,253,0.1)':'rgba(176,124,240,0.15)'}`,borderRadius:16,padding:'10px 12px',marginBottom:18,maxHeight:160,overflowY:'auto',textAlign:'left'}}>
-              {questions.map((q2,qi)=>{
-                const ok2=isAnswerCorrect(q2,answers[qi]);
-                return(
-                  <div key={qi} style={{borderBottom:qi<questions.length-1?`1px solid ${dark?'rgba(255,255,255,0.04)':'rgba(176,124,240,0.08)'}`:  'none',padding:'5px 0'}}>
-                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',fontSize:12,fontWeight:700}}>
-                      <span style={{color:dark?'#9B7FC0':'#8060A0'}}>Câu {qi+1}</span>
-                      <span style={{fontSize:11,color:ok2?'#10B981':'#EF4444',background:ok2?'rgba(16,185,129,0.1)':'rgba(239,68,68,0.08)',padding:'1px 8px',borderRadius:999}}>{ok2?'Đúng':'Sai'}</span>
-                    </div>
-                    {!ok2&&q2.explanation&&(
-                      <div style={{fontSize:11,color:dark?'rgba(196,181,253,0.7)':'rgba(130,80,180,0.85)',marginTop:3,lineHeight:1.55}}
-                        dangerouslySetInnerHTML={{__html:'&#128161; '+q2.explanation}}/>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            <div style={{display:'flex',gap:10}}>
-              <button onClick={resetQuiz} style={{flex:1,padding:'11px 0',borderRadius:999,border:`1.5px solid ${dark?'rgba(255,150,200,0.28)':'rgba(232,84,122,0.3)'}`,background:'transparent',color:dark?'#FBAFCE':'#E8547A',fontSize:13,fontWeight:800,cursor:'pointer',transition:'all .18s'}}>Làm lại</button>
-              <button onClick={()=>setModal(false)} style={{flex:1,padding:'11px 0',borderRadius:999,border:'none',background:'linear-gradient(135deg,#F472B6,#A855F7)',color:'#fff',fontSize:13,fontWeight:800,cursor:'pointer',boxShadow:'0 4px 18px rgba(168,85,247,0.4)'}}>Xem đáp án</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── Score Dynamic Island Toast ── */}
+      <ScoreIsland
+        visible={modal}
+        onClose={()=>setModal(false)}
+        onReset={resetQuiz}
+        pct={pct} s={s} t={t} rc={rc} dark={dark}
+        questions={questions} answers={answers}
+        bestStreak={bestStreak}
+      />
 
       {/* ── Export bottom sheet ── */}
       {showExpSheet&&(
