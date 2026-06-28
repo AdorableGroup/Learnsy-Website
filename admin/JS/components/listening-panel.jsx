@@ -1076,10 +1076,20 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
             <div style={{padding:'10px 12px',borderRadius:12,border:`1.5px solid ${C.border2}`,background:dark?'#180A10':'#FAFAFE'}}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
                 <span style={{fontSize:11,fontWeight:900,color:'#4338ca'}}>Word Box — từ cho học sinh chọn</span>
-                <button onClick={suggestWBFromAnswers} style={{...btnBase('#4338ca','rgba(67,56,202,.08)'),fontSize:10,display:'flex',alignItems:'center',gap:4}}>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.5 5.5L19 9l-5.5 1.5L12 16l-1.5-5.5L5 9l5.5-1.5z"/><path d="M19 14l.7 2.3L22 17l-2.3.7L19 20l-.7-2.3L16 17l2.3-.7z"/></svg>
-                  Gợi ý từ đáp án
-                </button>
+                <div style={{display:'flex',gap:6}}>
+                  {wordBox.length>1 && (
+                    <button onClick={()=>setWordBox(prev=>{let n;do{n=shuffleArr(prev);}while(n.every((w,i)=>w.id===prev[i].id));return n;})}
+                      title="Tráo thứ tự các từ trong Word Box"
+                      style={{...btnBase('#4338ca','rgba(67,56,202,.08)'),fontSize:10,display:'flex',alignItems:'center',gap:4}}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+                      Tráo
+                    </button>
+                  )}
+                  <button onClick={suggestWBFromAnswers} style={{...btnBase('#4338ca','rgba(67,56,202,.08)'),fontSize:10,display:'flex',alignItems:'center',gap:4}}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.5 5.5L19 9l-5.5 1.5L12 16l-1.5-5.5L5 9l5.5-1.5z"/><path d="M19 14l.7 2.3L22 17l-2.3.7L19 20l-.7-2.3L16 17l2.3-.7z"/></svg>
+                    Gợi ý từ đáp án
+                  </button>
+                </div>
               </div>
               <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:wordBox.length?8:0}}>
                 {wordBox.map(w=>(
