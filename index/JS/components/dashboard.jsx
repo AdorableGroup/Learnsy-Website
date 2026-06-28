@@ -1762,4 +1762,783 @@ function burstConfetti(x, y, count=18){
   const colors=['#f472b6','#a855f7','#f59e0b','#34d399','#06b6d4','#f9a8d4','#c084fc'];
   const shapes=[
     (c)=>`<svg width="13" height="13" viewBox="0 0 24 24"><path fill="${c}" d="M12 0l2.59 9.41L24 12l-9.41 2.59L12 24l-2.59-9.41L0 12l9.41-2.59z"/></svg>`,
-    (c)=>`<svg width="13" height="13" viewBox="0 0 24 24"><polygon fill="${c}" points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 2
+    (c)=>`<svg width="13" height="13" viewBox="0 0 24 24"><polygon fill="${c}" points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+    (c)=>`<svg width="11" height="11" viewBox="0 0 24 24"><circle fill="${c}" cx="12" cy="12" r="10"/></svg>`,
+    (c)=>`<svg width="11" height="11" viewBox="0 0 24 24"><rect fill="${c}" x="3" y="3" width="18" height="18" rx="3"/></svg>`,
+    (c)=>`<svg width="12" height="12" viewBox="0 0 24 24"><polygon fill="${c}" points="12 2 22 22 2 22"/></svg>`,
+    (c)=>`<svg width="10" height="14" viewBox="0 0 16 22"><rect fill="${c}" x="4" y="0" width="8" height="14" rx="2"/><path fill="${c}" d="M0 14l8 8 8-8z"/></svg>`,
+  ];
+  for(let i=0;i<count;i++){
+    const el=document.createElement('div');
+    el.className='bb-confetti-piece';
+    const c=colors[Math.floor(Math.random()*colors.length)];
+    el.innerHTML=shapes[Math.floor(Math.random()*shapes.length)](c);
+    el.style.lineHeight='1';
+    const angle=(Math.random()*360)*(Math.PI/180);
+    const dist=60+Math.random()*100;
+    el.style.cssText=`
+      left:${x}px; top:${y}px;
+      width:${12+Math.random()*10}px;
+      --fall-y:${Math.sin(angle)*dist}px;
+      --drift-x:${Math.cos(angle)*dist}px;
+      --rot:${-180+Math.random()*360}deg;
+      --dur:${0.6+Math.random()*0.8}s;
+    `;
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(),(0.6+Math.random()*0.8+0.1)*1000);
+  }
+}
+
+window.bbBurstConfetti=burstConfetti;
+
+/* ══ WEEK HEATMAP — 7-day activity grid ══ */
+function WeekHeatmap({history,dark}){
+  const C=dark?CD:CL;
+  const today=new Date();
+  const days=Array.from({length:7},(_,i)=>{
+    const d=new Date(today);
+    d.setDate(today.getDate()-6+i);
+    return d;
+  });
+  const dayLabels=['CN','T2','T3','T4','T5','T6','T7'];
+
+  const countByDay={};
+  history.forEach(h=>{
+    const k=new Date(h.ts).toDateString();
+    countByDay[k]=(countByDay[k]||0)+1;
+  });
+
+  return(
+    <div style={{
+      background:C.card,borderRadius:20,padding:'16px',
+      border:`1.5px solid ${dark?'rgba(244,114,182,0.15)':'rgba(244,114,182,0.15)'}`,
+      animation:'bb-fadeUp .55s ease both',
+    }}>
+      <SectionHeader icon='history' title="Hoạt động 7 ngày qua" dark={dark} color='#f472b6'/>
+      <div style={{display:'flex',gap:6,justifyContent:'space-between'}}>
+        {days.map((d,i)=>{
+          const k=d.toDateString();
+          const cnt=countByDay[k]||0;
+          const isToday=i===6;
+          const intensity=cnt===0?0:cnt===1?0.35:cnt<=3?0.6:0.9;
+          const bg=cnt===0
+            ?(dark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.05)')
+            :`rgba(244,114,182,${intensity})`;
+          return(
+            <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+              <div style={{
+                width:'100%',aspectRatio:'1',borderRadius:10,
+                background:bg,
+                border:isToday?`2px solid #f472b6`:`1.5px solid ${cnt>0?'rgba(244,114,182,0.4)':'transparent'}`,
+                display:'flex',alignItems:'center',justifyContent:'center',
+                fontSize:cnt>0?14:10,
+                boxShadow:cnt>0?`0 2px 8px rgba(244,114,182,${intensity*0.5})`:'none',
+                transition:'all .3s',
+              }}>
+                {cnt>0
+                  ?<span style={{display:'inline-flex',alignItems:'center',justifyContent:'center'}}>
+                    {cnt>2
+                      ?<svg viewBox="0 0 24 24" width="13" height="13" fill="#fff"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                      :cnt>1
+                        ?<svg viewBox="0 0 24 24" width="11" height="11" fill="#fff"><path d="M12 0l2.59 9.41L24 12l-9.41 2.59L12 24l-2.59-9.41L0 12l9.41-2.59z"/></svg>
+                        :<svg viewBox="0 0 24 24" width="7" height="7" fill="#fff"><circle cx="12" cy="12" r="9"/></svg>
+                    }
+                  </span>
+                  :<span style={{opacity:0.3,display:'inline-flex'}}><svg viewBox="0 0 24 24" width="5" height="5" fill="currentColor"><circle cx="12" cy="12" r="9"/></svg></span>
+                }
+              </div>
+              <span style={{
+                fontSize:9,fontWeight:700,
+                color:isToday?C.accent:C.sub,
+              }}>{dayLabels[d.getDay()]}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{marginTop:8,fontSize:11,color:C.sub,textAlign:'center'}}>
+        {history.filter(h=>{
+          const d=new Date(h.ts);
+          return(today-d)<7*24*60*60*1000;
+        }).length} bài trong tuần này
+      </div>
+    </div>
+  );
+}
+
+/* ══ DAILY GOAL WIDGET ══ */
+function DailyGoalWidget({history,dark,goal=3}){
+  const C=dark?CD:CL;
+  const today=new Date().toDateString();
+  const todayCount=history.filter(h=>new Date(h.ts).toDateString()===today).length;
+  const pct=Math.min(Math.round(todayCount/goal*100),100);
+  const done=todayCount>=goal;
+
+  const motivations=[
+    'Cố lên bé ơi~','Bé học giỏi lắm!','Thêm một chút nữa thôi',
+    'Học là sức mạnh!','Tuyệt vời lắm nè','Bé xịn ghê á',
+  ];
+  const mot=motivations[Math.floor(Date.now()/3600000)%motivations.length];
+
+  return(
+    <div style={{
+      background:done
+        ?`linear-gradient(135deg,rgba(16,185,129,0.18),rgba(52,211,153,0.12))`
+        :(dark?'rgba(255,255,255,0.07)':'rgba(255,255,255,0.8)'),
+      borderRadius:20,padding:'16px',
+      border:`1.5px solid ${done?'rgba(16,185,129,0.4)':(dark?'rgba(244,114,182,0.18)':'rgba(244,114,182,0.2)')}`,
+      boxShadow:done?'0 4px 20px rgba(16,185,129,0.2)':'none',
+      animation:'bb-fadeUp .4s ease both',
+      position:'relative',overflow:'hidden',
+    }}>
+      {done&&<div style={{position:'absolute',inset:0,pointerEvents:'none',
+        background:'radial-gradient(circle at 80% 20%,rgba(52,211,153,0.1),transparent 60%)'}}/>}
+      <div style={{display:'flex',alignItems:'center',gap:12}}>
+        <div style={{
+          width:52,height:52,borderRadius:16,flexShrink:0,position:'relative',
+          background:done?'linear-gradient(135deg,#34d399,#10b981)':'rgba(244,114,182,0.12)',
+          display:'flex',alignItems:'center',justifyContent:'center',
+          boxShadow:done?'0 4px 16px rgba(52,211,153,0.4)':'none',
+          animation:done?'bb-jelly 0.6s ease':'none',
+        }}>
+          <Icon name={done?'check':'target'} size={26} color={done?'#fff':'#f472b6'}/>
+        </div>
+        <div style={{flex:1}}>
+          <div style={{
+            fontFamily:"'Baloo 2',cursive",fontSize:15,fontWeight:800,
+            color:done?'#10b981':C.fg,
+          }}>
+            {done?'Hoàn thành mục tiêu hôm nay!':'Mục tiêu hôm nay'}
+          </div>
+          <div style={{fontSize:11,color:C.sub,marginTop:1}}>
+            {todayCount}/{goal} bài · {done?'Xuất sắc!':mot}
+          </div>
+          <div style={{marginTop:8}}>
+            <ProgressBar pct={pct} color={done?'#10b981':'#f472b6'} dark={dark}/>
+          </div>
+        </div>
+        <div style={{
+          fontFamily:"'Baloo 2',cursive",fontSize:22,fontWeight:900,
+          color:done?'#10b981':'#f472b6',flexShrink:0,
+        }}>{todayCount}<span style={{fontSize:13,color:C.sub}}>/{goal}</span></div>
+      </div>
+    </div>
+  );
+}
+
+/* ══ MOTIVATIONAL QUOTE ══ */
+function MotivationalQuote({dark,studentName}){
+  const C=dark?CD:CL;
+  const name=(studentName||'bé').split(' ').slice(-1)[0];
+  const quotes=[
+    {text:`${name} ơi, mỗi ngày học một chút là tiến bộ rồi!`,author:'Learnsy'},
+    {text:`Học không bao giờ là muộn, đặc biệt với ${name} xinh xắn!`,author:'Learnsy'},
+    {text:`Cố gắng hôm nay để ${name} tự hào ngày mai!`,author:'Learnsy'},
+    {text:`${name} làm được mà! Tin tưởng bản thân đi nào~`,author:'Learnsy'},
+    {text:`Mỗi câu đúng là một bước tiến của ${name}!`,author:'Learnsy'},
+    {text:`${name} học giỏi, ${name} xinh đẹp, ${name} làm được!`,author:'Learnsy'},
+    {text:`Hôm nay ${name} học gì mới chưa? Bắt đầu thôi nào!`,author:'Learnsy'},
+    {text:`Kiên nhẫn là chìa khóa, ${name} đang nắm nó rồi!`,author:'Learnsy'},
+  ];
+  const q=quotes[Math.floor(new Date().getDate())%quotes.length];
+
+  return(
+    <div style={{
+      borderRadius:18,padding:'14px 18px',
+      background:dark
+        ?'linear-gradient(135deg,rgba(168,85,247,0.12),rgba(244,114,182,0.1))'
+        :'linear-gradient(135deg,#f5f3ff,#fce7f3)',
+      border:`1.5px solid ${dark?'rgba(168,85,247,0.2)':'rgba(168,85,247,0.2)'}`,
+      animation:'bb-fadeUp .6s ease both',
+      position:'relative',
+    }}>
+      <div style={{
+        position:'absolute',top:10,left:14,fontSize:28,opacity:0.18,
+        fontFamily:'Georgia,serif',lineHeight:1,color:'#a855f7',userSelect:'none',
+      }}>"</div>
+      <div style={{
+        fontSize:13,fontWeight:700,color:C.fg,lineHeight:1.5,
+        fontStyle:'italic',paddingLeft:18,fontFamily:'Nunito,sans-serif',
+      }}>{q.text}</div>
+      <div style={{fontSize:10,color:C.sub,marginTop:6,paddingLeft:18}}>— {q.author}</div>
+      <div style={{
+        position:'absolute',bottom:-2,right:10,fontSize:10,
+        animation:'bb-star-twinkle 2s ease-in-out infinite',
+        display:'inline-flex',
+      }}><svg viewBox="0 0 24 24" width="10" height="10" fill="#a855f7"><path d="M12 0l2.59 9.41L24 12l-9.41 2.59L12 24l-2.59-9.41L0 12l9.41-2.59z"/></svg></div>
+    </div>
+  );
+}
+
+/* ══ ACHIEVEMENT TOAST — pop-up when unlocking ══ */
+function AchievementToast({achievement,onClose,dark}){
+  const [leaving,setLeaving]=useState(false);
+
+  useEffect(()=>{
+    const leaveTimer=setTimeout(()=>setLeaving(true),3000);
+    const closeTimer=setTimeout(onClose,3500);
+    return()=>{clearTimeout(leaveTimer);clearTimeout(closeTimer);};
+  },[onClose]);
+
+  const handleTap=()=>{
+    setLeaving(true);
+    setTimeout(onClose,500);
+  };
+
+  /* Màu nền pill: luôn tối (dark island style) bất kể light/dark mode */
+  const pillBg='linear-gradient(135deg,rgba(18,6,14,0.97) 0%,rgba(30,10,22,0.97) 100%)';
+  const glowColor=achievement.color||'#f472b6';
+
+  return(
+    <div
+      onClick={handleTap}
+      style={{
+        position:'fixed',
+        top:10,
+        left:'50%',
+        zIndex:9999,
+        /* Dynamic Island pill shape — animated via keyframes */
+        width:280,
+        height:56,
+        borderRadius:28,
+        transform:'translateX(-50%)',
+        transformOrigin:'center top',
+        background:pillBg,
+        boxShadow:`0 0 0 1.5px rgba(255,255,255,0.08), 0 8px 28px rgba(0,0,0,0.55), 0 0 20px ${glowColor}44`,
+        display:'flex',
+        alignItems:'center',
+        justifyContent:'center',
+        gap:10,
+        padding:'0 16px',
+        cursor:'pointer',
+        userSelect:'none',
+        overflow:'hidden',
+        animation: leaving
+          ? 'di-pill-out 0.45s cubic-bezier(.55,.0,.45,1) both'
+          : 'di-pill-in  0.55s cubic-bezier(.34,1.3,.64,1) both',
+        willChange:'width,height,border-radius,opacity',
+      }}
+    >
+      {/* Glow halo behind icon */}
+      <div style={{
+        position:'absolute',left:14,top:'50%',
+        transform:'translateY(-50%)',
+        width:32,height:32,borderRadius:'50%',
+        background:glowColor,
+        opacity:0.18,
+        filter:'blur(8px)',
+        animation:'di-glow-pulse 1.2s ease-in-out infinite',
+        pointerEvents:'none',
+      }}/>
+
+      {/* Icon */}
+      <div style={{
+        flexShrink:0,
+        display:'inline-flex',
+        animation:'di-icon-pulse 1s ease-in-out infinite',
+        position:'relative',zIndex:1,
+      }}>
+        <Icon name={achievement.icon} size={24} color={glowColor}/>
+      </div>
+
+      {/* Text content — fades in after pill expands */}
+      <div style={{
+        flex:1,minWidth:0,
+        animation:'di-content-in 0.55s cubic-bezier(.34,1.3,.64,1) both',
+        position:'relative',zIndex:1,
+      }}>
+        <div style={{
+          fontSize:9.5,fontWeight:800,color:glowColor,
+          letterSpacing:'0.7px',textTransform:'uppercase',
+          display:'flex',alignItems:'center',gap:3,
+          marginBottom:1,
+          fontFamily:'Nunito,sans-serif',
+        }}>
+          <Icon name="ribbon" size={10} color={glowColor}/> Thành tích mới!
+        </div>
+        <div style={{
+          fontFamily:"'Baloo 2',cursive",
+          fontSize:14,fontWeight:800,
+          color:'#fce4f0',
+          overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',
+          lineHeight:1.15,
+        }}>{achievement.label}</div>
+      </div>
+
+      {/* Tap-to-dismiss dot */}
+      <div style={{
+        flexShrink:0,width:6,height:6,borderRadius:'50%',
+        background:`rgba(255,255,255,0.25)`,
+        position:'relative',zIndex:1,
+      }}/>
+    </div>
+  );
+}
+
+/* ══ LESSON PREVIEW CARD — expanded info before play ══ */
+function LessonPreviewModal({lesson,history,onPlay,onClose,dark}){
+  const C=dark?CD:CL;
+  if(!lesson)return null;
+  const attempts=history.filter(h=>h.lessonTitle===lesson.title);
+  const best=attempts.length?Math.max(...attempts.map(h=>h.pct)):null;
+  const last=attempts[0];
+
+  return(
+    <div style={{
+      position:'fixed',inset:0,zIndex:5000,
+      background:'rgba(0,0,0,0.55)',backdropFilter:'blur(8px)',
+      display:'flex',alignItems:'flex-end',justifyContent:'center',
+      animation:'bb-fadeUp .15s ease both',
+    }} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div style={{
+        width:'100%',maxWidth:760,
+        background:dark?'#1a0515':'#fff5f9',
+        borderRadius:'24px 24px 0 0',
+        padding:'24px 20px 40px',
+        animation:'bb-fadeUp .25s cubic-bezier(.34,1.56,.64,1) both',
+        maxHeight:'85vh',overflowY:'auto',
+      }}>
+        {/* Handle bar */}
+        <div style={{width:40,height:4,borderRadius:99,background:dark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.12)',
+          margin:'0 auto 20px'}}/>
+
+        <div style={{display:'flex',gap:14,marginBottom:18}}>
+          <div style={{
+            width:56,height:56,borderRadius:18,flexShrink:0,fontSize:28,
+            background:dark?'rgba(244,114,182,0.15)':'rgba(244,114,182,0.12)',
+            display:'flex',alignItems:'center',justifyContent:'center',
+            border:`1.5px solid rgba(244,114,182,0.3)`,
+          }}>
+            {lesson.password?<Icon name='lock' size={26} color='#be4e8a'/>:best!==null?<Icon name='check' size={26} color={pctColor(best)}/>:<Icon name='book' size={26} color='#f472b6'/>}
+          </div>
+          <div style={{flex:1}}>
+            <div style={{fontFamily:"'Baloo 2',cursive",fontSize:18,fontWeight:800,color:C.fg,lineHeight:1.2}}>
+              {lesson.title}
+            </div>
+            <div style={{fontSize:12,color:C.sub,marginTop:4}}>
+              {lesson.subject||'Tiếng Anh'} · {lesson.questionCount||0} câu hỏi
+            </div>
+          </div>
+        </div>
+
+        {/* Stats row */}
+        {attempts.length>0&&(
+          <div style={{display:'flex',gap:10,marginBottom:18}}>
+            {[
+              {label:'Lần thử',value:attempts.length,icon:'shuffle',color:'#a855f7'},
+              {label:'Điểm cao nhất',value:fmtScore(best)+'/10',icon:'trophy',color:'#f59e0b'},
+              {label:'Lần cuối',value:fmtDate(last?.ts),icon:'history',color:'#06b6d4'},
+            ].map((s,i)=>(
+              <div key={i} style={{flex:1,textAlign:'center',
+                background:dark?'rgba(255,255,255,0.07)':'rgba(255,255,255,0.8)',
+                borderRadius:14,padding:'10px 6px',
+                border:`1px solid ${s.color}22`}}>
+                <div style={{display:'flex',justifyContent:'center',marginBottom:2}}>
+                  <Icon name={s.icon} size={16} color={s.color}/>
+                </div>
+                <div style={{fontSize:13,fontWeight:900,color:s.color,fontFamily:"'Baloo 2',cursive"}}>{s.value}</div>
+                <div style={{fontSize:9,color:C.sub,fontWeight:700}}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Progress bar if done */}
+        {best!==null&&(
+          <div style={{marginBottom:18}}>
+            <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
+              <span style={{fontSize:12,color:C.sub,fontWeight:700}}>Kết quả tốt nhất</span>
+              <span style={{fontSize:12,fontWeight:800,color:pctColor(best)}}>{pctLabel(best)}</span>
+            </div>
+            <ProgressBar pct={best} color={pctColor(best)} dark={dark}/>
+          </div>
+        )}
+
+        {/* Buttons */}
+        <div style={{display:'flex',gap:10}}>
+          <button onClick={onClose} className="bb-btn-tap"
+            style={{
+              flex:1,padding:'14px',borderRadius:16,border:`1.5px solid ${dark?'rgba(255,255,255,0.12)':'rgba(0,0,0,0.1)'}`,
+              background:'transparent',color:C.sub,fontWeight:800,fontSize:14,cursor:'pointer',
+              fontFamily:'Nunito,sans-serif',
+            }}>
+            Để sau
+          </button>
+          <button onClick={()=>{onClose();onPlay(lesson);}} className="bb-btn-tap"
+            style={{
+              flex:2,padding:'14px',borderRadius:16,border:'none',
+              background:'linear-gradient(135deg,#f472b6,#a855f7)',
+              color:'#fff',fontWeight:800,fontSize:14,cursor:'pointer',
+              boxShadow:'0 4px 20px rgba(244,114,182,0.45)',
+              fontFamily:'Nunito,sans-serif',
+              display:'flex',alignItems:'center',justifyContent:'center',gap:8,
+            }}>
+            <span style={{display:'inline-flex',animation:'bb-wiggle 2s ease-in-out infinite'}}><Icon name='zap' size={16} color='#fff'/></span>
+            {best!==null?'Học lại nào!':'Bắt đầu học!'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══ RE-EXPORT enhanced window globals ══ */
+window.bbWeekHeatmap     = WeekHeatmap;
+window.bbDailyGoal       = DailyGoalWidget;
+window.bbMotivationalQ   = MotivationalQuote;
+window.bbAchievementToast= AchievementToast;
+window.bbLessonPreview   = LessonPreviewModal;
+
+/* ══ DASHBOARD ENHANCED — drops in as a replacement for window.Dashboard ══
+   Includes all original tabs PLUS:
+     · WeekHeatmap in Stats tab
+     · DailyGoalWidget + MotivationalQuote in Home tab
+     · AchievementToast on new quiz completion
+     · LessonPreviewModal before entering a quiz
+     · Confetti burst on achievement unlock
+══════════════════════════════════════════════════════════════════ */
+function DashboardEnhanced(props){
+  const {student,lessons,loading,fetchError,history,dark,setDark,
+    onPlay,onClearHistory,onHistDetail,shuffleQ,shuffleA,setShuffleQ,setShuffleA,onLogout}=props;
+
+  const normHistory=useMemo(()=>(history||[]).map(h=>({
+    ...h,
+    pct:(h.total>0&&h.score!=null)?Math.round(h.score/h.total*100):(h.pct!=null?h.pct:0),
+  })),[history]);
+
+  const [tab,setTab]=useState('home');
+  const [achievementQueue,setAchievementQueue]=useState([]);
+  const [previewLesson,setPreviewLesson]=useState(null);
+  const [showExpSheet,setShowExpSheet]=useState(false);
+  const [expSel,setExpSel]=useState({});
+  const [liteMode,setLiteModeRaw]=useState(()=>localStorage.getItem('bb-lite-mode')==='1');
+  const prevHistLen=useRef(normHistory.length);
+  const C=dark?CD:CL;
+
+  function setLiteMode(val){
+    setLiteModeRaw(val);
+    localStorage.setItem('bb-lite-mode',val?'1':'0');
+    injectLiteCSS(val);
+  }
+
+  // ── Sync display_name từ Supabase (khớp với student-manager) ──
+  const [liveStudent,setLiveStudent]=useState(student);
+  const fetchStudentInfo=useCallback(async()=>{
+    if(!student?.id&&!student?.username)return;
+    try{
+      const q=student?.id
+        ?window.supa.from('students').select('id,username,display_name,class_name').eq('id',student.id).single()
+        :window.supa.from('students').select('id,username,display_name,class_name').eq('username',student.username).single();
+      const{data}=await q;
+      if(data)setLiveStudent(s=>({...s,...data}));
+    }catch(e){}
+  },[student?.id,student?.username]);
+  useEffect(()=>{
+    fetchStudentInfo();
+    window.addEventListener('learnsy:student-saved',fetchStudentInfo);
+    return()=>window.removeEventListener('learnsy:student-saved',fetchStudentInfo);
+  },[fetchStudentInfo]);
+  const eff=liveStudent||student;
+
+  // Avatar
+  const userId=eff?.id||eff?.username;
+  const {avatarUrl,loading:avatarLoading,uploadAvatar,removeAvatar}=useAvatar(userId);
+
+  useEffect(()=>{
+    const saved=localStorage.getItem('bb-lite-mode')==='1';
+    if(saved) injectLiteCSS(true);
+  },[]);
+
+  /* ── Background — quản lý bởi background-settings.js ── */
+  useEffect(()=>{
+    if(window.applyBackground&&window.loadBgSettings){
+      window.applyBackground(window.loadBgSettings());
+    }
+  },[dark]);
+
+  /* ── Achievement detection ── */
+  useEffect(()=>{
+    if(normHistory.length<=prevHistLen.current){ prevHistLen.current=normHistory.length; return; }
+    prevHistLen.current=normHistory.length;
+    const n=normHistory.length;
+    const best=Math.max(...normHistory.map(h=>h.pct));
+    const checks=[
+      {cond:n===1,   icon:'check',   label:'Bắt đầu hành trình!', color:'#34d399'},
+      {cond:n===5,   icon:'book',    label:'5 bài siêng năng!',   color:'#a855f7'},
+      {cond:n===10,  icon:'star',    label:'10 bài chăm chỉ!',    color:'#f59e0b'},
+      {cond:n===20,  icon:'zap',     label:'Thần đồng 20 bài!',   color:'#06b6d4'},
+      {cond:n===50,  icon:'trending',label:'50 bài siêu anh hùng!',color:'#f472b6'},
+      {cond:best>=70,icon:'thumbsup',label:'Đạt điểm Giỏi!',     color:'#f472b6'},
+      {cond:best>=90,icon:'trophy',  label:'Điểm Xuất sắc!',     color:'#f59e0b'},
+    ];
+    const unlocked=checks.filter(c=>c.cond);
+    if(unlocked.length){
+      setAchievementQueue(q=>[...q,...unlocked]);
+      setTimeout(()=>window.bbBurstConfetti&&window.bbBurstConfetti(window.innerWidth/2,120,24),300);
+    }
+  },[normHistory]);
+
+  /* ── Intercept play → show preview first ── */
+  function handlePlay(lesson){ setPreviewLesson(lesson); }
+  function confirmPlay(lesson){ setPreviewLesson(null); onPlay(lesson); }
+
+  const tabTitles={home:'Trang chủ',stats:'Thống kê',history:'Lịch sử',settings:'Cài đặt'};
+
+  return(
+    <div style={{maxWidth:760,margin:'0 auto',minHeight:'100vh',color:C.fg,position:'relative',fontFamily:'Nunito,sans-serif'}}>
+      {!liteMode&&<FloatingDecos dark={dark}/>}
+
+      {/* ── Top Bar ── */}
+      <div style={{
+        position:'sticky',top:0,zIndex:100,
+        background:dark?'rgba(18,0,12,0.93)':'rgba(255,245,250,0.93)',
+        backdropFilter:'blur(20px)',
+        borderBottom:`1px solid ${dark?'rgba(244,114,182,0.2)':'rgba(244,114,182,0.18)'}`,
+        padding:'11px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',
+        boxShadow:dark?'0 2px 20px rgba(244,114,182,0.1)':'0 2px 20px rgba(244,114,182,0.08)',
+      }}>
+        <div className="bb-logo-text" style={{fontSize:19,color:C.fg,display:'flex',alignItems:'center',gap:5}}>
+          <span style={{animation:'bb-heartbeat 2.5s ease-in-out infinite',display:'inline-flex',color:'#f472b6'}}>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="#f472b6"><path d="M12 2C9.5 2 8 4 8 4S6.5 2 4 2C1.5 2 0 4 0 6.5c0 4 4 7 8 10.5C12 13.5 16 10.5 16 6.5 16 4 14.5 2 12 2z" transform="translate(4,1)"/><circle cx="12" cy="20" r="1.5" fill="#f9a8d4"/><circle cx="7" cy="18" r="1" fill="#f9a8d4"/><circle cx="17" cy="18" r="1" fill="#f9a8d4"/></svg>
+          </span>
+          Learnsy
+          <span style={{animation:'bb-sparkle-rotate 3s linear infinite',display:'inline-flex',opacity:0.85}}>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="#f9a8d4"><path d="M12 0l2.59 9.41L24 12l-9.41 2.59L12 24l-2.59-9.41L0 12l9.41-2.59z"/></svg>
+          </span>
+        </div>
+        <div style={{fontSize:13,fontWeight:700,color:C.sub}}>{tabTitles[tab]}</div>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <button className="bb-dm-btn" onClick={()=>{
+              const sel={};(lessons||[]).forEach((_,i)=>{sel[i]=true;});
+              setExpSel(sel);setShowExpSheet(true);
+            }}
+            style={{
+              width:38,height:38,borderRadius:12,
+              background:dark?'rgba(244,114,182,0.1)':'rgba(244,114,182,0.08)',
+              border:`1.5px solid ${dark?'rgba(244,114,182,0.25)':'rgba(244,114,182,0.22)'}`,
+              display:'flex',alignItems:'center',justifyContent:'center',
+              transition:'all .25s cubic-bezier(.34,1.56,.64,1)',
+            }}>
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#f472b6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </button>
+          <button className="bb-dm-btn" onClick={()=>setDark(d=>!d)}
+            style={{
+              width:38,height:38,borderRadius:12,
+              background:dark?'rgba(245,158,11,0.15)':'rgba(168,85,247,0.1)',
+              border:`1.5px solid ${dark?'rgba(245,158,11,0.3)':'rgba(168,85,247,0.25)'}`,
+              display:'flex',alignItems:'center',justifyContent:'center',
+              transition:'all .25s cubic-bezier(.34,1.56,.64,1)',
+            }}>
+            {dark
+              ?<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+              :<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#a855f7" strokeWidth="2" strokeLinecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            }
+          </button>
+        </div>
+      </div>
+
+      {/* ── Content ── */}
+      <div key={tab} style={{animation:'bb-fadeUp .22s ease both',position:'relative',zIndex:1}}>
+
+        {tab==='home'&&(
+          <>
+            <TabHome {...{student:eff,lessons,loading,fetchError,onPlay:handlePlay,
+              shuffleQ,shuffleA,setShuffleQ,setShuffleA,history:normHistory,dark,setTab,avatarUrl,liteMode}}/>
+            {normHistory.length>0&&(
+              <div style={{padding:'0 14px 100px',display:'flex',flexDirection:'column',gap:10}}>
+                <DailyGoalWidget history={normHistory} dark={dark}/>
+                <MotivationalQuote dark={dark} studentName={eff?.display_name||eff?.username}/>
+              </div>
+            )}
+            {normHistory.length===0&&<div style={{paddingBottom:90}}/>}
+          </>
+        )}
+
+        {tab==='stats'&&(
+          <>
+            <TabStats history={normHistory} dark={dark}/>
+            {normHistory.length>0&&(
+              <div style={{padding:'0 14px 100px'}}>
+                <WeekHeatmap history={normHistory} dark={dark}/>
+              </div>
+            )}
+          </>
+        )}
+
+        {tab==='history'&&(
+          <TabHistory history={normHistory} onHistDetail={onHistDetail}
+            onClearHistory={onClearHistory} dark={dark}/>
+        )}
+
+        {tab==='settings'&&(
+          <TabSettings {...{student:eff,dark,setDark,shuffleQ,shuffleA,
+            setShuffleQ,setShuffleA,onLogout,history:normHistory,
+            avatarUrl,avatarLoading,onAvatarUpload:uploadAvatar,onAvatarRemove:removeAvatar,studentId:userId,liteMode,setLiteMode}}/>
+        )}
+      </div>
+
+      <TabBar tab={tab} setTab={setTab} dark={dark}/>
+
+      {/* ── Export Sheet ── */}
+      {showExpSheet&&(
+        <>
+          <div onClick={()=>setShowExpSheet(false)} style={{position:'fixed',inset:0,background:'rgba(10,2,25,0.72)',zIndex:8800,backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}}/>
+          <div style={{position:'fixed',bottom:0,left:'50%',transform:'translateX(-50%)',width:'100%',maxWidth:760,zIndex:8801,borderRadius:'28px 28px 0 0',padding:'20px 20px 36px',background:'linear-gradient(160deg,#1E0845,#120330)',borderTop:'1.5px solid rgba(255,150,200,0.2)',boxShadow:'0 -12px 60px rgba(168,85,247,0.3)'}}>
+            <div style={{width:36,height:4,borderRadius:99,background:'rgba(255,255,255,0.15)',margin:'0 auto 18px'}}/>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F472B6" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span style={{fontSize:15,fontWeight:900,color:'#F0DCE8',flex:1}}>Tải bài về máy</span>
+              <button onClick={()=>setShowExpSheet(false)} style={{background:'none',border:'none',cursor:'pointer',padding:4,color:'#8A6080',display:'flex'}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <p style={{fontSize:12,color:'#8A6080',marginBottom:14,lineHeight:1.6}}>File HTML hoạt động offline, không cần internet.</p>
+            <div style={{display:'flex',gap:7,marginBottom:12}}>
+              <button onClick={()=>{const s={};(lessons||[]).forEach((_,i)=>{s[i]=true;});setExpSel(s);}}
+                style={{padding:'5px 13px',borderRadius:999,border:'1.5px solid rgba(244,114,182,0.3)',background:'rgba(244,114,182,0.08)',color:'#F9A8D4',fontSize:11,fontWeight:800,cursor:'pointer',fontFamily:'Nunito,sans-serif'}}>Chọn tất cả</button>
+              <button onClick={()=>setExpSel({})}
+                style={{padding:'5px 13px',borderRadius:999,border:'1.5px solid rgba(168,85,247,0.3)',background:'rgba(168,85,247,0.08)',color:'#C084FC',fontSize:11,fontWeight:800,cursor:'pointer',fontFamily:'Nunito,sans-serif'}}>Bỏ chọn</button>
+            </div>
+            <div style={{maxHeight:'38vh',overflowY:'auto',display:'flex',flexDirection:'column',gap:6,marginBottom:16,paddingRight:2}}>
+              {(lessons||[]).map((l,i)=>(
+                <div key={i} onClick={()=>setExpSel(s=>({...s,[i]:!s[i]}))}
+                  style={{display:'flex',alignItems:'center',gap:10,padding:'9px 12px',borderRadius:14,border:`1.5px solid ${expSel[i]?'rgba(168,85,247,0.6)':'rgba(255,150,200,0.15)'}`,background:expSel[i]?'rgba(168,85,247,0.1)':'rgba(255,255,255,0.04)',cursor:'pointer',transition:'all .15s'}}>
+                  <div style={{width:18,height:18,borderRadius:6,border:`1.5px solid ${expSel[i]?'#A855F7':'rgba(255,255,255,0.2)'}`,background:expSel[i]?'linear-gradient(135deg,#F472B6,#A855F7)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'all .15s'}}>
+                    {expSel[i]&&<svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1.5 6 4.5 9 10.5 3"/></svg>}
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,fontWeight:800,color:'#F0DCE8',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{l.password?'🔒 ':''}{l.title||'Chưa đặt tên'}</div>
+                    <div style={{fontSize:11,color:'#8A6080',marginTop:2}}>{(l.questions||[]).length} câu hỏi</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{display:'flex',gap:8}}>
+              <button onClick={()=>{
+                const selected=(lessons||[]).filter((_,i)=>expSel[i]);
+                if(!selected.length){alert('Chọn ít nhất 1 bài nhé!');return;}
+                if(typeof window.buildExportLiteHTML==='function'){
+                  const html=window.buildExportLiteHTML(selected);
+                  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+                  const url=URL.createObjectURL(blob);
+                  const a=document.createElement('a');
+                  const name=selected.length===1?(selected[0].title||'learnsy-quiz'):'learnsy-'+selected.length+'bai';
+                  a.href=url;a.download=name.replace(/[<>:"/\|?*]/g,'').trim()+'.html';
+                  document.body.appendChild(a);a.click();
+                  setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1000);
+                  setShowExpSheet(false);
+                }
+              }} style={{flex:1,padding:'11px 0',borderRadius:999,border:'1.5px solid rgba(255,150,200,0.3)',background:'transparent',color:'#F9A8D4',fontSize:13,fontWeight:800,cursor:'pointer',fontFamily:'Nunito,sans-serif'}}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" style={{display:'inline',verticalAlign:-2,marginRight:4}}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Lite
+              </button>
+              <button onClick={()=>{
+                const selected=(lessons||[]).filter((_,i)=>expSel[i]);
+                if(!selected.length){alert('Chọn ít nhất 1 bài nhé!');return;}
+                if(typeof window.buildExportHTML==='function'){
+                  const html=window.buildExportHTML(selected);
+                  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+                  const url=URL.createObjectURL(blob);
+                  const a=document.createElement('a');
+                  const name=selected.length===1?(selected[0].title||'learnsy-quiz'):'learnsy-'+selected.length+'bai';
+                  a.href=url;a.download=name.replace(/[<>:"/\|?*]/g,'').trim()+'.html';
+                  document.body.appendChild(a);a.click();
+                  setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1000);
+                  setShowExpSheet(false);
+                }
+              }} style={{flex:1,padding:'11px 0',borderRadius:999,border:'none',background:'linear-gradient(135deg,#F472B6,#A855F7)',color:'#fff',fontSize:13,fontWeight:800,cursor:'pointer',fontFamily:'Nunito,sans-serif',boxShadow:'0 4px 18px rgba(168,85,247,0.35)'}}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" style={{display:'inline',verticalAlign:-2,marginRight:4}}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Full (âm thanh)
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Achievement Toast ── */}
+      {achievementQueue.length>0&&(
+        <AchievementToast
+          achievement={achievementQueue[0]}
+          dark={dark}
+          onClose={()=>setAchievementQueue(q=>q.slice(1))}
+        />
+      )}
+
+      {/* ── Lesson Preview Modal ── */}
+      {previewLesson&&(
+        <LessonPreviewModal
+          lesson={previewLesson}
+          history={normHistory}
+          onPlay={confirmPlay}
+          onClose={()=>setPreviewLesson(null)}
+          dark={dark}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ── Export ── */
+/* DashboardEnhanced là phiên bản đầy đủ tính năng.
+   Để dùng, thay window.Dashboard = DashboardEnhanced trong index.html,
+   hoặc dùng trực tiếp: ReactDOM.render(<DashboardEnhanced .../>, ...) */
+window.DashboardEnhanced = DashboardEnhanced;
+window.Dashboard         = DashboardEnhanced; /* auto-upgrade */
+
+/* ══ CHANGELOG / WHATSNEW BANNER ══ */
+function WhatsNewBanner({dark,onDismiss}){
+  const C=dark?CD:CL;
+  const items=[
+    {icon:'target',  text:'Mục tiêu học hàng ngày'},
+    {icon:'history', text:'Heatmap hoạt động 7 ngày'},
+    {icon:'ribbon',  text:'Thành tích tự động mở khoá'},
+    {icon:'book',    text:'Preview bài học trước khi vào'},
+    {icon:'star',    text:'Hiệu ứng sparkle khi đạt thành tích'},
+  ];
+  return(
+    <div style={{
+      margin:'12px 14px 0',borderRadius:20,overflow:'hidden',
+      border:`1.5px solid rgba(168,85,247,0.3)`,
+      animation:'bb-fadeUp .3s ease both',
+    }}>
+      <div style={{
+        background:'linear-gradient(135deg,#a855f7,#f472b6)',
+        padding:'10px 14px',
+        display:'flex',alignItems:'center',justifyContent:'space-between',
+      }}>
+        <div style={{display:'flex',alignItems:'center',gap:6}}>
+          <span style={{display:'inline-flex',animation:'bb-sparkle-rotate 3s linear infinite',color:'#fff'}}>
+            <Icon name="sparkle" size={16} color="#fff"/>
+          </span>
+          <span style={{fontFamily:"'Baloo 2',cursive",fontSize:14,fontWeight:800,color:'#fff'}}>
+            Cập nhật mới · Dashboard v3
+          </span>
+        </div>
+        <button onClick={onDismiss}
+          style={{background:'rgba(255,255,255,0.2)',border:'none',cursor:'pointer',
+            color:'#fff',fontSize:12,fontWeight:700,padding:'2px 8px',borderRadius:99,
+            fontFamily:'Nunito,sans-serif',display:'inline-flex',alignItems:'center',gap:4}}>
+          <Icon name="check" size={12} color="#fff"/> Đã hiểu
+        </button>
+      </div>
+      <div style={{
+        background:dark?'rgba(168,85,247,0.12)':'rgba(245,243,255,0.9)',
+        padding:'10px 14px',display:'flex',flexDirection:'column',gap:5,
+      }}>
+        {items.map((it,i)=>(
+          <div key={i} style={{display:'flex',alignItems:'center',gap:8,
+            animation:`bb-fadeUp .25s ease ${i*0.07}s both`}}>
+            <span style={{display:'inline-flex',flexShrink:0,color:'#a855f7'}}>
+              <Icon name={it.icon} size={14} color='#a855f7'/>
+            </span>
+            <span style={{fontSize:12,fontWeight:700,color:C.sub}}>{it.text}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+window.bbWhatsNew=WhatsNewBanner;
+
+})(); /* ══ END EXTENSIONS IIFE ══ */
+
+/* ══ END OF DASHBOARD.JS · Learnsy Bánh Bèo Edition ══ */
