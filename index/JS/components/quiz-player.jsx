@@ -414,351 +414,287 @@ const _injectDIStyles=()=>{
   const s=document.createElement('style');
   s.id=id;
   s.textContent=`
-    /* ── Dynamic Island open: grow from center-pill out ── */
+    /* Mở: pill ở giữa bung ra 2 bên (scaleX 0→1 + height 0→auto) */
     @keyframes diOpen{
-      0%  {clip-path:inset(0 50% 0 50% round 999px);opacity:0;transform:scaleY(0.5);}
-      40% {clip-path:inset(0 0% 0 0% round 26px);opacity:1;transform:scaleY(1.04);}
-      60% {transform:scaleY(0.98);}
-      100%{clip-path:inset(0 0% 0 0% round 26px);opacity:1;transform:scaleY(1);}
+      0%  {transform:translateX(-50%) scaleX(0.08) scaleY(0.6);opacity:0;}
+      45% {transform:translateX(-50%) scaleX(1.03) scaleY(1.02);opacity:1;}
+      65% {transform:translateX(-50%) scaleX(0.99) scaleY(1);}
+      100%{transform:translateX(-50%) scaleX(1) scaleY(1);opacity:1;}
     }
-    /* ── Dynamic Island close: shrink to center-pill ── */
+    /* Đóng: kẹp từ 2 bên vào giữa thành pill rồi biến mất */
     @keyframes diClose{
-      0%  {clip-path:inset(0 0% 0 0% round 26px);opacity:1;transform:scaleY(1);}
-      50% {clip-path:inset(0 0% 0 0% round 26px);opacity:1;transform:scaleY(1.03);}
-      100%{clip-path:inset(0 50% 0 50% round 999px);opacity:0;transform:scaleY(0.5);}
+      0%  {transform:translateX(-50%) scaleX(1) scaleY(1);opacity:1;}
+      40% {transform:translateX(-50%) scaleX(1.02) scaleY(1.02);opacity:1;}
+      100%{transform:translateX(-50%) scaleX(0.06) scaleY(0.5);opacity:0;}
     }
-    /* ── Nội dung fade-in sau khi island đã mở xong ── */
-    @keyframes diContentIn{
-      from{opacity:0;transform:translateY(6px);}
-      to  {opacity:1;transform:translateY(0);}
-    }
-    /* ── Progress bar fill ── */
-    @keyframes diBarFill{
-      from{width:0%;}
-    }
-    /* ── Score number count-up pop ── */
     @keyframes diScorePop{
-      0%  {transform:scale(0.5);opacity:0;}
-      70% {transform:scale(1.18);}
+      0%  {transform:scale(0.4);opacity:0;}
+      70% {transform:scale(1.2);}
       100%{transform:scale(1);opacity:1;}
     }
-    /* ── Icon spin ── */
     @keyframes diIconSpin{
-      0%  {transform:rotate(-30deg) scale(0);}
-      60% {transform:rotate(20deg) scale(1.15);}
-      100%{transform:rotate(0deg) scale(1);}
-    }
-    /* ── Dot bounce ── */
-    @keyframes diDotBounce{
-      0%,100%{transform:scale(1);}
-      50%{transform:scale(1.5);}
+      0%  {transform:rotate(-25deg) scale(0);opacity:0;}
+      65% {transform:rotate(12deg) scale(1.12);}
+      100%{transform:rotate(0deg) scale(1);opacity:1;}
     }
     .di-island{
       position:fixed;
-      top:18px;
+      top:16px;
       left:50%;
       transform:translateX(-50%);
-      z-index:10500;
-      width:min(92vw,380px);
       transform-origin:center top;
+      z-index:10500;
+      width:min(92vw,390px);
     }
     .di-island.di-entering{
-      animation:diOpen .52s cubic-bezier(.32,1.28,.42,1) both;
+      animation:diOpen .5s cubic-bezier(.28,1.24,.4,1) both;
     }
     .di-island.di-exiting{
-      animation:diClose .38s cubic-bezier(.55,0,.68,.88) both;
-    }
-    .di-content{
-      animation:diContentIn .28s ease both;
-      animation-delay:.3s;
-      opacity:0;
+      animation:diClose .36s cubic-bezier(.6,0,.7,.9) both;
     }
     .di-score-num{
-      animation:diScorePop .4s cubic-bezier(.34,1.56,.64,1) both;
-      animation-delay:.45s;
+      display:inline-block;
+      animation:diScorePop .38s cubic-bezier(.34,1.56,.64,1) both;
+      animation-delay:.42s;
     }
     .di-icon{
-      animation:diIconSpin .45s cubic-bezier(.34,1.56,.64,1) both;
-      animation-delay:.35s;
-    }
-    .di-bar-fill{
-      animation:diBarFill .7s cubic-bezier(.4,0,.2,1) both;
-      animation-delay:.55s;
+      animation:diIconSpin .42s cubic-bezier(.34,1.56,.64,1) both;
+      animation-delay:.3s;
     }
   `;
   document.head.appendChild(s);
 };
 
-/* ScoreIsland component */
-const ScoreIsland=React.memo(function ScoreIsland({
-  visible,onClose,onReset,pct,s,t,rc,dark,questions,answers,bestStreak
-}){
-  const [phase,setPhase]=useState('hidden'); // hidden | entering | visible | exiting
+/* ScoreIsland component
+   Flow: nộp bài → island xuất hiện với animation mở từ giữa ra
+         → ngay lập tức expanded (show full detail)
+         → sau 3s không tương tác → tự collapse thành pill nhỏ
+         → user tap pill → mở lại
+         → user tap backdrop hoặc bấm "Xem đáp án" → onClose
+*/
+function ScoreIsland({visible,onClose,onReset,pct,s,t,rc,dark,questions,answers,bestStreak}){
+  /* phase: hidden | entering | shown | exiting */
+  const [phase,setPhase]=useState('hidden');
   const [expanded,setExpanded]=useState(false);
   const phaseRef=useRef('hidden');
+  const idleTimerRef=useRef(null);
 
   useEffect(()=>{_injectDIStyles();},[]);
 
+  /* ── Bắt đầu idle countdown (reset khi user tương tác) ── */
+  const startIdleTimer=()=>{
+    clearTimeout(idleTimerRef.current);
+    idleTimerRef.current=setTimeout(()=>setExpanded(false),3000);
+  };
+  const cancelIdleTimer=()=>clearTimeout(idleTimerRef.current);
+
+  /* ── Dọn timer khi unmount ── */
+  useEffect(()=>()=>clearTimeout(idleTimerRef.current),[]);
+
+  /* ── Visible → phase transition ── */
   useEffect(()=>{
     if(visible&&phaseRef.current==='hidden'){
       phaseRef.current='entering';
       setPhase('entering');
-      setExpanded(false);
-      // Sau 520ms animation xong → chuyển sang visible + expand
+      /* Sau khi animation mở xong (520ms) → expand và bắt đầu idle */
       const t1=setTimeout(()=>{
-        phaseRef.current='visible';
-        setPhase('visible');
+        phaseRef.current='shown';
+        setPhase('shown');
         setExpanded(true);
+        startIdleTimer(); // 3s sau sẽ collapse
       },520);
       return()=>clearTimeout(t1);
     }
     if(!visible&&phaseRef.current!=='hidden'&&phaseRef.current!=='exiting'){
+      cancelIdleTimer();
       phaseRef.current='exiting';
       setPhase('exiting');
       setExpanded(false);
       const t2=setTimeout(()=>{
         phaseRef.current='hidden';
         setPhase('hidden');
-      },380);
+      },400);
       return()=>clearTimeout(t2);
     }
   },[visible]);
+
+  /* ── Toggle expand: user chủ động tap ── */
+  const handleToggle=()=>{
+    const next=!expanded;
+    setExpanded(next);
+    if(next) startIdleTimer(); // reset 3s khi mở lại
+    else cancelIdleTimer();
+  };
 
   if(phase==='hidden')return null;
 
   const label=pct>=0.8?'Xuất sắc! 🎉':pct>=0.5?'Khá tốt! ✨':'Cần ôn thêm 📖';
   const correct=questions.filter((q2,qi)=>isAnswerCorrect(q2,answers[qi]));
-  const wrong=questions.filter((q2,qi)=>!isAnswerCorrect(q2,answers[qi]));
-  const wrongWithExp=wrong.filter(q2=>q2.explanation);
+  const wrong  =questions.filter((q2,qi)=>!isAnswerCorrect(q2,answers[qi]));
 
+  /* ── Màu theo dark mode ── */
   const islandBg=dark
-    ?'linear-gradient(145deg,#1A0A35 0%,#0D0220 60%,#0A1830 100%)'
-    :'linear-gradient(145deg,#FFF0FA 0%,#F3E8FF 55%,#EEF2FF 100%)';
-  const borderColor=dark?'rgba(255,150,200,0.22)':'rgba(200,140,255,0.45)';
+    ?'linear-gradient(145deg,#1C0840 0%,#0F0225 60%,#0A1428 100%)'
+    :'linear-gradient(145deg,#FFFFFF 0%,#FAF0FF 55%,#F0F4FF 100%)';
+  const borderColor=dark?'rgba(220,140,255,0.25)':'rgba(180,100,255,0.35)';
+  const textMain  =dark?'#F0E6FF':'#2D1245';
+  const textSub   =dark?'rgba(220,200,255,0.5)':'rgba(0,0,0,0.35)';
+  const dividerC  =dark?'rgba(255,255,255,0.07)':'rgba(160,90,255,0.12)';
+  const rowBg     =dark?'rgba(255,255,255,0.04)':'rgba(180,100,255,0.05)';
+  const rowBorder =dark?'rgba(196,181,253,0.1)' :'rgba(176,124,240,0.13)';
+  const listItemBorder=dark?'rgba(255,255,255,0.04)':'rgba(176,124,240,0.08)';
 
   return(
     <div
-      className={`di-island ${phase==='entering'?'di-entering':phase==='exiting'?'di-exiting':''}`}
+      className={`di-island${phase==='entering'?' di-entering':phase==='exiting'?' di-exiting':''}`}
       style={{left:'50%',transform:'translateX(-50%)'}}
     >
-      {/* ── Backdrop blur overlay (chỉ hiện khi expanded) ── */}
+      {/* Backdrop — chỉ khi expanded, tap để đóng */}
       {expanded&&(
         <div
           onClick={onClose}
           style={{
-            position:'fixed',inset:0,
-            background:'rgba(8,1,22,0.6)',
-            backdropFilter:'blur(12px)',
-            WebkitBackdropFilter:'blur(12px)',
-            zIndex:-1,
+            position:'fixed',inset:0,zIndex:-1,
+            background:dark?'rgba(6,0,18,0.65)':'rgba(20,0,50,0.32)',
+            backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',
           }}
         />
       )}
 
-      {/* ── Island card ── */}
-      <div
-        style={{
-          background:islandBg,
-          border:`1.5px solid ${borderColor}`,
-          borderRadius:26,
-          boxShadow:dark
-            ?'0 12px 50px rgba(0,0,0,0.7),0 0 0 1px rgba(255,150,200,0.08)'
-            :'0 12px 50px rgba(140,60,220,0.22),0 0 0 1px rgba(200,140,255,0.15)',
-          overflow:'hidden',
-          transition:'all .32s cubic-bezier(.4,0,.2,1)',
-        }}
-      >
-        {/* ── Compact header (luôn hiển thị) ── */}
+      {/* Island card */}
+      <div style={{
+        background:islandBg,
+        border:`1.5px solid ${borderColor}`,
+        borderRadius:26,
+        boxShadow:dark
+          ?'0 16px 55px rgba(0,0,0,0.75),0 0 0 1px rgba(200,140,255,0.07)'
+          :'0 8px 40px rgba(140,60,220,0.18),0 0 0 1px rgba(180,100,255,0.12)',
+        overflow:'hidden',
+      }}>
+
+        {/* ── Compact pill header (luôn thấy) ── */}
         <div
-          style={{
-            display:'flex',alignItems:'center',gap:10,
-            padding:'11px 14px',
-            cursor:'pointer',
-          }}
-          onClick={()=>setExpanded(e=>!e)}
+          onClick={handleToggle}
+          style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',cursor:'pointer',userSelect:'none'}}
         >
-          {/* Icon */}
-          <div className="di-icon" style={{
+          {/* Icon badge */}
+          <div className={phase==='shown'?'':'di-icon'} style={{
             width:34,height:34,borderRadius:12,flexShrink:0,
-            background:pct>=0.8?'rgba(16,185,129,0.15)':pct>=0.5?'rgba(245,158,11,0.15)':'rgba(239,68,68,0.13)',
-            border:`1.5px solid ${rc}44`,
+            background:pct>=0.8?'rgba(16,185,129,0.13)':pct>=0.5?'rgba(245,158,11,0.13)':'rgba(239,68,68,0.12)',
+            border:`1.5px solid ${rc}55`,
             display:'flex',alignItems:'center',justifyContent:'center',
           }}>
-            {pct>=0.8?(
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={rc} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-            ):pct>=0.5?(
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={rc} strokeWidth="2.2">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-              </svg>
-            ):(
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={rc} strokeWidth="2.5" strokeLinecap="round">
-                <line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="17" r="1" fill={rc}/>
-                <circle cx="12" cy="12" r="10"/>
-              </svg>
-            )}
+            {pct>=0.8
+              ?<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={rc} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              :pct>=0.5
+                ?<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={rc} strokeWidth="2.2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill={rc} opacity=".8"/></svg>
+                :<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={rc} strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="17" r="1" fill={rc}/></svg>
+            }
           </div>
 
-          {/* Compact score + label */}
+          {/* Score + label + mini bar */}
           <div style={{flex:1,minWidth:0}}>
-            <div style={{display:'flex',alignItems:'baseline',gap:4}}>
-              <span className="di-score-num" style={{
+            <div style={{display:'flex',alignItems:'baseline',gap:5,flexWrap:'wrap'}}>
+              <span className={phase==='shown'?'':'di-score-num'} style={{
                 fontSize:22,fontWeight:900,color:rc,lineHeight:1,letterSpacing:-0.5,
               }}>{fmtS(pct*10)}</span>
-              <span style={{fontSize:12,color:dark?'rgba(255,255,255,0.28)':'rgba(0,0,0,0.22)',fontWeight:700}}>/10</span>
+              <span style={{fontSize:11,color:textSub,fontWeight:700}}>/10</span>
               <span style={{
-                fontSize:11,fontWeight:800,
-                color:pct>=0.8?'#10B981':pct>=0.5?'#C89700':'#EF4444',
-                background:pct>=0.8?'rgba(16,185,129,0.12)':pct>=0.5?'rgba(252,211,77,0.14)':'rgba(239,68,68,0.1)',
-                padding:'1px 7px',borderRadius:999,marginLeft:2,
-                flexShrink:0,
+                fontSize:10,fontWeight:800,
+                color:pct>=0.8?'#10B981':pct>=0.5?'#B07A00':'#EF4444',
+                background:pct>=0.8?'rgba(16,185,129,0.1)':pct>=0.5?'rgba(252,211,77,0.15)':'rgba(239,68,68,0.09)',
+                padding:'1px 8px',borderRadius:999,border:`1px solid ${rc}28`,flexShrink:0,
               }}>{label}</span>
             </div>
             {/* Mini progress bar */}
-            <div style={{
-              height:4,background:dark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.07)',
-              borderRadius:99,marginTop:5,overflow:'hidden',
-            }}>
-              <div className="di-bar-fill" style={{
+            <div style={{height:3,background:dark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.07)',borderRadius:99,marginTop:6,overflow:'hidden'}}>
+              <div className={phase==='shown'?'':'di-bar-fill'} style={{
                 height:'100%',borderRadius:99,
                 width:`${pct*100}%`,
-                background:pct>=0.8
-                  ?'linear-gradient(90deg,#10B981,#6EE7B7)'
-                  :pct>=0.5
-                    ?'linear-gradient(90deg,#F59E0B,#FCD34D)'
-                    :'linear-gradient(90deg,#EF4444,#FCA5A5)',
+                background:pct>=0.8?'linear-gradient(90deg,#10B981,#6EE7B7)':pct>=0.5?'linear-gradient(90deg,#F59E0B,#FCD34D)':'linear-gradient(90deg,#EF4444,#FCA5A5)',
+                transition:phase==='shown'?'none':'width .7s cubic-bezier(.4,0,.2,1) .55s',
               }}/>
             </div>
           </div>
 
-          {/* Dots: đúng/sai + chevron */}
-          <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:3,flexShrink:0}}>
+          {/* Right: đúng/sai badges + chevron */}
+          <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4,flexShrink:0}}>
             <div style={{display:'flex',gap:3}}>
-              {/* Đúng */}
-              <span style={{
-                fontSize:10,fontWeight:800,color:'#10B981',
-                background:'rgba(16,185,129,0.12)',
-                padding:'2px 7px',borderRadius:999,
-              }}>{correct.length}✓</span>
-              {/* Sai */}
-              <span style={{
-                fontSize:10,fontWeight:800,color:'#EF4444',
-                background:'rgba(239,68,68,0.1)',
-                padding:'2px 7px',borderRadius:999,
-              }}>{wrong.length}✗</span>
+              <span style={{fontSize:10,fontWeight:800,color:'#10B981',background:'rgba(16,185,129,0.11)',padding:'2px 7px',borderRadius:999}}>{correct.length}✓</span>
+              <span style={{fontSize:10,fontWeight:800,color:'#EF4444',background:'rgba(239,68,68,0.09)',padding:'2px 7px',borderRadius:999}}>{wrong.length}✗</span>
             </div>
-            {/* Chevron */}
-            <svg
-              width="14" height="14" viewBox="0 0 24 24" fill="none"
-              stroke={dark?'rgba(255,255,255,0.28)':'rgba(0,0,0,0.22)'}
-              strokeWidth="2.2" strokeLinecap="round"
-              style={{
-                transition:'transform .28s ease',
-                transform:expanded?'rotate(180deg)':'rotate(0deg)',
-              }}
-            >
-              <polyline points="6 9 12 15 18 9"/>
-            </svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke={dark?'rgba(255,255,255,0.3)':'rgba(0,0,0,0.25)'}
+              strokeWidth="2.3" strokeLinecap="round"
+              style={{transition:'transform .3s ease',transform:expanded?'rotate(180deg)':'rotate(0deg)'}}
+            ><polyline points="6 9 12 15 18 9"/></svg>
           </div>
         </div>
 
         {/* ── Expanded detail panel ── */}
         <div style={{
           overflow:'hidden',
-          maxHeight:expanded?'70vh':'0px',
-          transition:'max-height .38s cubic-bezier(.4,0,.2,1)',
+          maxHeight:expanded?'72vh':'0',
+          transition:'max-height .36s cubic-bezier(.4,0,.2,1)',
         }}>
-          <div className="di-content" style={{padding:'0 14px 16px'}}>
-            {/* Divider */}
-            <div style={{
-              height:1,
-              background:dark?'rgba(255,255,255,0.06)':'rgba(180,100,255,0.12)',
-              marginBottom:13,
-            }}/>
+          <div style={{padding:'0 14px 16px',opacity:expanded?1:0,transition:'opacity .2s ease .1s'}}>
 
-            {/* Stats row */}
-            <div style={{display:'flex',gap:7,marginBottom:13}}>
+            <div style={{height:1,background:dividerC,marginBottom:12}}/>
+
+            {/* Stats mini-cards */}
+            <div style={{display:'flex',gap:7,marginBottom:12}}>
               {[
-                {l:'Câu đúng', v:`${s}/${t}`, c:'#10B981', bg:'rgba(16,185,129,0.1)'},
-                {l:'Điểm',     v:`${fmtS(pct*10)}/10`, c:rc, bg:`${rc}18`},
-                bestStreak>=3?{l:'Streak', v:`${bestStreak}🔥`, c:'#FCD34D', bg:'rgba(252,211,77,0.12)'}:null,
-              ].filter(Boolean).map(({l,v,c,bg})=>(
-                <div key={l} style={{
-                  flex:1,borderRadius:14,padding:'8px 6px',textAlign:'center',
-                  background:bg,border:`1px solid ${c}28`,
-                }}>
-                  <div style={{fontSize:8,fontWeight:800,color:dark?'rgba(255,255,255,0.38)':'rgba(0,0,0,0.35)',letterSpacing:.6,marginBottom:3}}>{l.toUpperCase()}</div>
+                {l:'Câu đúng',v:`${s}/${t}`,c:'#10B981',bg:'rgba(16,185,129,0.08)'},
+                {l:'Điểm',    v:`${fmtS(pct*10)}/10`,c:rc,bg:dark?`${rc}18`:`${rc}11`},
+                ...(bestStreak>=3?[{l:'Streak',v:`${bestStreak}🔥`,c:'#EEB800',bg:'rgba(252,211,77,0.1)'}]:[]),
+              ].map(({l,v,c,bg})=>(
+                <div key={l} style={{flex:1,borderRadius:13,padding:'8px 5px',textAlign:'center',background:bg,border:`1px solid ${c}30`}}>
+                  <div style={{fontSize:7,fontWeight:800,color:textSub,letterSpacing:.7,marginBottom:3}}>{l.toUpperCase()}</div>
                   <div style={{fontSize:14,fontWeight:900,color:c}}>{v}</div>
                 </div>
               ))}
             </div>
 
             {/* Per-question list */}
-            <div style={{
-              background:dark?'rgba(255,255,255,0.033)':'rgba(176,124,240,0.06)',
-              border:`1px solid ${dark?'rgba(196,181,253,0.1)':'rgba(176,124,240,0.14)'}`,
-              borderRadius:16,padding:'9px 11px',
-              marginBottom:12,maxHeight:160,overflowY:'auto',
-            }}>
+            <div style={{background:rowBg,border:`1px solid ${rowBorder}`,borderRadius:16,padding:'9px 11px',marginBottom:12,maxHeight:155,overflowY:'auto'}}>
               {questions.map((q2,qi)=>{
                 const ok2=isAnswerCorrect(q2,answers[qi]);
                 return(
-                  <div key={qi} style={{
-                    borderBottom:qi<questions.length-1
-                      ?`1px solid ${dark?'rgba(255,255,255,0.04)':'rgba(176,124,240,0.07)'}`
-                      :'none',
-                    padding:'4px 0',
-                  }}>
+                  <div key={qi} style={{borderBottom:qi<questions.length-1?`1px solid ${listItemBorder}`:'none',padding:'4px 0'}}>
                     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                      <span style={{fontSize:11,color:dark?'#9B7FC0':'#8060A0',fontWeight:600}}>Câu {qi+1}</span>
-                      <span style={{
-                        fontSize:10,fontWeight:800,color:ok2?'#10B981':'#EF4444',
-                        background:ok2?'rgba(16,185,129,0.1)':'rgba(239,68,68,0.08)',
-                        padding:'1px 7px',borderRadius:999,
-                      }}>{ok2?'Đúng':'Sai'}</span>
+                      <span style={{fontSize:11,color:dark?'#A080C8':'#7050A0',fontWeight:600}}>Câu {qi+1}</span>
+                      <span style={{fontSize:10,fontWeight:800,color:ok2?'#10B981':'#EF4444',background:ok2?'rgba(16,185,129,0.09)':'rgba(239,68,68,0.08)',padding:'1px 7px',borderRadius:999}}>{ok2?'Đúng':'Sai'}</span>
                     </div>
                     {!ok2&&q2.explanation&&(
-                      <div style={{
-                        fontSize:10,color:dark?'rgba(196,181,253,0.65)':'rgba(130,80,180,0.85)',
-                        marginTop:2,lineHeight:1.5,
-                      }} dangerouslySetInnerHTML={{__html:'💡 '+q2.explanation}}/>
+                      <div style={{fontSize:10,color:dark?'rgba(196,181,253,0.62)':'rgba(120,70,170,0.85)',marginTop:2,lineHeight:1.5}}
+                        dangerouslySetInnerHTML={{__html:'💡 '+q2.explanation}}/>
                     )}
                   </div>
                 );
               })}
             </div>
 
-            {/* Action buttons */}
+            {/* Buttons */}
             <div style={{display:'flex',gap:8}}>
-              <button
-                onClick={onReset}
-                style={{
-                  flex:1,padding:'10px 0',borderRadius:999,
-                  border:`1.5px solid ${dark?'rgba(255,150,200,0.28)':'rgba(232,84,122,0.3)'}`,
-                  background:'transparent',
-                  color:dark?'#FBAFCE':'#E8547A',
-                  fontSize:12,fontWeight:800,cursor:'pointer',
-                  transition:'all .18s',fontFamily:'Nunito,sans-serif',
-                }}
-              >Làm lại</button>
-              <button
-                onClick={onClose}
-                style={{
-                  flex:1,padding:'10px 0',borderRadius:999,border:'none',
-                  background:'linear-gradient(135deg,#F472B6,#A855F7)',
-                  color:'#fff',fontSize:12,fontWeight:800,cursor:'pointer',
-                  boxShadow:'0 4px 16px rgba(168,85,247,0.38)',
-                  fontFamily:'Nunito,sans-serif',
-                }}
-              >Xem đáp án</button>
+              <button onClick={onReset} style={{
+                flex:1,padding:'10px 0',borderRadius:999,
+                border:`1.5px solid ${dark?'rgba(255,150,200,0.3)':'rgba(220,80,120,0.28)'}`,
+                background:'transparent',color:dark?'#FBAFCE':'#D84070',
+                fontSize:12,fontWeight:800,cursor:'pointer',fontFamily:'Nunito,sans-serif',
+              }}>Làm lại</button>
+              <button onClick={onClose} style={{
+                flex:1,padding:'10px 0',borderRadius:999,border:'none',
+                background:'linear-gradient(135deg,#F472B6,#A855F7)',
+                color:'#fff',fontSize:12,fontWeight:800,cursor:'pointer',
+                boxShadow:'0 4px 16px rgba(168,85,247,0.38)',fontFamily:'Nunito,sans-serif',
+              }}>Xem đáp án</button>
             </div>
           </div>
         </div>
       </div>
     </div>
   );
-});
+}
 
 /* ════════════════════════════════════════════════ */
 function QuizPlayer({lesson,onBack,dark,setDark,onSaveHistory}){
