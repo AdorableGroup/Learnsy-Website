@@ -212,6 +212,127 @@ const _kawaiiIcons = {
    @param {number}  [duration] Display time in milliseconds. Default 3500.
    @returns {void}
 ══════════════════════════════════════════════════ */
+/* ══ DYNAMIC ISLAND CSS — inject once ══ */
+(function _injectDiCSS(){
+  if(document.getElementById('bb-di-toast-css'))return;
+  const s=document.createElement('style');
+  s.id='bb-di-toast-css';
+  s.textContent=`
+    @keyframes _di-in  {
+      0%  { width:36px;  height:36px;  border-radius:50%;  opacity:0; transform:translateX(-50%) scaleY(.6); }
+      20% { width:36px;  height:36px;  border-radius:50%;  opacity:1; transform:translateX(-50%) scaleY(1); }
+      55% { width:252px; height:50px;  border-radius:25px; opacity:1; transform:translateX(-50%) scaleY(1); }
+      100%{ width:272px; height:56px;  border-radius:28px; opacity:1; transform:translateX(-50%) scaleY(1); }
+    }
+    @keyframes _di-out {
+      0%  { width:272px; height:56px;  border-radius:28px; opacity:1; transform:translateX(-50%) scaleY(1); }
+      40% { width:252px; height:50px;  border-radius:25px; opacity:1; transform:translateX(-50%) scaleY(1); }
+      75% { width:36px;  height:36px;  border-radius:50%;  opacity:1; transform:translateX(-50%) scaleY(1); }
+      100%{ width:36px;  height:36px;  border-radius:50%;  opacity:0; transform:translateX(-50%) scaleY(.6); }
+    }
+    @keyframes _di-content-in {
+      0%,40%{ opacity:0; transform:scale(.85) translateY(3px); }
+      100%  { opacity:1; transform:scale(1) translateY(0); }
+    }
+    @keyframes _di-icon-pulse { 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.18); } }
+    @keyframes _di-glow       { 0%,100%{ opacity:.35; } 50%{ opacity:.8; } }
+    ._di-pill {
+      position:fixed; top:10px; left:50%;
+      transform:translateX(-50%); transform-origin:center top;
+      z-index:999999;
+      background:linear-gradient(135deg,rgba(14,4,10,.97),rgba(26,8,18,.97));
+      display:flex; align-items:center; justify-content:center;
+      gap:9px; padding:0 14px; cursor:pointer; user-select:none; overflow:hidden;
+      will-change:width,height,border-radius,opacity;
+      box-shadow:0 0 0 1.5px rgba(255,255,255,.07), 0 8px 28px rgba(0,0,0,.55);
+    }
+    ._di-glow {
+      position:absolute; left:13px; top:50%; transform:translateY(-50%);
+      width:30px; height:30px; border-radius:50%;
+      opacity:.15; filter:blur(7px); pointer-events:none;
+      animation:_di-glow 1.2s ease-in-out infinite;
+    }
+    ._di-icon { flex-shrink:0; font-size:18px; position:relative; z-index:1; line-height:1;
+      animation:_di-icon-pulse 1s ease-in-out infinite; }
+    ._di-body { flex:1; min-width:0; position:relative; z-index:1;
+      animation:_di-content-in .52s cubic-bezier(.34,1.3,.64,1) both; }
+    ._di-label { font-size:9px; font-weight:800; letter-spacing:.7px; text-transform:uppercase;
+      font-family:Nunito,sans-serif; margin-bottom:1px; }
+    ._di-msg   { font-size:13px; font-weight:800; color:#fce4f0;
+      font-family:'Baloo 2',cursive; overflow:hidden; text-overflow:ellipsis;
+      white-space:nowrap; line-height:1.15; }
+    ._di-dot   { flex-shrink:0; width:5px; height:5px; border-radius:50%;
+      background:rgba(255,255,255,.22); position:relative; z-index:1; }
+  `;
+  document.head.appendChild(s);
+})();
+
+/* ══ TYPE → icon emoji + accent color ══ */
+const _diConfig={
+  success:{ emoji:'✅', color:'#34d399' },
+  error:  { emoji:'❌', color:'#f87171' },
+  warn:   { emoji:'⚠️', color:'#fbbf24' },
+  info:   { emoji:'✨', color:'#a78bfa' },
+};
+
+/* ══ showDiToast — DOM-native Dynamic Island (không cần React) ══ */
+let _diActive=null;
+function showDiToast(msg, type='info', duration=3200){
+  /* Nếu đang có pill → dismiss trước */
+  if(_diActive){ _diDismiss(_diActive,true); }
+
+  const cfg=_diConfig[type]||_diConfig.info;
+  const pill=document.createElement('div');
+  pill.className='_di-pill';
+  pill.style.animation='_di-in .52s cubic-bezier(.34,1.3,.64,1) both';
+  pill.style.boxShadow+=`, 0 0 18px ${cfg.color}38`;
+
+  const glow=document.createElement('div');
+  glow.className='_di-glow';
+  glow.style.background=cfg.color;
+
+  const icon=document.createElement('span');
+  icon.className='_di-icon';
+  icon.textContent=cfg.emoji;
+
+  const body=document.createElement('div');
+  body.className='_di-body';
+
+  const lbl=document.createElement('div');
+  lbl.className='_di-label';
+  lbl.style.color=cfg.color;
+  lbl.textContent='Learnsy';
+
+  const txt=document.createElement('div');
+  txt.className='_di-msg';
+  txt.textContent=msg;
+
+  const dot=document.createElement('div');
+  dot.className='_di-dot';
+
+  body.append(lbl,txt);
+  pill.append(glow,icon,body,dot);
+  document.body.appendChild(pill);
+
+  pill.addEventListener('click',()=>_diDismiss(pill));
+  _diActive=pill;
+
+  const t=setTimeout(()=>_diDismiss(pill), duration);
+  pill._diTimer=t;
+}
+
+function _diDismiss(pill, immediate=false){
+  if(!pill||!pill.isConnected)return;
+  if(pill._diTimer)clearTimeout(pill._diTimer);
+  if(_diActive===pill)_diActive=null;
+  if(immediate){ pill.remove(); return; }
+  pill.style.animation='_di-out .42s cubic-bezier(.55,0,.45,1) both';
+  setTimeout(()=>pill.remove(), 420);
+}
+
+/* ══ Expose globally ══ */
+window.showDiToast=showDiToast;
+
 function showToast(msg, type = 'auto', duration = 3500) {
   // Strip any SVG tags that may have leaked into msg
   msg = msg.replace(/<svg[\s\S]*?<\/svg>/gi, '').replace(/\s{2,}/g, ' ').trim();
@@ -240,10 +361,11 @@ function showToast(msg, type = 'auto', duration = 3500) {
       type = 'info';
   }
 
-  const icon = _kawaiiIcons[type] || _kawaiiIcons.info;
-
+  /* ── Nếu không có #toastContainer → dùng Dynamic Island ── */
   const container = document.getElementById('toastContainer');
-  if (!container) return;
+  if (!container){ showDiToast(msg, type, duration); return; }
+
+  const icon = _kawaiiIcons[type] || _kawaiiIcons.info;
 
   // Giới hạn 2 toast cùng lúc — xóa toast cũ nhất nếu đầy
   const MAX_TOASTS = 2;
