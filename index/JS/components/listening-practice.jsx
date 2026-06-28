@@ -295,13 +295,16 @@ import React from 'react';
       s.id = 'lp-toast-css';
       s.textContent = `
         @keyframes lp-pill-in {
-          0%   { width:56px; height:56px; border-radius:28px; opacity:0; transform:translateX(-50%) scale(0.8); }
-          55%  { width:300px; height:56px; border-radius:28px; opacity:1; transform:translateX(-50%) scale(1.04); }
-          100% { width:300px; height:56px; border-radius:28px; opacity:1; transform:translateX(-50%) scale(1); }
+          0%  { width:36px; height:36px; border-radius:50%; opacity:0; transform:translateX(-50%) scaleY(0.6); }
+          20% { width:36px; height:36px; border-radius:50%; opacity:1; transform:translateX(-50%) scaleY(1); }
+          55% { width:270px; height:52px; border-radius:26px; opacity:1; transform:translateX(-50%) scaleY(1); }
+          100%{ width:300px; height:56px; border-radius:28px; opacity:1; transform:translateX(-50%) scaleY(1); }
         }
         @keyframes lp-pill-out {
-          0%   { opacity:1; transform:translateX(-50%) scale(1); }
-          100% { opacity:0; transform:translateX(-50%) scale(0.85) translateY(-6px); }
+          0%  { width:300px; height:56px; border-radius:28px; opacity:1; transform:translateX(-50%) scaleY(1); }
+          40% { width:270px; height:52px; border-radius:26px; opacity:1; transform:translateX(-50%) scaleY(1); }
+          75% { width:36px;  height:36px; border-radius:50%; opacity:1; transform:translateX(-50%) scaleY(1); }
+          100%{ width:36px;  height:36px; border-radius:50%; opacity:0; transform:translateX(-50%) scaleY(0.6); }
         }
         @keyframes lp-content-in {
           0% { opacity:0; transform:translateX(-6px); }
@@ -323,6 +326,7 @@ import React from 'react';
        phong cách đồng bộ với AchievementToast của dashboard ── */
     function ScoreToast({ correct, total, onClose }) {
       const [leaving, setLeaving] = useState(false);
+      const [mounted, setMounted] = useState(false);
       const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
 
       const visual = pct >= 90
@@ -334,14 +338,18 @@ import React from 'react';
             : { Icon: IconSadFace, color: '#f472b6', label: 'Cố lên nhé!' };
 
       useEffect(() => {
+        setLeaving(false);
+        setMounted(true);
         const leaveTimer = setTimeout(() => setLeaving(true), 3000);
         const closeTimer = setTimeout(onClose, 3500);
         return () => { clearTimeout(leaveTimer); clearTimeout(closeTimer); };
       }, [onClose]);
 
+      if (!mounted) return null;
+
       const handleTap = () => {
         setLeaving(true);
-        setTimeout(onClose, 500);
+        setTimeout(onClose, 450);
       };
 
       const pillBg = 'linear-gradient(135deg,rgba(18,6,14,0.97) 0%,rgba(30,10,22,0.97) 100%)';
