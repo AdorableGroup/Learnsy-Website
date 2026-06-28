@@ -167,6 +167,30 @@ const {useState,useEffect,useRef,useCallback,useMemo}=React;
       0%,100% { opacity:1; transform:scale(1); }
       50% { opacity:0.35; transform:scale(0.65); }
     }
+    @keyframes di-pill-in {
+      0%   { width:36px; height:36px; border-radius:50%; opacity:0; transform:translateX(-50%) scaleY(0.6); }
+      20%  { width:36px; height:36px; border-radius:50%; opacity:1; transform:translateX(-50%) scaleY(1); }
+      55%  { width:260px; height:52px; border-radius:26px; opacity:1; transform:translateX(-50%) scaleY(1); }
+      100% { width:280px; height:56px; border-radius:28px; opacity:1; transform:translateX(-50%) scaleY(1); }
+    }
+    @keyframes di-pill-out {
+      0%   { width:280px; height:56px; border-radius:28px; opacity:1; transform:translateX(-50%) scaleY(1); }
+      40%  { width:260px; height:52px; border-radius:26px; opacity:1; transform:translateX(-50%) scaleY(1); }
+      75%  { width:36px;  height:36px; border-radius:50%; opacity:1; transform:translateX(-50%) scaleY(1); }
+      100% { width:36px;  height:36px; border-radius:50%; opacity:0; transform:translateX(-50%) scaleY(0.6); }
+    }
+    @keyframes di-content-in {
+      0%,40% { opacity:0; transform:scale(0.8) translateY(4px); }
+      100%   { opacity:1; transform:scale(1) translateY(0); }
+    }
+    @keyframes di-icon-pulse {
+      0%,100% { transform:scale(1); }
+      50%     { transform:scale(1.18); }
+    }
+    @keyframes di-glow-pulse {
+      0%,100% { opacity:0.5; }
+      50%     { opacity:1; }
+    }
 
     .bb-btn-tap { transition: transform 0.12s !important; }
     .bb-btn-tap:active { transform: scale(0.92) !important; }
@@ -1823,50 +1847,105 @@ function MotivationalQuote({dark,studentName}){
 
 /* ══ ACHIEVEMENT TOAST — pop-up when unlocking ══ */
 function AchievementToast({achievement,onClose,dark}){
-  const C=dark?CD:CL;
+  const [leaving,setLeaving]=useState(false);
+
   useEffect(()=>{
-    const t=setTimeout(onClose,3500);
-    return()=>clearTimeout(t);
+    const leaveTimer=setTimeout(()=>setLeaving(true),3000);
+    const closeTimer=setTimeout(onClose,3500);
+    return()=>{clearTimeout(leaveTimer);clearTimeout(closeTimer);};
   },[onClose]);
 
+  const handleTap=()=>{
+    setLeaving(true);
+    setTimeout(onClose,500);
+  };
+
+  /* Màu nền pill: luôn tối (dark island style) bất kể light/dark mode */
+  const pillBg='linear-gradient(135deg,rgba(18,6,14,0.97) 0%,rgba(30,10,22,0.97) 100%)';
+  const glowColor=achievement.color||'#f472b6';
+
   return(
-    <div style={{
-      position:'fixed',bottom:90,left:'50%',transform:'translateX(-50%)',
-      zIndex:9000,
-      background:dark
-        ?'linear-gradient(135deg,rgba(30,10,20,0.97),rgba(40,10,30,0.97))'
-        :'linear-gradient(135deg,#fff5f9,#fce7f3)',
-      borderRadius:20,padding:'14px 20px',
-      border:`2px solid ${achievement.color}55`,
-      boxShadow:`0 8px 32px ${achievement.color}40, 0 0 0 1px ${achievement.color}20`,
-      display:'flex',alignItems:'center',gap:12,
-      width:'calc(100vw - 40px)',maxWidth:340,
-      boxSizing:'border-box',
-      animation:'bb-pop .4s cubic-bezier(.34,1.56,.64,1) both',
-      whiteSpace:'nowrap',
-    }}>
+    <div
+      onClick={handleTap}
+      style={{
+        position:'fixed',
+        top:10,
+        left:'50%',
+        zIndex:9999,
+        /* Dynamic Island pill shape — animated via keyframes */
+        width:280,
+        height:56,
+        borderRadius:28,
+        transform:'translateX(-50%)',
+        transformOrigin:'center top',
+        background:pillBg,
+        boxShadow:`0 0 0 1.5px rgba(255,255,255,0.08), 0 8px 28px rgba(0,0,0,0.55), 0 0 20px ${glowColor}44`,
+        display:'flex',
+        alignItems:'center',
+        justifyContent:'center',
+        gap:10,
+        padding:'0 16px',
+        cursor:'pointer',
+        userSelect:'none',
+        overflow:'hidden',
+        animation: leaving
+          ? 'di-pill-out 0.45s cubic-bezier(.55,.0,.45,1) both'
+          : 'di-pill-in  0.55s cubic-bezier(.34,1.3,.64,1) both',
+        willChange:'width,height,border-radius,opacity',
+      }}
+    >
+      {/* Glow halo behind icon */}
       <div style={{
-        display:'inline-flex',animation:'bb-bounce 1s ease-in-out infinite',
-        flexShrink:0,color:achievement.color,
+        position:'absolute',left:14,top:'50%',
+        transform:'translateY(-50%)',
+        width:32,height:32,borderRadius:'50%',
+        background:glowColor,
+        opacity:0.18,
+        filter:'blur(8px)',
+        animation:'di-glow-pulse 1.2s ease-in-out infinite',
+        pointerEvents:'none',
+      }}/>
+
+      {/* Icon */}
+      <div style={{
+        flexShrink:0,
+        display:'inline-flex',
+        animation:'di-icon-pulse 1s ease-in-out infinite',
+        position:'relative',zIndex:1,
       }}>
-        <Icon name={achievement.icon} size={28} color={achievement.color}/>
+        <Icon name={achievement.icon} size={24} color={glowColor}/>
       </div>
-      <div style={{flex:1,minWidth:0}}>
-        <div style={{fontSize:11,fontWeight:700,color:achievement.color,letterSpacing:'0.5px',
-          display:'flex',alignItems:'center',gap:4}}>
-          <Icon name="ribbon" size={12} color={achievement.color}/> THÀNH TÍCH MỚI!
+
+      {/* Text content — fades in after pill expands */}
+      <div style={{
+        flex:1,minWidth:0,
+        animation:'di-content-in 0.55s cubic-bezier(.34,1.3,.64,1) both',
+        position:'relative',zIndex:1,
+      }}>
+        <div style={{
+          fontSize:9.5,fontWeight:800,color:glowColor,
+          letterSpacing:'0.7px',textTransform:'uppercase',
+          display:'flex',alignItems:'center',gap:3,
+          marginBottom:1,
+          fontFamily:'Nunito,sans-serif',
+        }}>
+          <Icon name="ribbon" size={10} color={glowColor}/> Thành tích mới!
         </div>
         <div style={{
-          fontFamily:"'Baloo 2',cursive",fontSize:15,fontWeight:800,
-          color:C.fg,overflow:'hidden',textOverflow:'ellipsis',
+          fontFamily:"'Baloo 2',cursive",
+          fontSize:14,fontWeight:800,
+          color:'#fce4f0',
+          overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',
+          lineHeight:1.15,
         }}>{achievement.label}</div>
       </div>
-      <button onClick={onClose} style={{
-        background:'none',border:'none',cursor:'pointer',
-        color:C.sub,padding:0,flexShrink:0,display:'inline-flex',
-      }}>
-        <Icon name="check" size={16} color={C.sub}/>
-      </button>
+
+      {/* Tap-to-dismiss dot */}
+      <div style={{
+        flexShrink:0,width:6,height:6,borderRadius:'50%',
+        background:`rgba(255,255,255,0.25)`,
+        position:'relative',zIndex:1,
+      }}/>
     </div>
   );
 }
