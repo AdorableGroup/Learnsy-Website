@@ -11,6 +11,7 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
 //      word_box:[],          // Word Box — các từ cho học sinh chọn
 //      answers:[],           // đáp án đúng theo thứ tự (1),(2),(3)...
 //      statements:[],        // [{statement, answer:'True'|'False'|'Not Mentioned'}]
+//      shuffle_statements:bool, // [v3] true = tự tráo thứ tự nhận định T/F/NM mỗi lần học sinh làm
 //      sort_order:number,    // [v2] thứ tự sắp xếp
 //      tags:[],              // [v2] nhãn phân loại
 //      created_at }
@@ -29,6 +30,7 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
 //    -- migrate cột mới nếu bảng đã tồn tại:
 //    alter table listening_items add column if not exists sort_order integer default 0;
 //    alter table listening_items add column if not exists tags jsonb default '[]';
+//    alter table listening_items add column if not exists shuffle_statements boolean default false;
 //
 //  Props nhận từ app.js:
 //    dark, C            — theme
@@ -74,6 +76,7 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
     wordBox: r.word_box||[],
     answers: r.answers||[],
     statements: r.statements||[],
+    shuffleStatements: !!r.shuffle_statements, // [v3] tự tráo thứ tự nhận định T/F/NM mỗi lần học sinh làm
     sortOrder: r.sort_order ?? 0,
     tags: r.tags||[],
     created_at: r.created_at,
@@ -83,8 +86,19 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
     const an = Array.isArray(it.answers)    ? it.answers    : [];
     const st = Array.isArray(it.statements) ? it.statements : [];
     const tg = Array.isArray(it.tags)       ? it.tags       : [];
-    return {id:it.id, text:it.text, word_box:wb, answers:an, statements:st, sort_order:it.sortOrder??0, tags:tg};
+    return {id:it.id, text:it.text, word_box:wb, answers:an, statements:st, shuffle_statements:!!it.shuffleStatements, sort_order:it.sortOrder??0, tags:tg};
   };
+
+  // xáo trộn mảng (Fisher-Yates) — dùng để tráo thứ tự nhận định T/F/NM khi hiển thị cho học sinh
+  const shuffleArr = arr => {
+    const a = [...arr];
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]]=[a[j],a[i]];
+    }
+    return a;
+  };
+
 
   // ─────────────────────── PREVIEW MODAL ───────────────────────
   function ListeningPreview({item, dark, C, onClose}){
@@ -93,6 +107,12 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
     const [checked, setChecked] = useState(false);
     const [ttsSpeed, setTtsSpeed] = useState(1);
     const [ttsSpeaking, setTtsSpeaking] = useState(false);
+
+    // nếu câu này bật "Tự tráo thứ tự" thì xáo 1 lần khi mở preview (giống cách học sinh sẽ thấy)
+    const displayStatements = useMemo(()=>{
+      const st = item.statements||[];
+      return item.shuffleStatements ? shuffleArr(st) : st;
+    },[]); // chỉ xáo 1 lần khi mở modal, không xáo lại mỗi lần render
 
     // build rendered text with inline inputs
     const parts = useMemo(()=>{
@@ -125,10 +145,10 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
 
     const blankCorrect  = idx => cleanStr(userAnswers[idx]||'').toLowerCase() === cleanStr(item.answers[idx]||'').toLowerCase();
     const stmtCorrect   = (s,i) => (stmtAnswers[i]||'') === s.answer;
-    const totalQ        = (item.answers||[]).length + (item.statements||[]).length;
+    const totalQ        = (item.answers||[]).length + displayStatements.length;
     const totalCorrect  = checked
       ? (item.answers||[]).filter((_,i)=>blankCorrect(i)).length
-        + (item.statements||[]).filter((s,i)=>stmtCorrect(s,i)).length
+        + displayStatements.filter((s,i)=>stmtCorrect(s,i)).length
       : 0;
 
     const ovStyle = {
@@ -220,11 +240,14 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
           )}
 
           {/* T/F/NM statements */}
-          {(item.statements||[]).length>0 && (
+          {displayStatements.length>0 && (
             <div style={{marginBottom:14}}>
-              <div style={{fontSize:11,fontWeight:900,color:'#dc2626',marginBottom:8}}>True / False / Not Mentioned</div>
+              <div style={{fontSize:11,fontWeight:900,color:'#dc2626',marginBottom:8}}>
+                True / False / Not Mentioned
+                {item.shuffleStatements && <span style={{marginLeft:6,fontWeight:700,color:'#b45309'}}>(đã tráo thứ tự)</span>}
+              </div>
               <div style={{display:'flex',flexDirection:'column',gap:7}}>
-                {item.statements.map((s,i)=>{
+                {displayStatements.map((s,i)=>{
                   const sel   = stmtAnswers[i]||null;
                   const done  = checked;
                   const ok    = done && stmtCorrect(s,i);
@@ -334,6 +357,7 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
     const [wbInput,     setWbInput]     = useState('');
     const [answers,     setAnswers]     = useState([]);
     const [statements,  setStatements]  = useState([]);
+    const [shuffleStatements, setShuffleStatements] = useState(false); // [v3] tự tráo thứ tự nhận định T/F/NM cho học sinh
     const [tags,        setTags]        = useState([]);
     const [tagInput,    setTagInput]    = useState('');
     const [saving,      setSaving]      = useState(false);
@@ -363,7 +387,7 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
     // ── Reset form ──
     const resetForm = useCallback(()=>{
       setEditingId(null); setText(''); setWordBox([]); setWbInput('');
-      setAnswers([]); setStatements([]); setTags([]); setTagInput('');
+      setAnswers([]); setStatements([]); setShuffleStatements(false); setTags([]); setTagInput('');
     },[]);
 
     const openForm = useCallback((it=null)=>{
@@ -373,6 +397,7 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
         setWordBox(Array.isArray(it.wordBox)?it.wordBox.map(w=>({id:genId(),val:w})):[]);
         setAnswers(Array.isArray(it.answers)?it.answers.map((a,i)=>({id:i+'_'+Date.now(),val:a})):[]);
         setStatements(Array.isArray(it.statements)?it.statements.map((s,i)=>({...s,id:i+'_'+Date.now()})):[]);
+        setShuffleStatements(!!it.shuffleStatements);
         setTags(Array.isArray(it.tags)?[...it.tags]:[]);
       } else {
         resetForm();
@@ -516,14 +541,14 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
         setSaving(true);
         try{
           if(editingId){
-            const payload={text:cleanText,wordBox:cleanWordBox,answers:cleanAnswers,statements:cleanStatements,tags:cleanTags};
+            const payload={text:cleanText,wordBox:cleanWordBox,answers:cleanAnswers,statements:cleanStatements,shuffleStatements,tags:cleanTags};
             const {error}=await supa.from('listening_items').update(toRow({id:editingId,...payload})).eq('id',editingId);
             if(error) throw error;
             setItems(p=>p.map(it=>it.id===editingId?{...it,...payload}:it));
             toast_&&toast_('+ Đã cập nhật câu Listening!');
           } else {
             const sortMax = items.reduce((m,it)=>Math.max(m,it.sortOrder||0),0);
-            const newItem={id:'ls'+Date.now()+Math.random(),text:cleanText,wordBox:cleanWordBox,answers:cleanAnswers,statements:cleanStatements,tags:cleanTags,sortOrder:sortMax+1};
+            const newItem={id:'ls'+Date.now()+Math.random(),text:cleanText,wordBox:cleanWordBox,answers:cleanAnswers,statements:cleanStatements,shuffleStatements,tags:cleanTags,sortOrder:sortMax+1};
             const {error}=await supa.from('listening_items').insert(toRow(newItem));
             if(error) throw error;
             setItems(p=>[...p,newItem]);
@@ -551,7 +576,7 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
         return;
       }
       doSave();
-    },[text,wordBox,answers,statements,tags,editingId,items,saving,toast_,confirm_,resetForm]);
+    },[text,wordBox,answers,statements,shuffleStatements,tags,editingId,items,saving,toast_,confirm_,resetForm]);
 
     // ── Remove ──
     const remove = useCallback(async(id)=>{
@@ -924,7 +949,8 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
                           </span>
                         )}
                         {(it.statements||[]).length>0 && (
-                          <span style={{fontSize:10,fontWeight:800,color:'#dc2626',background:'rgba(220,38,38,.08)',border:'1px solid rgba(220,38,38,.28)',borderRadius:99,padding:'2px 7px'}}>
+                          <span style={{fontSize:10,fontWeight:800,color:'#dc2626',background:'rgba(220,38,38,.08)',border:'1px solid rgba(220,38,38,.28)',borderRadius:99,padding:'2px 7px',display:'inline-flex',alignItems:'center',gap:3}}>
+                            {it.shuffleStatements && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>}
                             {it.statements.length} T/F/NM
                           </span>
                         )}
@@ -1076,9 +1102,19 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
 
             {/* T/F/NM */}
             <div style={{padding:'10px 12px',borderRadius:12,border:'1.5px solid rgba(220,38,38,.2)',background:'rgba(220,38,38,.04)'}}>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4,gap:8}}>
                 <span style={{fontSize:11,fontWeight:800,color:'#dc2626'}}>True / False / Not Mentioned <span style={{fontWeight:600,color:C.text4}}>(tuỳ chọn)</span></span>
+                <button type="button" onClick={()=>setShuffleStatements(v=>!v)} title="Tự tráo thứ tự câu nhận định mỗi lần học sinh làm"
+                  style={{display:'flex',alignItems:'center',gap:4,padding:'4px 9px',borderRadius:999,border:`1.5px solid ${shuffleStatements?'#dc2626':C.border2}`,background:shuffleStatements?'#dc2626':C.bg2,color:shuffleStatements?'#fff':C.text3,fontSize:10.5,fontWeight:800,cursor:'pointer',flexShrink:0}}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+                  Tráo thứ tự
+                </button>
               </div>
+              {shuffleStatements && (
+                <div style={{fontSize:10.5,color:'#b45309',marginBottom:8,fontStyle:'italic'}}>
+                  Đang bật: mỗi học sinh sẽ thấy các nhận định theo thứ tự ngẫu nhiên khác nhau.
+                </div>
+              )}
               <div style={{display:'flex',flexDirection:'column',gap:7}}>
                 {statements.map((s,i)=>(
                   <div key={s.id} style={{padding:'8px 10px',borderRadius:10,background:dark?'rgba(255,255,255,.04)':'rgba(255,255,255,.6)',border:'1px solid rgba(220,38,38,.15)'}}>
