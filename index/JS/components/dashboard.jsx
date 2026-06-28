@@ -63,25 +63,26 @@ async function detectDevicePerformance(){
     if(conn.saveData){ result.score-=15; result.reason.push('Chế độ tiết kiệm dữ liệu'); }
   }
 
-  /* 4. FPS test nhanh — đo thời gian render 30 frame */
+  /* 4. FPS test — đo 40 frame, trigger liteMode nếu fps 30-40 */
   await new Promise(res=>{
     let frames=0, start=performance.now(), last=start;
     function tick(now){
       frames++;
       last=now;
-      if(frames<30) requestAnimationFrame(tick);
+      if(frames<40) requestAnimationFrame(tick);
       else res(last-start);
     }
     requestAnimationFrame(tick);
   }).then(elapsed=>{
-    const fps=Math.round(30/(elapsed/1000));
-    if(fps<25){ result.score-=30; result.reason.push(`FPS thấp (~${fps}fps)`); }
-    else if(fps<45){ result.score-=10; result.reason.push(`FPS trung bình (~${fps}fps)`); }
+    const fps=Math.round(40/(elapsed/1000));
     result.fps=fps;
+    if(fps<30){       result.score-=35; result.reason.push(`FPS thấp (~${fps}fps)`); }
+    else if(fps<=40){ result.score-=18; result.reason.push(`FPS trung bình (~${fps}fps)`); }
+    else if(fps<55){  result.score-=6; }
   }).catch(()=>{});
 
-  /* Kết luận */
-  result.isLow = result.score < 60;
+  /* Kết luận — isLow cũng bắt luôn fps 30-40 */
+  result.isLow = result.score < 65 || (result.fps!=null && result.fps<=40);
   result.label = result.isLow
     ? 'Máy yếu — nên bật Lite Mode'
     : result.score < 80
@@ -89,6 +90,27 @@ async function detectDevicePerformance(){
       : 'Máy mạnh — không cần Lite Mode';
   return result;
 }
+
+/* ══ runLoginPerfCheck — gọi ngay khi user nhấn đăng nhập ══
+   index.html dùng: await window.bbRunLoginPerfCheck()
+   Trả về { liteMode: bool, fps: number, reason: string[] }
+   Tự apply liteMode + lưu localStorage nếu máy yếu.         */
+async function runLoginPerfCheck(){
+  /* Không chạy lại nếu user đã tự set thủ công trong session này */
+  if(sessionStorage.getItem('bb-perf-checked')==='1'){
+    const stored=localStorage.getItem('bb-lite-mode')==='1';
+    return{ liteMode:stored, fps:null, reason:[] };
+  }
+  const res=await detectDevicePerformance();
+  sessionStorage.setItem('bb-perf-checked','1');
+  if(res.isLow){
+    localStorage.setItem('bb-lite-mode','1');
+    /* Inject CSS ngay lập tức — trước khi React mount Dashboard */
+    if(typeof injectLiteCSS==='function') injectLiteCSS(true);
+  }
+  return{ liteMode:res.isLow, fps:res.fps, reason:res.reason, score:res.score };
+}
+window.bbRunLoginPerfCheck=runLoginPerfCheck;
 
 (function(){
 const {useState,useEffect,useRef,useCallback,useMemo}=React;
@@ -1502,8 +1524,18 @@ function Dashboard(props){
     injectLiteCSS(val);
   }
 
+  /* ── Auto perf check khi student vừa login (null → có giá trị) ── */
+  const prevStudentRef=useRef(null);
+  useEffect(()=>{
+    const wasNull=prevStudentRef.current==null;
+    const hasNow=!!(student?.id||student?.username);
+    prevStudentRef.current=student;
+    if(!wasNull||!hasNow)return; /* chỉ chạy lần đầu sau login */
+    if(sessionStorage.getItem('bb-perf-checked')==='1')return; /* đã check ở login screen rồi */
+    runLoginPerfCheck().then(r=>{ if(r.liteMode&&!liteMode) setLiteMode(true); });
+  },[student]); // eslint-disable-line
+
   // ── Sync display_name từ Supabase (khớp với student-manager) ──
-  const [liveStudent1,setLiveStudent1]=useState(student);
   const fetchStudentInfo1=useCallback(async()=>{
     if(!student?.id&&!student?.username)return;
     try{
@@ -2220,8 +2252,18 @@ function DashboardEnhanced(props){
     injectLiteCSS(val);
   }
 
+  /* ── Auto perf check khi student vừa login (null → có giá trị) ── */
+  const prevStudentRefE=useRef(null);
+  useEffect(()=>{
+    const wasNull=prevStudentRefE.current==null;
+    const hasNow=!!(student?.id||student?.username);
+    prevStudentRefE.current=student;
+    if(!wasNull||!hasNow)return;
+    if(sessionStorage.getItem('bb-perf-checked')==='1')return;
+    runLoginPerfCheck().then(r=>{ if(r.liteMode&&!liteMode) setLiteMode(true); });
+  },[student]); // eslint-disable-line
+
   // ── Sync display_name từ Supabase (khớp với student-manager) ──
-  const [liveStudent,setLiveStudent]=useState(student);
   const fetchStudentInfo=useCallback(async()=>{
     if(!student?.id&&!student?.username)return;
     try{
