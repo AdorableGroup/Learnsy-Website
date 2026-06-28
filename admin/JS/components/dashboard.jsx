@@ -30,6 +30,30 @@ import React, {useState,useEffect,useRef,useMemo} from 'react';
     @keyframes bb-typewriter{ from{width:0;opacity:0} to{width:100%;opacity:1} }
     @keyframes bb-rise{ from{opacity:0;transform:translateY(14px) scale(.95)} to{opacity:1;transform:translateY(0) scale(1)} }
     @keyframes bb-bar-grow{ from{width:0} to{width:var(--w)} }
+    @keyframes di-pill-in {
+      0%   { width:36px; height:36px; border-radius:50%; opacity:0; transform:translateX(-50%) scaleY(0.6); }
+      20%  { width:36px; height:36px; border-radius:50%; opacity:1; transform:translateX(-50%) scaleY(1); }
+      55%  { width:248px; height:50px; border-radius:25px; opacity:1; transform:translateX(-50%) scaleY(1); }
+      100% { width:268px; height:54px; border-radius:27px; opacity:1; transform:translateX(-50%) scaleY(1); }
+    }
+    @keyframes di-pill-out {
+      0%   { width:268px; height:54px; border-radius:27px; opacity:1; transform:translateX(-50%) scaleY(1); }
+      40%  { width:248px; height:50px; border-radius:25px; opacity:1; transform:translateX(-50%) scaleY(1); }
+      75%  { width:36px;  height:36px; border-radius:50%;  opacity:1; transform:translateX(-50%) scaleY(1); }
+      100% { width:36px;  height:36px; border-radius:50%;  opacity:0; transform:translateX(-50%) scaleY(0.6); }
+    }
+    @keyframes di-content-in {
+      0%,40% { opacity:0; transform:scale(.85) translateY(3px); }
+      100%   { opacity:1; transform:scale(1) translateY(0); }
+    }
+    @keyframes di-icon-pulse {
+      0%,100% { transform:scale(1); }
+      50%     { transform:scale(1.18); }
+    }
+    @keyframes di-glow-pulse {
+      0%,100% { opacity:.4; }
+      50%     { opacity:.9; }
+    }
     .bb-kpi-shine{ position:relative;overflow:hidden; }
     .bb-kpi-shine::after{ content:'';position:absolute;inset:0;border-radius:inherit;background:linear-gradient(105deg,transparent 38%,rgba(255,255,255,.22) 50%,transparent 62%);transform:translateX(-100%);transition:transform .55s ease; }
     .bb-kpi-shine:hover::after{ transform:translateX(100%); }
@@ -57,6 +81,74 @@ import React, {useState,useEffect,useRef,useMemo} from 'react';
   `;
   document.head.appendChild(s);
 })();
+
+/* ══ DYNAMIC ISLAND TOAST ══ */
+function DiToast({msg,onClose}){
+  const [leaving,setLeaving]=useState(false);
+  const {icon,label,color}=msg;
+  const glowColor=color||'#f472b6';
+
+  useEffect(()=>{
+    const t1=setTimeout(()=>setLeaving(true),2800);
+    const t2=setTimeout(onClose,3300);
+    return()=>{clearTimeout(t1);clearTimeout(t2);};
+  },[onClose]);
+
+  return(
+    <div onClick={()=>{setLeaving(true);setTimeout(onClose,400);}}
+      style={{
+        position:'fixed',top:10,left:'50%',zIndex:99999,
+        width:268,height:54,borderRadius:27,
+        transform:'translateX(-50%)',transformOrigin:'center top',
+        background:'linear-gradient(135deg,rgba(14,4,10,.97),rgba(26,8,18,.97))',
+        boxShadow:`0 0 0 1.5px rgba(255,255,255,.07), 0 8px 28px rgba(0,0,0,.55), 0 0 18px ${glowColor}38`,
+        display:'flex',alignItems:'center',justifyContent:'center',
+        gap:9,padding:'0 14px',cursor:'pointer',userSelect:'none',overflow:'hidden',
+        animation:leaving
+          ?'di-pill-out .42s cubic-bezier(.55,0,.45,1) both'
+          :'di-pill-in  .52s cubic-bezier(.34,1.3,.64,1) both',
+        willChange:'width,height,border-radius,opacity',
+      }}>
+      {/* glow halo */}
+      <div style={{position:'absolute',left:13,top:'50%',transform:'translateY(-50%)',
+        width:30,height:30,borderRadius:'50%',background:glowColor,
+        opacity:.15,filter:'blur(7px)',
+        animation:'di-glow-pulse 1.2s ease-in-out infinite',pointerEvents:'none'}}/>
+      {/* icon */}
+      <span style={{flexShrink:0,fontSize:18,animation:'di-icon-pulse 1s ease-in-out infinite',
+        position:'relative',zIndex:1,lineHeight:1}}>{icon}</span>
+      {/* text */}
+      <div style={{flex:1,minWidth:0,animation:'di-content-in .52s cubic-bezier(.34,1.3,.64,1) both',
+        position:'relative',zIndex:1}}>
+        <div style={{fontSize:9,fontWeight:800,color:glowColor,letterSpacing:'.7px',
+          textTransform:'uppercase',fontFamily:'Nunito,sans-serif',marginBottom:1}}>
+          Learnsy Admin
+        </div>
+        <div style={{fontSize:13,fontWeight:800,color:'#fce4f0',
+          fontFamily:"'Baloo 2',cursive",overflow:'hidden',
+          textOverflow:'ellipsis',whiteSpace:'nowrap',lineHeight:1.15}}>{label}</div>
+      </div>
+      {/* dot */}
+      <div style={{flexShrink:0,width:5,height:5,borderRadius:'50%',
+        background:'rgba(255,255,255,.22)',position:'relative',zIndex:1}}/>
+    </div>
+  );
+}
+
+function useDiToast(){
+  const [queue,setQueue]=useState([]);
+  const show=useCallback((label,icon='✨',color='#f472b6')=>{
+    const id=Date.now();
+    setQueue(q=>[...q,{id,label,icon,color}]);
+  },[]);
+  const dismiss=useCallback((id)=>setQueue(q=>q.filter(t=>t.id!==id)),[]);
+  const node=queue.length>0?(
+    <DiToast key={queue[0].id} msg={queue[0]} onClose={()=>dismiss(queue[0].id)}/>
+  ):null;
+  return{show,node};
+}
+window.bbDiToast=DiToast;
+window.bbUseDiToast=useDiToast;
 
 /* ══ FLOATING DECO EMOJIS (background only) ══ */
 function FloatingDecos({dark}){
@@ -665,7 +757,7 @@ function SettingsPanel({dark,C,onDarkToggle,lessons=[]}){
             </div>
             <button className="bb-a-btn" onClick={()=>{
               const valid=lessons.filter(l=>l.questions?.length>0);
-              if(!valid.length){alert('Chưa có bộ câu hỏi nào!');return;}
+              if(!valid.length){(window._adminToast||alert)('Chưa có bộ câu hỏi nào!','📭','#f472b6');return;}
               const html=buildExportHTML(valid);
               const blob=new Blob([html],{type:'text/html'});
               const a=document.createElement('a');
@@ -702,7 +794,7 @@ function SettingsPanel({dark,C,onDarkToggle,lessons=[]}){
             </div>
             <button className="bb-a-btn" onClick={()=>{
               const valid=lessons.filter(l=>l.questions?.length>0);
-              if(!valid.length){alert('Chưa có bộ câu hỏi nào!');return;}
+              if(!valid.length){(window._adminToast||alert)('Chưa có bộ câu hỏi nào!','📭','#f472b6');return;}
               const html=buildExportLiteHTML(valid);
               const blob=new Blob([html],{type:'text/html'});
               const a=document.createElement('a');
@@ -912,6 +1004,9 @@ function ResultsPanel({dark,C}){
 /* ══ MAIN DASHBOARD ══ */
 function AdminDashboard({lessons,dark,C,onDarkToggle,onClose}){
   const [tab,setTab]=useState('overview');
+  const {show:showToast,node:toastNode}=useDiToast();
+  /* Expose globally so sub-components (SettingsPanel etc.) can call showToast */
+  useEffect(()=>{ window._adminToast=showToast; return()=>{ window._adminToast=null; }; },[showToast]);
   const stats=useMemo(()=>buildStats(lessons),[lessons]);
   const TYPES_CONFIG=[
     {key:'true_false', label:'Đúng/Sai',     color:'#A855F7'},
@@ -1369,6 +1464,7 @@ function AdminDashboard({lessons,dark,C,onDarkToggle,onClose}){
           </div>
         )}
       </div>
+      {toastNode}
     </div>
   );
 }
