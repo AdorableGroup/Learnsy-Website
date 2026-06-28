@@ -116,6 +116,13 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
     const [checked, setChecked] = useState(false);
     const [ttsSpeed, setTtsSpeed] = useState(1);
     const [ttsSpeaking, setTtsSpeaking] = useState(false);
+    const [wordBoxOrder, setWordBoxOrder] = useState(()=>shuffleArr(item.wordBox||[]));
+    const reshuffleWordBox = () => setWordBoxOrder(prev=>{
+      if(prev.length<=1) return prev;
+      let next;
+      do { next=shuffleArr(prev); } while(next.every((w,i)=>w===prev[i]));
+      return next;
+    });
 
     // nếu câu này bật "Tự tráo thứ tự" thì xáo 1 lần khi mở preview (giống cách học sinh sẽ thấy)
     const displayStatements = useMemo(()=>{
@@ -234,12 +241,21 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
           {/* Word Box */}
           {(item.wordBox||[]).length>0 && (
             <div style={{marginBottom:12,padding:'10px 12px',borderRadius:12,background:'rgba(99,102,241,.07)',border:'1.5px solid rgba(99,102,241,.25)'}}>
-              <div style={{display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:900,color:'#4338ca',marginBottom:7}}>
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-                Word Box
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:5,marginBottom:7}}>
+                <div style={{display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:900,color:'#4338ca'}}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                  Word Box
+                </div>
+                {wordBoxOrder.length>1 && (
+                  <button onClick={reshuffleWordBox} title="Tráo lại thứ tự các từ"
+                    style={{display:'flex',alignItems:'center',gap:4,padding:'3px 9px',borderRadius:99,border:'1.5px solid rgba(99,102,241,.4)',background:'rgba(99,102,241,.1)',color:'#4338ca',fontSize:10.5,fontWeight:800,cursor:'pointer',flexShrink:0}}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+                    Tráo
+                  </button>
+                )}
               </div>
               <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
-                {item.wordBox.map((w,i)=>(
+                {wordBoxOrder.map((w,i)=>(
                   <span key={i} style={{fontSize:12,fontWeight:700,color:'#4338ca',background:'rgba(99,102,241,.13)',borderRadius:99,padding:'4px 11px'}}>
                     {w}
                   </span>
