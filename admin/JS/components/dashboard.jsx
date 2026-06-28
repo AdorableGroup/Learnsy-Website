@@ -83,9 +83,42 @@ import React, {useState,useEffect,useRef,useMemo,useCallback} from 'react';
 })();
 
 /* ══ DYNAMIC ISLAND TOAST ══ */
+function DiToastIcon({icon,color}){
+  const c=color||'#f472b6';
+  const s={width:15,height:15,display:'block'};
+  /* map emoji/string → SVG */
+  const k=String(icon||'').trim();
+  if(k==='✅'||k==='✓'||k==='☑️')
+    return <svg {...s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
+  if(k==='❌'||k==='✗'||k==='🚫')
+    return <svg {...s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.6" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+  if(k==='⚠️'||k==='⚠'||k==='🔔')
+    return <svg {...s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><circle cx="12" cy="17" r="1" fill={c} stroke="none"/></svg>;
+  if(k==='ℹ️'||k==='ℹ')
+    return <svg {...s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="17" r="1" fill={c} stroke="none"/></svg>;
+  if(k==='💾'||k==='📥')
+    return <svg {...s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>;
+  if(k==='📤'||k==='📦'||k==='⬆️')
+    return <svg {...s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>;
+  if(k==='📋'||k==='📄'||k==='📝')
+    return <svg {...s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>;
+  if(k==='📭'||k==='📬'||k==='📪')
+    return <svg {...s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92V19a2 2 0 0 1-2.18 2A19.86 19.86 0 0 1 3 4.18 2 2 0 0 1 5 2h2.09a2 2 0 0 1 2 1.72c.13 1 .37 1.97.72 2.9a2 2 0 0 1-.45 2.11l-.9.9a16 16 0 0 0 6.92 6.92l.9-.9a2 2 0 0 1 2.11-.45c.93.35 1.9.59 2.9.72A2 2 0 0 1 22 16.92z"/></svg>;
+  if(k==='🗑️'||k==='🗑'||k==='🚮')
+    return <svg {...s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>;
+  if(k==='⭐'||k==='🌟'||k==='🏆')
+    return <svg {...s} viewBox="0 0 24 24" fill="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill={c} opacity=".9"/></svg>;
+  if(k==='🔄'||k==='↩️'||k==='↻')
+    return <svg {...s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>;
+  if(k==='⚙️'||k==='⚙'||k==='🔧')
+    return <svg {...s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
+  /* default: sparkle/star */
+  return <svg {...s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
+}
+
 function DiToast({msg,onClose}){
   const [leaving,setLeaving]=useState(false);
-  const {icon,label,color}=msg;
+  const {icon,label,color,sublabel}=msg;
   const glowColor=color||'#f472b6';
 
   useEffect(()=>{
@@ -95,38 +128,44 @@ function DiToast({msg,onClose}){
   },[onClose]);
 
   return(
-    <div onClick={()=>{setLeaving(true);setTimeout(onClose,400);}}
+    <div onClick={()=>{setLeaving(true);setTimeout(onClose,450);}}
       style={{
-        position:'fixed',top:10,left:'50%',zIndex:99999,
-        width:268,height:54,borderRadius:27,
+        position:'fixed',top:12,left:'50%',zIndex:99999,
+        width:290,height:56,borderRadius:28,
         transform:'translateX(-50%)',transformOrigin:'center top',
-        background:'linear-gradient(135deg,rgba(14,4,10,.97),rgba(26,8,18,.97))',
-        boxShadow:`0 0 0 1.5px rgba(255,255,255,.07), 0 8px 28px rgba(0,0,0,.55), 0 0 18px ${glowColor}38`,
-        display:'flex',alignItems:'center',justifyContent:'center',
-        gap:9,padding:'0 14px',cursor:'pointer',userSelect:'none',overflow:'hidden',
+        background:'linear-gradient(135deg,rgba(14,6,14,.97) 0%,rgba(26,10,20,.97) 100%)',
+        boxShadow:`0 0 0 1.5px rgba(255,255,255,.09), 0 10px 32px rgba(0,0,0,.6), 0 0 22px ${glowColor}44`,
+        display:'flex',alignItems:'center',
+        gap:11,padding:'0 16px',cursor:'pointer',userSelect:'none',overflow:'hidden',
         animation:leaving
-          ?'di-pill-out .42s cubic-bezier(.55,0,.45,1) both'
-          :'di-pill-in  .52s cubic-bezier(.34,1.3,.64,1) both',
+          ?'di-pill-out .45s cubic-bezier(.55,0,.45,1) both'
+          :'di-pill-in  .55s cubic-bezier(.34,1.3,.64,1) both',
         willChange:'width,height,border-radius,opacity',
       }}>
       {/* glow halo */}
-      <div style={{position:'absolute',left:13,top:'50%',transform:'translateY(-50%)',
+      <div style={{position:'absolute',left:14,top:'50%',transform:'translateY(-50%)',
         width:30,height:30,borderRadius:'50%',background:glowColor,
-        opacity:.15,filter:'blur(7px)',
-        animation:'di-glow-pulse 1.2s ease-in-out infinite',pointerEvents:'none'}}/>
-      {/* icon */}
-      <span style={{flexShrink:0,fontSize:18,animation:'di-icon-pulse 1s ease-in-out infinite',
-        position:'relative',zIndex:1,lineHeight:1}}>{icon}</span>
+        opacity:.15,filter:'blur(9px)',pointerEvents:'none'}}/>
+      {/* icon box — SVG giống quiz */}
+      <div style={{
+        flexShrink:0,position:'relative',zIndex:1,
+        display:'flex',alignItems:'center',justifyContent:'center',
+        width:30,height:30,borderRadius:10,
+        background:`${glowColor}22`,
+        border:`1.5px solid ${glowColor}55`,
+      }}>
+        <DiToastIcon icon={icon} color={glowColor}/>
+      </div>
       {/* text */}
-      <div style={{flex:1,minWidth:0,animation:'di-content-in .52s cubic-bezier(.34,1.3,.64,1) both',
+      <div style={{flex:1,minWidth:0,
+        animation:'di-content-in .55s cubic-bezier(.34,1.3,.64,1) both',
         position:'relative',zIndex:1}}>
-        <div style={{fontSize:9,fontWeight:800,color:glowColor,letterSpacing:'.7px',
+        <div style={{fontSize:9,fontWeight:800,color:glowColor,letterSpacing:'.6px',
           textTransform:'uppercase',fontFamily:'Nunito,sans-serif',marginBottom:1}}>
-          Learnsy Admin
+          {sublabel||'Learnsy Admin'}
         </div>
-        <div style={{fontSize:13,fontWeight:800,color:'#fce4f0',
-          fontFamily:"'Baloo 2',cursive",overflow:'hidden',
-          textOverflow:'ellipsis',whiteSpace:'nowrap',lineHeight:1.15}}>{label}</div>
+        <div style={{fontSize:14,fontWeight:900,color:'#f0e6ff',fontFamily:'Nunito,sans-serif',
+          overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',lineHeight:1.2}}>{label}</div>
       </div>
       {/* dot */}
       <div style={{flexShrink:0,width:5,height:5,borderRadius:'50%',
