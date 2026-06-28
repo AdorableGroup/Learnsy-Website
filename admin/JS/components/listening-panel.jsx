@@ -604,7 +604,7 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
         return;
       }
       doSave();
-    },[text,wordBox,answers,statements,shuffleStatements,tags,editingId,items,saving,toast_,confirm_,resetForm]);
+    },[text,wordBox,answers,statements,shuffleStatements,shuffleWordBox,tags,editingId,items,saving,toast_,confirm_,resetForm]);
 
     // ── Remove ──
     const remove = useCallback(async(id)=>{
