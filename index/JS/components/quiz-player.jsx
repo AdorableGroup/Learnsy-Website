@@ -484,7 +484,7 @@ function ScoreIsland({visible,onClose,onReset,pct,s,t,rc,dark,questions,answers,
   /* ── Bắt đầu idle countdown (reset khi user tương tác) ── */
   const startIdleTimer=()=>{
     clearTimeout(idleTimerRef.current);
-    idleTimerRef.current=setTimeout(()=>setExpanded(false),3000);
+    idleTimerRef.current=setTimeout(()=>onClose(),3000);
   };
   const cancelIdleTimer=()=>clearTimeout(idleTimerRef.current);
 
@@ -500,8 +500,7 @@ function ScoreIsland({visible,onClose,onReset,pct,s,t,rc,dark,questions,answers,
       const t1=setTimeout(()=>{
         phaseRef.current='shown';
         setPhase('shown');
-        setExpanded(true);
-        startIdleTimer(); // 3s sau sẽ collapse
+        // Giữ collapsed — user tap mới mở rộng
       },520);
       return()=>clearTimeout(t1);
     }
@@ -522,7 +521,7 @@ function ScoreIsland({visible,onClose,onReset,pct,s,t,rc,dark,questions,answers,
   const handleToggle=()=>{
     const next=!expanded;
     setExpanded(next);
-    if(next) startIdleTimer(); // reset 3s khi mở lại
+    if(next) startIdleTimer();
     else cancelIdleTimer();
   };
 
@@ -533,16 +532,14 @@ function ScoreIsland({visible,onClose,onReset,pct,s,t,rc,dark,questions,answers,
   const wrong  =questions.filter((q2,qi)=>!isAnswerCorrect(q2,answers[qi]));
 
   /* ── Màu theo dark mode ── */
-  const islandBg=dark
-    ?'linear-gradient(145deg,#1C0840 0%,#0F0225 60%,#0A1428 100%)'
-    :'linear-gradient(145deg,#FFFFFF 0%,#FAF0FF 55%,#F0F4FF 100%)';
-  const borderColor=dark?'rgba(220,140,255,0.25)':'rgba(180,100,255,0.35)';
-  const textMain  =dark?'#F0E6FF':'#2D1245';
-  const textSub   =dark?'rgba(220,200,255,0.5)':'rgba(0,0,0,0.35)';
-  const dividerC  =dark?'rgba(255,255,255,0.07)':'rgba(160,90,255,0.12)';
-  const rowBg     =dark?'rgba(255,255,255,0.04)':'rgba(180,100,255,0.05)';
-  const rowBorder =dark?'rgba(196,181,253,0.1)' :'rgba(176,124,240,0.13)';
-  const listItemBorder=dark?'rgba(255,255,255,0.04)':'rgba(176,124,240,0.08)';
+  const islandBg='linear-gradient(145deg,#1A1A1A 0%,#0D0D0D 100%)';
+  const borderColor='rgba(255,255,255,0.12)';
+  const textMain  ='#F0F0F0';
+  const textSub   ='rgba(255,255,255,0.38)';
+  const dividerC  ='rgba(255,255,255,0.08)';
+  const rowBg     ='rgba(255,255,255,0.05)';
+  const rowBorder ='rgba(255,255,255,0.09)';
+  const listItemBorder='rgba(255,255,255,0.06)';
 
   return(
     <div
