@@ -60,6 +60,15 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
     return out;
   };
 
+  // làm sạch HTML gõ trong ô nhận định (contentEditable): chỉ giữ thẻ <u>, bỏ mọi thẻ/thuộc tính khác
+  const sanitizeStmtHTML = html => {
+    let s = html||'';
+    s = s.replace(/<div[^>]*>/gi,'').replace(/<\/div>/gi,'').replace(/<br\s*\/?>/gi,''); // contentEditable hay chèn div/br khi Enter
+    s = s.replace(/<u[^>]*>/gi,'<u>').replace(/<\/u\s*>/gi,'</u>'); // chuẩn hoá <u ...> -> <u>
+    s = s.replace(/<(?!\/?u>)[^>]+>/gi,''); // xoá mọi thẻ khác không phải <u> hoặc </u>
+    return s;
+  };
+
   const ANS_COLORS = {
     'True':        {c:'#16a34a', bg:'rgba(22,163,74,.1)',   bd:'rgba(22,163,74,.35)',  label:'Đúng'},
     'False':       {c:'#dc2626', bg:'rgba(220,38,38,.08)',  bd:'rgba(220,38,38,.32)',  label:'Sai'},
@@ -469,18 +478,16 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
       [next[i],next[j]]=[next[j],next[i]];
       return next;
     });
-    // gạch chân phần text đang được bôi đen trong ô nhận định (toggle <u>...</u>)
+    // gạch chân phần text đang được bôi đen trong ô nhận định (dùng execCommand cho div contentEditable)
     const toggleUnderlineStatement = id => {
       const el = stmtInputRefs.current[id];
-      const s  = statements.find(x=>x.id===id);
-      if(!s) return;
-      const start = el?el.selectionStart:null, end = el?el.selectionEnd:null;
-      if(start==null||end==null||start===end){ toast_&&toast_('! Hãy bôi đen phần chữ cần gạch chân trước'); return; }
-      const text = s.statement||'';
-      const before=text.slice(0,start), sel=text.slice(start,end), after=text.slice(end);
-      const isWrapped = sel.startsWith('<u>')&&sel.endsWith('</u>')&&sel.length>=7;
-      const newSel = isWrapped ? sel.slice(3,-4) : `<u>${sel}</u>`;
-      updateStatement(id,'statement',before+newSel+after);
+      if(!el) return;
+      const sel = window.getSelection&&window.getSelection();
+      const hasSelInside = sel && sel.rangeCount>0 && !sel.isCollapsed && el.contains(sel.anchorNode) && el.contains(sel.focusNode);
+      if(!hasSelInside){ toast_&&toast_('! Hãy bôi đen phần chữ cần gạch chân trước'); el.focus(); return; }
+      try{ document.execCommand('styleWithCSS', false, false); }catch(_){}
+      document.execCommand('underline');
+      updateStatement(id,'statement', sanitizeStmtHTML(el.innerHTML));
     };
 
     // ── Tags ──
@@ -1000,6 +1007,7 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
         {/* ── FORM tab ── */}
         {tab==='form' && (
           <div ref={formRef} style={{padding:'14px 16px',borderRadius:16,border:`1.5px dashed ${C.border2}`,background:C.lavPale,display:'flex',flexDirection:'column',gap:12}}>
+            <style>{`[data-ph]:empty:before{content:attr(data-ph);color:${C.text4};pointer-events:none;}`}</style>
 
             {/* form header */}
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
@@ -1120,9 +1128,16 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
                   <div key={s.id} style={{padding:'8px 10px',borderRadius:10,background:dark?'rgba(255,255,255,.04)':'rgba(255,255,255,.6)',border:'1px solid rgba(220,38,38,.15)'}}>
                     <div style={{display:'flex',gap:6,alignItems:'center',marginBottom:7}}>
                       <span style={{fontSize:11,fontWeight:900,color:'#dc2626',minWidth:16}}>{i+1}.</span>
-                      <input ref={el=>{stmtInputRefs.current[s.id]=el;}} value={s.statement} onChange={e=>updateStatement(s.id,'statement',e.target.value)}
-                        placeholder={`Nhận định ${i+1}`} style={{...inputStyle,flex:1}}/>
-                      <button type="button" onClick={()=>toggleUnderlineStatement(s.id)} title="Gạch chân phần đã bôi đen"
+                      <div ref={el=>{
+                          stmtInputRefs.current[s.id]=el;
+                          if(el && el.getAttribute('data-inited')!=='1'){ el.innerHTML=s.statement||''; el.setAttribute('data-inited','1'); }
+                        }}
+                        contentEditable suppressContentEditableWarning data-ph={`Nhận định ${i+1}`}
+                        onInput={e=>updateStatement(s.id,'statement',sanitizeStmtHTML(e.currentTarget.innerHTML))}
+                        onKeyDown={e=>{ if(e.key==='Enter') e.preventDefault(); }}
+                        onPaste={e=>{ e.preventDefault(); const t=(e.clipboardData||window.clipboardData).getData('text/plain'); document.execCommand('insertText',false,t); }}
+                        style={{...inputStyle,flex:1,minHeight:36,cursor:'text',whiteSpace:'pre-wrap',wordBreak:'break-word'}}/>
+                      <button type="button" onMouseDown={e=>e.preventDefault()} onClick={()=>toggleUnderlineStatement(s.id)} title="Bôi đen chữ rồi bấm để gạch chân"
                         style={{width:26,height:26,flexShrink:0,borderRadius:8,border:`1.5px solid ${C.border2}`,background:C.bg2,color:C.text3,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 4v6a6 6 0 0012 0V4"/><line x1="4" y1="20" x2="20" y2="20"/></svg>
                       </button>
@@ -1137,11 +1152,6 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
                       <button onClick={()=>removeStatement(s.id)}
                         style={{width:26,height:26,flexShrink:0,borderRadius:8,border:'1.5px solid rgba(220,38,38,.25)',background:'rgba(220,38,38,.08)',color:'#dc2626',cursor:'pointer'}}>−</button>
                     </div>
-                    {s.statement && /<u>/.test(s.statement) && (
-                      <div style={{fontSize:11.5,color:C.text3,padding:'0 4px 7px 22px'}}>
-                        Xem trước: {renderUnderline(s.statement)}
-                      </div>
-                    )}
                     <div style={{display:'flex',gap:6}}>
                       {Object.keys(ANS_COLORS).map(key=>{
                         const ac=ANS_COLORS[key]; const sel=s.answer===key;
