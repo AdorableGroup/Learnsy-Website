@@ -12,41 +12,11 @@ import React from 'react';
      Fallback standalone chỉ khi không có showToast (dev/offline).
   ──────────────────────────────────────────────────────────────────── */
   function nag(msg, duration = 3500) {
-    if (typeof window.showToast === 'function') {
+    if (typeof window.showDiToast === 'function') {
+      window.showDiToast(msg, 'info', duration);
+    } else if (typeof window.showToast === 'function') {
       window.showToast(msg, 'info', duration);
-      return;
     }
-    // Fallback standalone
-    const el = document.createElement('div');
-    Object.assign(el.style, {
-      position: 'fixed',
-      bottom: '24px',
-      left: '50%',
-      transform: 'translateX(-50%) translateY(20px)',
-      background: 'linear-gradient(135deg,#F472B6,#A855F7)',
-      color: 'white',
-      padding: '9px 20px',
-      borderRadius: '24px',
-      fontFamily: "'Nunito',sans-serif",
-      fontSize: '12.5px',
-      fontWeight: '800',
-      zIndex: '9999',
-      boxShadow: '0 4px 16px rgba(168,85,247,0.35)',
-      opacity: '0',
-      transition: 'opacity .3s ease, transform .3s ease',
-      pointerEvents: 'none',
-      whiteSpace: 'nowrap',
-    });
-    el.textContent = msg;
-    document.body.appendChild(el);
-    requestAnimationFrame(() => {
-      el.style.opacity = '1';
-      el.style.transform = 'translateX(-50%) translateY(0)';
-    });
-    setTimeout(() => {
-      el.style.opacity = '0';
-      setTimeout(() => el.remove(), 400);
-    }, duration);
   }
 
   /* ── Admin idle input nag ────────────────────────────────────────────
