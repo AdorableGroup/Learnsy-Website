@@ -25,6 +25,82 @@ import React from 'react';
     const stripHTML = s => (s || '').replace(/<[^>]*>/g, '');
     const norm = s => (s || '').trim().toLowerCase();
 
+    /* ────────────────────────────────────────────────
+       🔊 MINI AUDIO ENGINE — đồng bộ cảm giác với quiz-player
+       Tự chứa (Web Audio API), không phụ thuộc file ngoài.
+       Dùng chung cờ mute 'qp_muted' với quiz-player để đồng bộ
+       lựa chọn của học sinh trên toàn app.
+    ──────────────────────────────────────────────── */
+    const _AC = (() => {
+      try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return null;
+        let ctx = null;
+        const get = () => {
+          if (!ctx) ctx = new Ctx();
+          if (ctx.state === 'suspended') ctx.resume();
+          return ctx;
+        };
+        return { get };
+      } catch { return null; }
+    })();
+
+    let _muted = false;
+    try { _muted = localStorage.getItem('qp_muted') === '1'; } catch {}
+
+    const _sfxPlay = (notes, masterVol) => {
+      if (!_AC || _muted) return;
+      try {
+        const ctx = _AC.get();
+        const mv = masterVol !== undefined ? masterVol : 0.22;
+        notes.forEach(({ f, d, t, v, delay, ramp }) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          const comp = ctx.createDynamicsCompressor();
+          osc.connect(gain); gain.connect(comp); comp.connect(ctx.destination);
+          osc.type = t || 'sine';
+          osc.frequency.value = f;
+          const start = ctx.currentTime + (delay || 0);
+          gain.gain.setValueAtTime(0, start);
+          gain.gain.linearRampToValueAtTime((v !== undefined ? v : 1) * mv, start + 0.008);
+          if (ramp === 'slide') {
+            osc.frequency.setValueAtTime(f, start);
+            osc.frequency.linearRampToValueAtTime(f * 1.08, start + d);
+          }
+          gain.gain.exponentialRampToValueAtTime(0.0001, start + d);
+          osc.start(start);
+          osc.stop(start + d + 0.01);
+        });
+      } catch {}
+    };
+
+    /* Nộp bài — chime ngắn */
+    const _sfxSubmit = () => _sfxPlay([
+      { f: 440, d: 0.08, t: 'triangle', v: 0.6 },
+      { f: 550, d: 0.10, t: 'triangle', v: 0.7, delay: 0.07 },
+      { f: 660, d: 0.12, t: 'sine', v: 0.8, delay: 0.15 },
+    ], 0.24);
+
+    /* Đạt điểm cao — fanfare chiến thắng */
+    const _sfxFanfare = () => _sfxPlay([
+      { f: 523, d: 0.12, t: 'triangle', v: 0.9 },
+      { f: 659, d: 0.12, t: 'triangle', v: 0.9, delay: 0.11 },
+      { f: 784, d: 0.12, t: 'triangle', v: 0.9, delay: 0.22 },
+      { f: 1047, d: 0.18, t: 'sine', v: 1.0, delay: 0.33 },
+      { f: 784, d: 0.09, t: 'triangle', v: 0.7, delay: 0.52 },
+      { f: 1047, d: 0.09, t: 'sine', v: 0.8, delay: 0.62 },
+      { f: 1319, d: 0.26, t: 'sine', v: 1.0, delay: 0.72, ramp: 'slide' },
+      { f: 659, d: 0.26, t: 'triangle', v: 0.4, delay: 0.72 },
+    ], 0.30);
+
+    /* Điểm thấp — giai điệu buồn nhẹ */
+    const _sfxSad = () => _sfxPlay([
+      { f: 440, d: 0.14, t: 'sawtooth', v: 0.6 },
+      { f: 370, d: 0.18, t: 'sawtooth', v: 0.7, delay: 0.12 },
+      { f: 294, d: 0.24, t: 'triangle', v: 0.5, delay: 0.26 },
+      { f: 220, d: 0.30, t: 'triangle', v: 0.4, delay: 0.44 },
+    ], 0.26);
+
     /* ── Helper: tách đoạn văn – dùng split với capturing group ── */
     function splitPassage(text, blankCount) {
       const raw = stripHTML(text);
@@ -171,6 +247,193 @@ import React from 'react';
       );
     }
 
+    /* ── Icon bộ điểm số dùng cho ScoreToast ── */
+    function IconTrophy({ size = 16, color = 'currentColor' }) {
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+          <path d="M8 21h8" /><path d="M12 17v4" />
+          <path d="M7 4h10v5a5 5 0 0 1-10 0V4z" />
+          <path d="M7 5H4.5A1.5 1.5 0 0 0 3 6.5v0A3.5 3.5 0 0 0 6.5 10H7" />
+          <path d="M17 5h2.5A1.5 1.5 0 0 1 21 6.5v0a3.5 3.5 0 0 1-3.5 3.5H17" />
+        </svg>
+      );
+    }
+
+    function IconThumbsUp({ size = 16, color = 'currentColor' }) {
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+          <path d="M7 10v11" />
+          <path d="M11 4l-1 5h9.28a2 2 0 0 1 1.94 2.5l-1.76 7A2 2 0 0 1 17.52 20H7" />
+        </svg>
+      );
+    }
+
+    function IconStarBadge({ size = 16, color = 'currentColor' }) {
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+          <path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.6 1.1 6.45L12 17.3l-5.8 3.1 1.1-6.45-4.7-4.6 6.5-.95L12 2.5z" />
+        </svg>
+      );
+    }
+
+    function IconSadFace({ size = 16, color = 'currentColor' }) {
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M8.5 16c.8-1.3 2-2 3.5-2s2.7.7 3.5 2" />
+          <line x1="9" y1="9.5" x2="9" y2="9.5" strokeWidth="2.6" />
+          <line x1="15" y1="9.5" x2="15" y2="9.5" strokeWidth="2.6" />
+        </svg>
+      );
+    }
+
+    /* ── Inject keyframes riêng cho ScoreToast (tự chứa, không phụ
+       thuộc thứ tự load của dashboard.jsx) ── */
+    (function injectScoreToastCSS() {
+      if (document.getElementById('lp-toast-css')) return;
+      const s = document.createElement('style');
+      s.id = 'lp-toast-css';
+      s.textContent = `
+        @keyframes lp-pill-in {
+          0%   { width:56px; height:56px; border-radius:28px; opacity:0; transform:translateX(-50%) scale(0.8); }
+          55%  { width:300px; height:56px; border-radius:28px; opacity:1; transform:translateX(-50%) scale(1.04); }
+          100% { width:300px; height:56px; border-radius:28px; opacity:1; transform:translateX(-50%) scale(1); }
+        }
+        @keyframes lp-pill-out {
+          0%   { opacity:1; transform:translateX(-50%) scale(1); }
+          100% { opacity:0; transform:translateX(-50%) scale(0.85) translateY(-6px); }
+        }
+        @keyframes lp-content-in {
+          0% { opacity:0; transform:translateX(-6px); }
+          100% { opacity:1; transform:translateX(0); }
+        }
+        @keyframes lp-icon-pulse {
+          0%,100% { transform:scale(1); }
+          50% { transform:scale(1.12); }
+        }
+        @keyframes lp-glow-pulse {
+          0%,100% { opacity:0.16; }
+          50% { opacity:0.32; }
+        }
+      `;
+      document.head.appendChild(s);
+    })();
+
+    /* ── ScoreToast — toast kiểu Dynamic Island báo điểm khi nộp bài,
+       phong cách đồng bộ với AchievementToast của dashboard ── */
+    function ScoreToast({ correct, total, onClose }) {
+      const [leaving, setLeaving] = useState(false);
+      const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+
+      const visual = pct >= 90
+        ? { Icon: IconTrophy, color: '#f59e0b', label: 'Xuất sắc!' }
+        : pct >= 70
+          ? { Icon: IconThumbsUp, color: '#34d399', label: 'Giỏi lắm!' }
+          : pct >= 50
+            ? { Icon: IconStarBadge, color: '#a855f7', label: 'Khá ổn!' }
+            : { Icon: IconSadFace, color: '#f472b6', label: 'Cố lên nhé!' };
+
+      useEffect(() => {
+        const leaveTimer = setTimeout(() => setLeaving(true), 3000);
+        const closeTimer = setTimeout(onClose, 3500);
+        return () => { clearTimeout(leaveTimer); clearTimeout(closeTimer); };
+      }, [onClose]);
+
+      const handleTap = () => {
+        setLeaving(true);
+        setTimeout(onClose, 500);
+      };
+
+      const pillBg = 'linear-gradient(135deg,rgba(18,6,14,0.97) 0%,rgba(30,10,22,0.97) 100%)';
+      const glowColor = visual.color;
+
+      return (
+        <div
+          onClick={handleTap}
+          style={{
+            position: 'fixed',
+            top: 10,
+            left: '50%',
+            zIndex: 9999,
+            width: 300,
+            height: 56,
+            borderRadius: 28,
+            transform: 'translateX(-50%)',
+            transformOrigin: 'center top',
+            background: pillBg,
+            boxShadow: `0 0 0 1.5px rgba(255,255,255,0.08), 0 8px 28px rgba(0,0,0,0.55), 0 0 20px ${glowColor}44`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 10,
+            padding: '0 16px',
+            cursor: 'pointer',
+            userSelect: 'none',
+            overflow: 'hidden',
+            animation: leaving
+              ? 'lp-pill-out 0.45s cubic-bezier(.55,.0,.45,1) both'
+              : 'lp-pill-in  0.55s cubic-bezier(.34,1.3,.64,1) both',
+            willChange: 'width,height,border-radius,opacity',
+          }}
+        >
+          {/* Glow halo phía sau icon */}
+          <div style={{
+            position: 'absolute', left: 14, top: '50%',
+            transform: 'translateY(-50%)',
+            width: 32, height: 32, borderRadius: '50%',
+            background: glowColor,
+            opacity: 0.18,
+            filter: 'blur(8px)',
+            animation: 'lp-glow-pulse 1.2s ease-in-out infinite',
+            pointerEvents: 'none',
+          }} />
+
+          {/* Icon */}
+          <div style={{
+            flexShrink: 0,
+            display: 'inline-flex',
+            animation: 'lp-icon-pulse 1s ease-in-out infinite',
+            position: 'relative', zIndex: 1,
+          }}>
+            <visual.Icon size={24} color={glowColor} />
+          </div>
+
+          {/* Nội dung — hiện sau khi pill nở ra */}
+          <div style={{
+            flex: 1, minWidth: 0,
+            animation: 'lp-content-in 0.55s cubic-bezier(.34,1.3,.64,1) both',
+            position: 'relative', zIndex: 1,
+          }}>
+            <div style={{
+              fontSize: 9.5, fontWeight: 800, color: glowColor,
+              letterSpacing: '0.7px', textTransform: 'uppercase',
+              display: 'flex', alignItems: 'center', gap: 3,
+              marginBottom: 1,
+              fontFamily: 'Nunito,sans-serif',
+            }}>
+              <IconHeadphones size={10} color={glowColor} /> {visual.label}
+            </div>
+            <div style={{
+              fontFamily: "'Baloo 2',cursive",
+              fontSize: 14, fontWeight: 800,
+              color: '#fce4f0',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              lineHeight: 1.15,
+            }}>
+              Đúng {correct}/{total} câu · {pct}%
+            </div>
+          </div>
+
+          {/* Chấm tap-to-dismiss */}
+          <div style={{
+            flexShrink: 0, width: 6, height: 6, borderRadius: '50%',
+            background: 'rgba(255,255,255,0.25)',
+            position: 'relative', zIndex: 1,
+          }} />
+        </div>
+      );
+    }
+
     /* ── Component chính ── */
     function ListeningPractice({ dark, onBack }) {
       const [items, setItems] = useState([]);
@@ -181,6 +444,7 @@ import React from 'react';
       const [blanks, setBlanks] = useState([]);
       const [stmtSel, setStmtSel] = useState([]);
       const [submitted, setSubmitted] = useState(false);
+      const [showScoreToast, setShowScoreToast] = useState(false);
 
       const [isPlaying, setIsPlaying] = useState(false);
       const [speechRate, setSpeechRate] = useState(1.0);
@@ -273,6 +537,7 @@ import React from 'react';
         setBlanks(it.answers.map(() => ''));
         setStmtSel(it.statements.map(() => null));
         setSubmitted(false);
+        setShowScoreToast(false);
         inputRefs.current = [];
       }, []);
 
@@ -960,6 +1225,13 @@ import React from 'react';
               <button onClick={() => {
                 setSubmitted(true);
                 if (navigator.vibrate) navigator.vibrate(10);
+                const pct = score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0;
+                _sfxSubmit();
+                setTimeout(() => {
+                  _AC?.get(); // wake AudioContext trước khi play fanfare/sad
+                  if (pct >= 70) _sfxFanfare(); else _sfxSad();
+                  setShowScoreToast(true);
+                }, 420);
               }}
                 style={{
                   padding: '14px',
@@ -1009,6 +1281,15 @@ import React from 'react';
               </button>
             )}
           </div>
+
+          {/* ── Score Toast — Dynamic Island, hiện khi nộp bài ── */}
+          {showScoreToast && (
+            <ScoreToast
+              correct={score.correct}
+              total={score.total}
+              onClose={() => setShowScoreToast(false)}
+            />
+          )}
         </div>
       );
     }
