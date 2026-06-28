@@ -25,6 +25,33 @@ import React from 'react';
     const stripHTML = s => (s || '').replace(/<[^>]*>/g, '');
     const norm = s => (s || '').trim().toLowerCase();
 
+    // render nhận định T/F/NM có hỗ trợ gạch chân (đồng bộ với listening-panel admin):
+    // phần text được bọc <u>...</u> trong câu sẽ hiển thị gạch chân thật, không lộ ký tự thẻ
+    const renderUnderline = str => {
+      const text = str || '';
+      const segs = text.split(/(<u>|<\/u>)/g);
+      let underline = false, key = 0;
+      const out = [];
+      segs.forEach(seg => {
+        if (seg === '<u>') { underline = true; return; }
+        if (seg === '</u>') { underline = false; return; }
+        if (seg === '') return;
+        out.push(underline ? <u key={key++}>{seg}</u> : <span key={key++}>{seg}</span>);
+      });
+      return out;
+    };
+
+    // xáo trộn mảng (Fisher-Yates) — dùng để tự tráo thứ tự nhận định T/F/NM khi mở bài
+    const shuffleArr = arr => {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    };
+
+
     /* ────────────────────────────────────────────────
        🔊 MINI AUDIO ENGINE — đồng bộ cảm giác với quiz-player
        Tự chứa (Web Audio API), không phụ thuộc file ngoài.
@@ -449,6 +476,7 @@ import React from 'react';
       const [loadError, setLoadError] = useState(false);
 
       const [selected, setSelected] = useState(null);
+      const [wordBoxDisplay, setWordBoxDisplay] = useState([]); // wordBox đã xáo (hoặc gốc) cho bài đang làm
       const [blanks, setBlanks] = useState([]);
       const [stmtSel, setStmtSel] = useState([]);
       const [submitted, setSubmitted] = useState(false);
@@ -528,6 +556,8 @@ import React from 'react';
               wordBox: Array.isArray(r.word_box) ? r.word_box : [],
               answers: Array.isArray(r.answers) ? r.answers : [],
               statements: Array.isArray(r.statements) ? r.statements : [],
+              shuffleStatements: !!r.shuffle_statements, // tự tráo thứ tự nhận định T/F/NM mỗi lần mở bài
+              shuffleWordBox: !!r.shuffle_word_box,       // tự tráo thứ tự Word Box mỗi lần mở bài
             })));
           }
           setLoading(false);
@@ -553,9 +583,13 @@ import React from 'react';
         }
         speakPendingRef.current = false;
         setIsRestarting(false);
-        setSelected(it);
+        // nếu bật "Tự tráo thứ tự", xáo lại thứ tự nhận định mỗi lần mở bài (không ảnh hưởng đáp án đúng vì answer đi theo từng câu)
+        const stmts = it.shuffleStatements ? shuffleArr(it.statements) : it.statements;
+        const wb = it.shuffleWordBox ? shuffleArr(it.wordBox) : it.wordBox;
+        setSelected({ ...it, statements: stmts });
+        setWordBoxDisplay(wb);
         setBlanks(it.answers.map(() => ''));
-        setStmtSel(it.statements.map(() => null));
+        setStmtSel(stmts.map(() => null));
         setSubmitted(false);
         setShowScoreToast(false);
         inputRefs.current = [];
@@ -1189,12 +1223,21 @@ import React from 'react';
                 borderRadius: 16,
                 padding: '12px 14px',
               }}>
-                <div style={{ fontSize: 10, fontWeight: 900, color: '#6366f1', letterSpacing: 1, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <IconBox size={11} color="#6366f1" />
-                  WORD BOX
+                <div style={{ fontSize: 10, fontWeight: 900, color: '#6366f1', letterSpacing: 1, marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 5 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <IconBox size={11} color="#6366f1" />
+                    WORD BOX
+                  </span>
+                  {selected.shuffleWordBox && wordBoxDisplay.length > 1 && (
+                    <button onClick={() => setWordBoxDisplay(prev => { let n; do { n = shuffleArr(prev); } while (n.every((w, i) => w === prev[i])); return n; })}
+                      style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 99, border: '1.5px solid rgba(99,102,241,.35)', background: 'rgba(99,102,241,.1)', color: '#4338ca', fontSize: 10, fontWeight: 800, cursor: 'pointer' }}>
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+                      Tráo lại
+                    </button>
+                  )}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                  {selected.wordBox.map((w, i) => (
+                  {wordBoxDisplay.map((w, i) => (
                     <span key={i} style={{
                       fontSize: 12.5,
                       fontWeight: 700,
@@ -1255,7 +1298,7 @@ import React from 'react';
                           flexShrink: 0,
                         }}>{i + 1}</span>
                         <p style={{ margin: 0, color: LC.text2, lineHeight: 1.65, fontWeight: 600, fontSize: 13 }}>
-                          {st.statement}
+                          {renderUnderline(st.statement)}
                         </p>
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
