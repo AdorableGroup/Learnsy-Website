@@ -503,7 +503,7 @@ function App(){
     setLessonsSynced(prev=>[...prev,lesson]);
     setTitle('Bộ câu hỏi mới');setSubject('Tiếng Anh');setPassword('');setQ([emptyTF()]);
     setEditingId(id);setTab('build');
-    toast_('+ Đã tạo bài mới!',2000);
+    setTimeout(()=>(window.showDiToast||window.showToast)?.('Đã tạo bài mới!','success',2000),100);
   },[toast_]);
   const deleteLesson=useCallback(async(id,e,_confirmed=false)=>{
     e&&e.stopPropagation();
