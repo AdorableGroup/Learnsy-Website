@@ -5,10 +5,10 @@ import React from 'react';
    Particle engine (PixiJS v8) chuyển từ Class 11A7 sang Learnsy.
    Chỉ chạy khi Chế độ tối đang bật · ~6kB
 
-   YÊU CẦU: PixiJS v8 phải là global TRƯỚC khi file này chạy.
-   Trong main.js (Vite entry), thêm 2 dòng CẠNH import Tone
-   (PHẢI đứng TRƯỚC dòng import file này — thứ tự bắt buộc vì
-   _hasPixi chỉ được tính 1 lần lúc module này được nạp):
+   YÊU CẦU: PixiJS v8 phải là global TRƯỚC khi bật toggle (không bắt buộc
+   phải có sẵn ngay lúc file này load — _hasPixi() giờ kiểm tra LIVE mỗi
+   lần gọi, không cache 1 lần, nên chịu được PIXI load async chậm hơn).
+   Trong main.jsx (Vite entry), thêm 2 dòng CẠNH import Tone:
      import * as PIXI from 'pixi.js'
      window.PIXI = PIXI
    Nếu chưa có gói: npm install pixi.js
@@ -40,10 +40,16 @@ const {useState}=React;
 //  PLAVSKY PARTICLE ENGINE — PixiJS v8
 //  (giữ nguyên logic hạt / chaos / breathing từ bản gốc Class 11A7)
 // ═══════════════════════════════════════════════════════════════
-const _hasPixi = typeof PIXI !== 'undefined';
-if (!_hasPixi) {
-  console.warn('[Plavsky] ⚠️ PIXI không tồn tại lúc file này load. Kiểm tra: (1) đã npm install pixi.js chưa, (2) trong main.js dòng "import PIXI + window.PIXI=PIXI" có đứng TRƯỚC dòng import learnsy-sparkle-settings.jsx không, (3) đã restart `npm run dev` sau khi sửa package.json chưa.');
-}
+function _hasPixi() { return typeof PIXI !== 'undefined'; }
+// Cảnh báo sớm — không chặn engine, chỉ để biết nếu PIXI thật sự không bao giờ xuất hiện.
+// Check lại sau 2s để loại trừ trường hợp bundle PIXI (Rolldown/Vite) load async chậm hơn 1 nhịp.
+setTimeout(() => {
+  if (!_hasPixi()) {
+    console.warn('[Plavsky] ⚠️ PIXI vẫn chưa có trên window sau 2s. Kiểm tra: (1) đã npm install pixi.js chưa, (2) trong main.jsx dòng "import PIXI + window.PIXI=PIXI" có đứng TRƯỚC dòng import learnsy-sparkle-settings.jsx không, (3) đã restart `npm run dev` / rebuild sau khi sửa package.json chưa.');
+  } else {
+    console.log('[Plavsky] ℹ️ PIXI có sẵn trên window — engine sẽ hoạt động khi bật toggle.');
+  }
+}, 2000);
 
 const LEVEL_CFG = {
   low:   { max:500,  spawnEvery:2, burstEvery:14, prepop:220,  hues:[175,182,188,195,202] },
@@ -65,13 +71,11 @@ let _level = localStorage.getItem('bb-sparkleLevel') || 'high';
 
 // ── Parallax scroll ──────────────────────────────────────────
 let _scrollY = 0, _lastScrollY = 0, _scrollDelta = 0;
-if(_hasPixi){
-  window.addEventListener('scroll', function() {
-    _scrollDelta = window.scrollY - _lastScrollY;
-    _lastScrollY = window.scrollY;
-    _scrollY     = window.scrollY;
-  }, { passive: true });
-}
+window.addEventListener('scroll', function() {
+  _scrollDelta = window.scrollY - _lastScrollY;
+  _lastScrollY = window.scrollY;
+  _scrollY     = window.scrollY;
+}, { passive: true });
 
 // ── Chaos mode ───────────────────────────────────────────────
 let _chaosActive  = false;
@@ -250,7 +254,7 @@ function _prepop() {
 }
 
 async function startPlavsky() {
-  if (!_hasPixi || _running || _initing) return;
+  if (!_hasPixi() || _running || _initing) return;
   _initing = true;
 
   try {
@@ -305,7 +309,7 @@ async function startPlavsky() {
 }
 
 function stopPlavsky() {
-  if (!_hasPixi) return;
+  if (!_hasPixi()) return;
   if (_initing) { _pendingStop = true; return; }
   _running = false;
   _exitChaos();
@@ -460,7 +464,7 @@ if (localStorage.getItem('bb-sparkle-debug') !== '0') {
   if (document.body) document.body.appendChild(_badge);
   setInterval(() => {
     _badge.textContent =
-      'PIXI: '        + (_hasPixi ? '✅' : '❌ THIẾU') + '\n' +
+      'PIXI: '        + (_hasPixi() ? '✅' : '❌ THIẾU') + '\n' +
       'App tạo: '     + (_app ? '✅' : '⛔ chưa') + '\n' +
       'Running: '     + (_running ? '✅' : '❌') + '\n' +
       'Initing: '     + (_initing ? '⏳' : '—') + '\n' +
