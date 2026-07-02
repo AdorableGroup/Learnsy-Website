@@ -1,7 +1,7 @@
 import React from 'react';
 
 /* ══════════════════════════════════════════════════════════════════
-   LEARNSY-DEV-ISLAND.JSX  ·  Bảng chẩn đoán "Dev Island" 🟢
+   LEARNSY-DEV-ISLAND.JSX  ·  Bảng chẩn đoán "Dev Island"
    Thay thế badge debug tạm — Dynamic Island toast, mở rộng thành panel
    tabs (Tổng quan/Lệnh/Console/Storage/Mạng/Globals/Eval). Toggle ở Cài đặt.
 
@@ -113,6 +113,68 @@ function DevIcon({ size = 18, color = '#4ade80' }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  Bộ icon SVG nhỏ dùng chung trong panel (thay thế mọi emoji/ký tự Unicode)
+// ═══════════════════════════════════════════════════════════════
+function CheckIcon({ size = 11, color = '#4ade80' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+function XMarkIcon({ size = 11, color = '#f87171' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+function SearchIcon({ size = 12, color = '#86efac' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  );
+}
+function WrenchIcon({ size = 12, color = '#86efac' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14.7 6.3a4 4 0 1 0-5.66 5.66L3 18l3 3 6.04-6.04a4 4 0 0 0 5.66-5.66l-2.83 2.83-2.12-2.12 2.95-2.87z" />
+    </svg>
+  );
+}
+function TrashIcon({ size = 12, color = '#f87171' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    </svg>
+  );
+}
+function RefreshIcon({ size = 12, color = '#86efac' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+    </svg>
+  );
+}
+function CloseIcon({ size = 12, color = '#f87171' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+function PlayIcon({ size = 11, color = '#04150c' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+      <polygon points="6 4 20 12 6 20" />
+    </svg>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  Style injection — morph pill↔panel (spring giống ScoreIsland) + nhấp nháy
 // ═══════════════════════════════════════════════════════════════
 function _injectStyles(){
@@ -140,11 +202,15 @@ function _injectStyles(){
 //  UI phụ — 1 dòng key/value kiểu terminal
 // ═══════════════════════════════════════════════════════════════
 function Row({k,v,warn,plain,small}){
-  const display = plain ? v : (typeof v==='boolean' ? (v?'✅':'❌') : v);
+  const isBool = !plain && typeof v==='boolean';
   return (
     <div style={{display:'flex',justifyContent:'space-between',gap:8,marginBottom:5,fontSize:small?9:11}}>
       <span style={{opacity:.65,flexShrink:0}}>{k}</span>
-      <span style={{color:warn?'#f87171':'#4ade80',textAlign:'right',wordBreak:'break-word'}}>{display}</span>
+      {isBool ? (
+        <span style={{display:'inline-flex',alignItems:'center'}}>{v ? <CheckIcon/> : <XMarkIcon/>}</span>
+      ) : (
+        <span style={{color:warn?'#f87171':'#4ade80',textAlign:'right',wordBreak:'break-word'}}>{v}</span>
+      )}
     </div>
   );
 }
@@ -154,12 +220,13 @@ function Row({k,v,warn,plain,small}){
 // ═══════════════════════════════════════════════════════════════
 const QUICK_COMMANDS = [
   {
-    group: '🔍 Kiểm tra',
+    group: 'Kiểm tra',
+    icon: SearchIcon,
     items: [
-      { label:'PIXI có tồn tại?', run: ()=> `window.PIXI: ${typeof window.PIXI!=='undefined'?'✅ có':'❌ không có'}` },
+      { label:'PIXI có tồn tại?', run: ()=> `window.PIXI: ${typeof window.PIXI!=='undefined'?'Có':'Không có'}` },
       { label:'Plavsky đang chạy?', run: ()=>{
         const app = window._playskyApp && window._playskyApp();
-        return app ? '✅ Đang chạy' : '❌ Không chạy';
+        return app ? 'Đang chạy' : 'Không chạy';
       }},
       { label:'Service Worker đã đăng ký', run: async ()=>{
         if(!('serviceWorker' in navigator)) return 'Trình duyệt không hỗ trợ Service Worker';
@@ -171,7 +238,7 @@ const QUICK_COMMANDS = [
         const ks = await caches.keys();
         return ks.length ? ks.join('\n') : 'Không có cache nào';
       }},
-      { label:'Trạng thái mạng', run: ()=> navigator.onLine ? '✅ Online' : '❌ Offline' },
+      { label:'Trạng thái mạng', run: ()=> navigator.onLine ? 'Online' : 'Offline' },
       { label:'Toàn bộ key localStorage', run: ()=>{
         const n = localStorage.length;
         return n ? `${n} key: ` + Array.from({length:n},(_,i)=>localStorage.key(i)).join(', ') : 'Trống';
@@ -179,7 +246,8 @@ const QUICK_COMMANDS = [
     ],
   },
   {
-    group: '🛠️ Sửa lỗi',
+    group: 'Sửa lỗi',
+    icon: WrenchIcon,
     items: [
       { label:'Gỡ Service Worker + tải lại', dangerous:true, run: async ()=>{
         if(!('serviceWorker' in navigator)) return 'Trình duyệt không hỗ trợ Service Worker';
@@ -237,7 +305,10 @@ function CommandsTab(){
     <div>
       {QUICK_COMMANDS.map(group=>(
         <div key={group.group} style={{marginBottom:14}}>
-          <div style={{fontSize:10,fontWeight:800,color:'#86efac',letterSpacing:'.03em',marginBottom:6,textTransform:'uppercase'}}>{group.group}</div>
+          <div style={{display:'flex',alignItems:'center',gap:5,fontSize:10,fontWeight:800,color:'#86efac',letterSpacing:'.03em',marginBottom:6,textTransform:'uppercase'}}>
+            {group.icon && <group.icon size={11} color="#86efac"/>}
+            {group.group}
+          </div>
           {group.items.map((cmd,i)=>{
             const key = group.group+i;
             const res = results[key];
@@ -351,8 +422,8 @@ function DevIsland(){
             <IconComponent {...iconProps(16, '#4ade80')} />
             <span style={{color:'#4ade80',fontWeight:800,fontSize:12,letterSpacing:'.03em',animation:'bb-blink 1.6s ease-in-out infinite'}}>DEV ISLAND</span>
             <span style={{flex:1}}/>
-            <span onClick={()=>{refreshStorage();refreshNetwork();}} style={{color:'#86efac',fontSize:11,cursor:'pointer',padding:'2px 7px',border:'1px solid rgba(74,222,128,0.3)',borderRadius:7}}>↻</span>
-            <span onClick={toggleOpen} style={{color:'#f87171',fontSize:11,cursor:'pointer',padding:'2px 7px',border:'1px solid rgba(248,113,113,0.3)',borderRadius:7}}>✕</span>
+            <span onClick={()=>{refreshStorage();refreshNetwork();}} style={{display:'inline-flex',alignItems:'center',cursor:'pointer',padding:'4px 7px',border:'1px solid rgba(74,222,128,0.3)',borderRadius:7}}><RefreshIcon size={11}/></span>
+            <span onClick={toggleOpen} style={{display:'inline-flex',alignItems:'center',cursor:'pointer',padding:'4px 7px',border:'1px solid rgba(248,113,113,0.3)',borderRadius:7}}><CloseIcon size={11}/></span>
           </div>
 
           <div style={{display:'flex',gap:4,padding:'6px 8px',borderBottom:'1px solid rgba(74,222,128,0.1)',overflowX:'auto',flexShrink:0}}>
@@ -394,7 +465,11 @@ function DevIsland(){
                   </div>
                 ))}
                 <div ref={logEndRef}/>
-                {_logBuf.length>0 && <div onClick={clearLogs} style={{marginTop:6,color:'#f87171',cursor:'pointer',fontSize:10}}>🗑 Xoá log</div>}
+                {_logBuf.length>0 && (
+                  <div onClick={clearLogs} style={{marginTop:6,display:'inline-flex',alignItems:'center',gap:4,color:'#f87171',cursor:'pointer',fontSize:10}}>
+                    <TrashIcon size={11}/> Xoá log
+                  </div>
+                )}
               </div>
             )}
 
@@ -415,7 +490,11 @@ function DevIsland(){
 
             {tab==='network' && (
               <div>
-                {netData.length===0 && <div style={{opacity:.5}}>Chưa có dữ liệu — bấm ↻ để tải lại.</div>}
+                {netData.length===0 && (
+                  <div style={{opacity:.5,display:'flex',alignItems:'center',gap:4}}>
+                    Chưa có dữ liệu — bấm <RefreshIcon size={10}/> để tải lại.
+                  </div>
+                )}
                 {netData.map((r,i)=>(
                   <div key={i} style={{display:'flex',justifyContent:'space-between',gap:6,marginBottom:4}}>
                     <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1}}>{r.name}</span>
@@ -438,8 +517,8 @@ function DevIsland(){
                   placeholder="vd: window.PIXI"
                   style={{width:'100%',minHeight:60,background:'rgba(74,222,128,0.06)',border:'1px solid rgba(74,222,128,0.25)',
                     borderRadius:8,color:'#d1fae5',fontFamily:'inherit',fontSize:11,padding:8,resize:'vertical',boxSizing:'border-box'}}/>
-                <div onClick={runEvalNow} style={{marginTop:6,display:'inline-block',background:'#4ade80',color:'#04150c',
-                  fontWeight:800,padding:'5px 14px',borderRadius:999,cursor:'pointer',fontSize:11}}>Chạy ▶</div>
+                <div onClick={runEvalNow} style={{marginTop:6,display:'inline-flex',alignItems:'center',gap:5,background:'#4ade80',color:'#04150c',
+                  fontWeight:800,padding:'5px 14px',borderRadius:999,cursor:'pointer',fontSize:11}}>Chạy <PlayIcon size={10}/></div>
                 {evalResult && (
                   <div style={{marginTop:8,padding:8,background:'rgba(0,0,0,0.3)',borderRadius:8,
                     color:evalResult.ok?'#4ade80':'#f87171',wordBreak:'break-word'}}>{evalResult.out}</div>
