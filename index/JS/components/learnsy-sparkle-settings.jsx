@@ -2,20 +2,16 @@ import React from 'react';
 
 /* ══════════════════════════════════════════════════════════════════
    LEARNSY-SPARKLE-SETTINGS.JSX  ·  Hạt lấp lánh "Plavsky" 🌙✨
-   Particle engine (PixiJS v8) chuyển từ Class 11A7 sang Learnsy.
-   Chỉ chạy khi Chế độ tối đang bật · ~6kB
+   Particle engine (PixiJS v8) nâng cấp chất lượng hạt: texture glow
+   mềm mại, hiệu ứng lấp lánh (twinkle), sprite pooling giảm rác,
+   chuyển động mượt hơn. ~7.5kB
 
-   YÊU CẦU: PixiJS v8 phải là global TRƯỚC khi bật toggle (không bắt buộc
-   phải có sẵn ngay lúc file này load — _hasPixi() giờ kiểm tra LIVE mỗi
-   lần gọi, không cache 1 lần, nên chịu được PIXI load async chậm hơn).
-   Trong main.jsx (Vite entry), thêm 2 dòng CẠNH import Tone:
+   YÊU CẦU: PixiJS v8 phải là global TRƯỚC khi bật toggle.
+   Trong main.jsx (Vite entry):
      import * as PIXI from 'pixi.js'
      window.PIXI = PIXI
-   Nếu chưa có gói: npm install pixi.js
-   Nếu thiếu PixiJS, mọi hàm bên dưới tự động no-op (không crash trang).
 
-   CÁCH THÊM VÀO main.js (Vite entry) — file đặt ở components/,
-   import SAU dòng import PixiJS ở trên và SAU dashboard.jsx:
+   CÁCH THÊM VÀO main.js:
      import './components/learnsy-sparkle-settings.jsx'
 
    API công khai (window):
@@ -25,29 +21,21 @@ import React from 'react';
      window._getPlayskyLevel()     — mức hiện tại
      window.bbApplySparkle(dark)   — dashboard.jsx gọi mỗi khi state dark đổi
      window.SparkleSettingsCard    — <Card/> nhét vào TabSettings
-
-   Đã tích hợp sẵn trong dashboard.jsx (2 chỗ):
-     1. TabSettings, ngay dưới BgSettingsCard:
-        {window.SparkleSettingsCard&&React.createElement(window.SparkleSettingsCard,{dark})}
-     2. Dashboard & DashboardEnhanced, useEffect theo dõi [dark]:
-        useEffect(()=>{ window.bbApplySparkle&&window.bbApplySparkle(dark); },[dark]);
 ══════════════════════════════════════════════════════════════════ */
 (function(){
 'use strict';
 const {useState}=React;
 
 // ═══════════════════════════════════════════════════════════════
-//  PLAVSKY PARTICLE ENGINE — PixiJS v8
-//  (giữ nguyên logic hạt / chaos / breathing từ bản gốc Class 11A7)
+//  PLAVSKY PARTICLE ENGINE — PixiJS v8 (nâng cấp chất lượng)
 // ═══════════════════════════════════════════════════════════════
 function _hasPixi() { return typeof PIXI !== 'undefined'; }
-// Cảnh báo sớm — không chặn engine, chỉ để biết nếu PIXI thật sự không bao giờ xuất hiện.
-// Check lại sau 2s để loại trừ trường hợp bundle PIXI (Rolldown/Vite) load async chậm hơn 1 nhịp.
+
 setTimeout(() => {
   if (!_hasPixi()) {
-    console.warn('[Plavsky] ⚠️ PIXI vẫn chưa có trên window sau 2s. Kiểm tra: (1) đã npm install pixi.js chưa, (2) trong main.jsx dòng "import PIXI + window.PIXI=PIXI" có đứng TRƯỚC dòng import learnsy-sparkle-settings.jsx không, (3) đã restart `npm run dev` / rebuild sau khi sửa package.json chưa.');
+    console.warn('[Plavsky] ⚠️ PIXI vẫn chưa có trên window sau 2s...');
   } else {
-    console.log('[Plavsky] ℹ️ PIXI có sẵn trên window — engine sẽ hoạt động khi bật toggle.');
+    console.log('[Plavsky] ℹ️ PIXI có sẵn — engine sẽ hoạt động khi bật toggle.');
   }
 }, 2000);
 
@@ -65,6 +53,7 @@ const LAYER = {
 
 let _app, _container, _glowTex;
 let _particles = [];
+let _spritePool = [];              // Pool sprite để tái sử dụng
 let _running = false, _initing = false, _pendingStop = false, _frame = 0;
 let _stopTimer = null;
 let _level = localStorage.getItem('bb-sparkleLevel') || 'high';
@@ -113,6 +102,7 @@ function _exitChaos() {
 
 function cfg() { return LEVEL_CFG[_level] || LEVEL_CFG.high; }
 
+// HSL -> integer RGB
 function hslToNum(h, s, l) {
   s /= 100; l /= 100;
   const k = n => (n + h / 30) % 12;
@@ -124,6 +114,46 @@ function hslToNum(h, s, l) {
 function getW() { return _app ? _app.renderer.width  : window.innerWidth;  }
 function getH() { return _app ? _app.renderer.height : window.innerHeight; }
 
+// Tạo texture glow mềm mại bằng canvas radial gradient
+function createGlowTexture(app) {
+  const size = 64;
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const gradient = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+  gradient.addColorStop(0,   'rgba(255,255,255,1)');
+  gradient.addColorStop(0.12,'rgba(255,255,255,0.9)');
+  gradient.addColorStop(0.3, 'rgba(255,255,220,0.6)');
+  gradient.addColorStop(0.6, 'rgba(255,255,255,0.1)');
+  gradient.addColorStop(1,   'rgba(255,255,255,0)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+  return PIXI.Texture.from(canvas);
+}
+
+// Lấy sprite từ pool hoặc tạo mới
+function getSprite() {
+  if (_spritePool.length > 0) {
+    const sp = _spritePool.pop();
+    sp.visible = true;
+    sp.alpha = 0;
+    return sp;
+  }
+  const sp = new PIXI.Sprite(_glowTex);
+  sp.anchor.set(0.5);
+  sp.blendMode = 'add';
+  return sp;
+}
+
+// Trả sprite về pool (ẩn đi, removeChild)
+function recycleSprite(sp) {
+  if (!sp) return;
+  sp.visible = false;
+  _container.removeChild(sp);
+  _spritePool.push(sp);
+}
+
+// ── Tạo particle với thuộc tính twinkle ────────────────────────
 function _mkParticle() {
   const W = getW(), H = getH(), c = cfg();
   const r = Math.random();
@@ -153,10 +183,15 @@ function _mkParticle() {
     breathPhase: Math.random() * Math.PI * 2,
     breathSpeed: 0.010 + Math.random() * 0.030,
     breathAmp:   layerKey === 'bg' ? 0.05 : layerKey === 'mid' ? 0.14 : 0.26,
+    // Twinkle
+    twinkleTimer: Math.random() * 200,   // frames đến lần lấp lánh tiếp theo
+    twinkleActive: false,
+    twinkleProgress: 0,
     dead: false, sprite: null,
   };
 }
 
+// ── Tạo burst particle (twinkle giống thường) ──────────────────
 function _mkBurst() {
   const p = _mkParticle();
   const W = getW(), H = getH();
@@ -169,6 +204,7 @@ function _mkBurst() {
   return p;
 }
 
+// ── Cập nhật từng frame ──────────────────────────────────────
 function _tick() {
   if (!_running || !_app) return;
   _frame++;
@@ -215,34 +251,57 @@ function _tick() {
     const parallaxFactor = p.layerKey === 'bg' ? 0.008 : p.layerKey === 'mid' ? 0.018 : 0.032;
     p.y += p.vy + frameDelta * parallaxFactor;
 
+    // ── Breathing + Twinkle ──────────────────────────────────
     p.breathPhase += p.breathSpeed;
     const breathOffset = Math.sin(p.breathPhase) * p.breathAmp;
     const prog = 1 - p.y / H;
-    const aMax = p.alphaMax + breathOffset;
-    if      (prog < 0.10) p.alpha = Math.min(p.alpha + p.fadeIn, prog / 0.10 * aMax);
-    else if (prog > 0.85) p.alpha = Math.max(0, p.alpha - p.fadeIn * 0.8);
-    else                  p.alpha = Math.min(p.alpha + p.fadeIn, aMax);
+    let baseAlpha;
+    if      (prog < 0.10) baseAlpha = Math.min(p.alpha + p.fadeIn, prog / 0.10 * p.alphaMax);
+    else if (prog > 0.85) baseAlpha = Math.max(0, p.alpha - p.fadeIn * 0.8);
+    else                  baseAlpha = Math.min(p.alpha + p.fadeIn, p.alphaMax);
+    p.alpha = baseAlpha;
 
-    if (p.y < -50 || p.y > H + 80 || p.x < -120 || p.x > W + 120) {
-      if (p.sprite) { _container.removeChild(p.sprite); p.sprite.destroy(); }
-      _particles.splice(i, 1);
-      continue;
+    // Xử lý twinkle
+    if (!p.twinkleActive) {
+      p.twinkleTimer--;
+      if (p.twinkleTimer <= 0) {
+        p.twinkleActive = true;
+        p.twinkleProgress = 0;
+        p.twinkleTimer = 120 + Math.random() * 250; // lần sau
+      }
+    } else {
+      p.twinkleProgress += 0.08; // tốc độ twinkle
+      if (p.twinkleProgress >= 1) {
+        p.twinkleActive = false;
+        p.twinkleProgress = 0;
+      }
+      // alpha tăng đột biến rồi giảm nhanh theo hàm sin
+      const twinkleBoost = Math.sin(p.twinkleProgress * Math.PI) * 0.7;
+      p.alpha = Math.min(p.alpha + twinkleBoost, p.alphaMax * 1.5);
     }
+
+    // Cập nhật sprite
     if (!p.sprite) {
-      const sp = new PIXI.Sprite(_glowTex);
-      sp.anchor.set(0.5);
-      sp.blendMode = 'add';
-      _container.addChild(sp);
-      p.sprite = sp;
+      p.sprite = getSprite();
+      _container.addChild(p.sprite);
     }
     p.sprite.scale.set(p.size / 32);
     p.sprite.position.set(p.x, p.y);
     p.sprite.alpha = p.alpha;
-    const lum = _chaosActive ? 90 : 80;
+    // Tint: sử dụng HSL → số nguyên, tăng nhẹ độ sáng khi twinkle
+    const lum = (p.twinkleActive && p.twinkleProgress < 0.5) ? 95 : (_chaosActive ? 90 : 80);
     p.sprite.tint = hslToNum(p.hue, 100, lum);
+
+    // Xóa nếu ra ngoài
+    if (p.y < -50 || p.y > H + 80 || p.x < -120 || p.x > W + 120) {
+      recycleSprite(p.sprite);
+      p.sprite = null;
+      _particles.splice(i, 1);
+    }
   }
 }
 
+// ── Prepopulate particles ────────────────────────────────────
 function _prepop() {
   const H = getH(), c = cfg();
   for (let i = 0; i < c.prepop; i++) {
@@ -253,6 +312,7 @@ function _prepop() {
   }
 }
 
+// ── Khởi động engine ─────────────────────────────────────────
 async function startPlavsky() {
   if (!_hasPixi() || _running || _initing) return;
   _initing = true;
@@ -272,26 +332,15 @@ async function startPlavsky() {
         + 'width:100%;height:100%;opacity:0;transition:opacity 1.2s ease;';
       document.body.appendChild(_app.canvas);
 
-      const g = new PIXI.Graphics();
-      const R = 32;
-      for (let step = R; step > 0; step--) {
-        const a = Math.pow(1 - step / R, 1.5) * 0.09;
-        g.circle(R, R, step);
-        g.fill({ color: 0xffffff, alpha: a });
-      }
-      g.circle(R, R, R * 0.18);
-      g.fill({ color: 0xffffff, alpha: 0.95 });
-      _glowTex = _app.renderer.generateTexture({ target: g });
-      g.destroy();
-
-      _container   = new PIXI.Container();
+      _glowTex = createGlowTexture(_app);
+      _container = new PIXI.Container();
       _app.stage.addChild(_container);
 
       window.addEventListener('resize', () => {
         if (_app) _app.renderer.resize(window.innerWidth, window.innerHeight);
       });
       _app.ticker.add(_tick);
-      console.log('[Plavsky] ✅ Khởi tạo PixiJS thành công, canvas đã gắn vào <body>, z-index:9999');
+      console.log('[Plavsky] ✅ Khởi tạo PixiJS thành công (chất lượng cao).');
     }
 
     _running = true; _initing = false; _frame = 0;
@@ -308,6 +357,7 @@ async function startPlavsky() {
   }
 }
 
+// ── Dừng engine ──────────────────────────────────────────────
 function stopPlavsky() {
   if (!_hasPixi()) return;
   if (_initing) { _pendingStop = true; return; }
@@ -316,20 +366,27 @@ function stopPlavsky() {
   if (_app) _app.canvas.style.opacity = '0';
   _stopTimer = setTimeout(() => {
     _stopTimer = null;
-    let i = _particles.length;
-    while (i--) { if (_particles[i].sprite) { _container?.removeChild(_particles[i].sprite); _particles[i].sprite.destroy(); } }
+    // Thu hồi toàn bộ sprite về pool
+    for (let p of _particles) {
+      if (p.sprite) recycleSprite(p.sprite);
+      p.sprite = null;
+    }
     _particles = [];
-    if (_container) _container.removeChildren();
   }, 1200);
 }
 
+// ── Đổi mức ─────────────────────────────────────────────────
 function setLevel(lv) {
   _level = lv;
   localStorage.setItem('bb-sparkleLevel', lv);
   if (_running && _container) {
-    let i = _particles.length;
-    while (i--) { if (_particles[i].sprite) { _container.removeChild(_particles[i].sprite); _particles[i].sprite.destroy(); } }
-    _particles = []; _container.removeChildren(); _frame = 0;
+    for (let p of _particles) {
+      if (p.sprite) recycleSprite(p.sprite);
+      p.sprite = null;
+    }
+    _particles = [];
+    _container.removeChildren();
+    _frame = 0;
     _prepop();
   }
 }
@@ -341,7 +398,7 @@ window._getPlayskyLevel = () => _level;
 window._playskyApp      = () => (_running ? _app : null);
 
 // ═══════════════════════════════════════════════════════════════
-//  Cầu nối dark-mode ↔ engine — dashboard.jsx gọi qua useEffect([dark])
+//  Cầu nối dark-mode ↔ engine
 // ═══════════════════════════════════════════════════════════════
 let _sparkleOn = localStorage.getItem('bb-sparkleOn') !== '0'; // mặc định BẬT
 
@@ -360,8 +417,7 @@ window.bbSetSparkleOn = setSparkleOn;
 window.bbGetSparkleOn = () => _sparkleOn;
 
 // ═══════════════════════════════════════════════════════════════
-//  SparkleSettingsCard — card React nhét vào TabSettings
-//  Style khớp với "Settings Card" / "Lite Mode Card" đã có sẵn
+//  SparkleSettingsCard — card React (giữ nguyên, không đổi giao diện)
 // ═══════════════════════════════════════════════════════════════
 const LEVELS = [
   { key:'low',   label:'Thấp'     },
@@ -376,7 +432,6 @@ function SparkleSettingsCard({ dark }) {
   const [on,setOn]     = useState(_sparkleOn);
   const [level,setLvl] = useState(window._getPlayskyLevel());
 
-  // Plavsky chỉ chạy ở Chế độ tối — ẩn card khi đang ở Chế độ sáng
   if (!dark || !C) return null;
 
   function toggle(){
@@ -405,7 +460,7 @@ function SparkleSettingsCard({ dark }) {
         </span>
         <div style={{flex:1}}>
           <div style={{fontSize:14,fontWeight:700,color:C.fg,fontFamily:"'Baloo 2',cursive"}}>Hạt lấp lánh</div>
-          <div style={{fontSize:11,color:C.sub}}>Hiệu ứng hạt sáng đêm</div>
+          <div style={{fontSize:11,color:C.sub}}>Hiệu ứng hạt sáng đêm (chất lượng cao)</div>
         </div>
         <div className="bb-toggle-track" onClick={toggle}
           style={{background:on?'linear-gradient(135deg,#f472b6,#a855f7)':'rgba(128,128,128,0.2)',
@@ -451,4 +506,4 @@ function SparkleSettingsCard({ dark }) {
 window.SparkleSettingsCard = SparkleSettingsCard;
 })();
 
-/* ══ END OF LEARNSY-SPARKLE-SETTINGS.JSX ══ */
+/* ══ END OF LEARNSY-SPARKLE-SETTINGS.JSX (NÂNG CẤP CHẤT LƯỢNG) ══ */
