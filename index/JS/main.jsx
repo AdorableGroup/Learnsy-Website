@@ -29,6 +29,8 @@ import './components/dashboard.jsx'
 import './export-builder.jsx'
 import './components/background-settings.jsx'
 import './components/learnsy-sparkle-settings.jsx'
+import './components/learnsy-dev-icon.jsx'
+import './components/learnsy-dev-island.jsx'
 import './components/listening-practice.jsx'
 import './app.jsx'
 import './ripple-haptic.jsx'
@@ -37,4 +39,4 @@ import './components/score-client.jsx'
 import './components/pw-gate.jsx'
 
 
-console.log('[index] v2 ✅ loaded!') 
+console.log('[index] v2 ✅ loaded!')
