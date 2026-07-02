@@ -1438,6 +1438,9 @@ function TabSettings({student,dark,setDark,shuffleQ,shuffleA,setShuffleQ,setShuf
 
       {window.BgSettingsCard&&React.createElement(window.BgSettingsCard,{dark,studentId})}
 
+      {/* ── Sparkle Settings Card — quản lý bởi learnsy-sparkle-settings.jsx ── */}
+      {window.SparkleSettingsCard&&React.createElement(window.SparkleSettingsCard,{dark})}
+
       {/* ── About Card ── */}
       <div style={{background:C.card,borderRadius:20,padding:'16px 18px',
         border:`1.5px solid ${dark?'rgba(244,114,182,0.15)':'rgba(244,114,182,0.15)'}`,
@@ -1569,6 +1572,11 @@ function Dashboard(props){
     if(window.applyBackground&&window.loadBgSettings){
       window.applyBackground(window.loadBgSettings());
     }
+  },[dark]);
+
+  useEffect(()=>{
+    // Sparkle particles (Plavsky) — quản lý bởi learnsy-sparkle-settings.jsx
+    window.bbApplySparkle&&window.bbApplySparkle(dark);
   },[dark]);
 
   const tabTitles={home:'Trang chủ',stats:'Thống kê',history:'Lịch sử',settings:'Cài đặt'};
@@ -2297,6 +2305,11 @@ function DashboardEnhanced(props){
     if(window.applyBackground&&window.loadBgSettings){
       window.applyBackground(window.loadBgSettings());
     }
+  },[dark]);
+
+  /* ── Sparkle particles (Plavsky) — quản lý bởi learnsy-sparkle-settings.jsx ── */
+  useEffect(()=>{
+    window.bbApplySparkle&&window.bbApplySparkle(dark);
   },[dark]);
 
   /* ── Achievement detection ── */
