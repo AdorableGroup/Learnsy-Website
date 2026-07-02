@@ -258,6 +258,20 @@ const {useState,useEffect,useRef,useCallback,useMemo}=React;
       42%  { opacity:1; filter:brightness(1); }
       100% { opacity:1; filter:brightness(1); }
     }
+    /* Nhấp nháy nhẹ liên tục kiểu phim sci-fi — chỉ opacity, không nhân lớp SVG */
+    @keyframes bb-cine-flicker {
+      0%,100% { opacity:1; }
+      41%     { opacity:1; }
+      42%     { opacity:0.55; }
+      43%     { opacity:1; }
+      63%     { opacity:1; }
+      64%     { opacity:0.35; }
+      65%     { opacity:0.85; }
+      66%     { opacity:1; }
+      88%     { opacity:1; }
+      89%     { opacity:0.6; }
+      90%     { opacity:1; }
+    }
 
     .bb-btn-tap { transition: transform 0.12s !important; }
     .bb-btn-tap:active { transform: scale(0.92) !important; }
@@ -746,7 +760,7 @@ const TabIcons={
   settings:(col)=>(<svg viewBox="0 0 24 24" fill="none" stroke={col} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width="22" height="22"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>),
 };
 
-function TabBar({tab,setTab,dark}){
+function TabBar({tab,setTab,dark,liteMode}){
   const C=dark?CD:CL;
   const tabs=[
     {id:'home',    label:'Trang chủ'},
@@ -763,7 +777,7 @@ function TabBar({tab,setTab,dark}){
       maxWidth:760,margin:'0 auto',
       boxShadow:dark?'0 -4px 24px rgba(244,114,182,0.1)':'0 -4px 24px rgba(244,114,182,0.08)',
     }}>
-      {tabs.map(t=>{
+      {tabs.map((t,idx)=>{
         const active=tab===t.id;
         const col=active?C.accent:(dark?'rgba(255,180,210,0.38)':'rgba(160,96,128,0.45)');
         return(
@@ -781,11 +795,18 @@ function TabBar({tab,setTab,dark}){
               animation:active?'bb-bounce .6s ease':'none',
               filter:active?`drop-shadow(0 0 4px ${C.accent}88)`:'none',
             }}>
-              {TabIcons[t.id](col)}
+              <span style={{
+                display:'inline-flex',
+                animation: liteMode?'none':`bb-cine-flicker 4.5s ease-in-out ${idx*0.4}s infinite`,
+              }}>
+                {TabIcons[t.id](col)}
+              </span>
             </div>
             <span style={{
               fontSize:10,fontWeight:800,letterSpacing:'0.2px',transition:'color .2s',
               color:active?C.accent:C.sub,
+              display:'inline-block',
+              animation: liteMode?'none':`bb-cine-flicker 4.5s ease-in-out ${idx*0.4}s infinite`,
             }}>{t.label}</span>
             {active&&<div style={{width:4,height:4,borderRadius:'50%',background:C.accent,boxShadow:`0 0 6px ${C.accent}`}}/>}
           </button>
@@ -1014,6 +1035,7 @@ function TabHome({student,lessons,loading,fetchError,onPlay,shuffleQ,shuffleA,se
                   background:done?`linear-gradient(135deg,${col}30,${col}18)`:(dark?'rgba(244,114,182,0.12)':'rgba(244,114,182,0.12)'),
                   display:'flex',alignItems:'center',justifyContent:'center',
                   boxShadow:done?`0 2px 10px ${col}25`:'none',
+                  animation: liteMode?'none':`bb-cine-flicker 5s ease-in-out ${(i%8)*0.3}s infinite`,
                 }}>
                   {l.password
                     ?<Icon name="lock" size={20} color={dark?'rgba(255,180,210,0.6)':'#be4e8a'}/>
@@ -1024,7 +1046,9 @@ function TabHome({student,lessons,loading,fetchError,onPlay,shuffleQ,shuffleA,se
                 </div>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontWeight:800,fontSize:14,color:C.fg,fontFamily:"'Baloo 2',cursive",
-                    overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                    overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',
+                    animation: liteMode?'none':`bb-cine-flicker 5s ease-in-out ${(i%8)*0.3}s infinite`,
+                  }}>
                     <GlitchText color={C.fg} liteMode={liteMode} style={{fontSize:14}}>{l.title}</GlitchText>
                   </div>
                   <div style={{fontSize:11,color:C.sub,marginTop:2,display:'flex',alignItems:'center',gap:5,flexWrap:'wrap'}}>
@@ -1695,7 +1719,7 @@ function Dashboard(props){
       </div>
 
       <>
-      <TabBar tab={tab} setTab={setTab} dark={dark}/>
+      <TabBar tab={tab} setTab={setTab} dark={dark} liteMode={liteMode}/>
 
       {showExpSheet&&(
         <>
@@ -1804,6 +1828,7 @@ window.bbTabStats        = TabStats;
 window.bbTabSettings     = TabSettings;
 window.bbInjectLiteCSS   = injectLiteCSS;
 window.bbDetectPerf      = detectDevicePerformance;
+window.bbGlitchText      = GlitchText;
 })();
 
 /* ══════════════════════════════════════════════════════════════════
@@ -1831,6 +1856,7 @@ const TabHome     =(p)=>window.bbTabHome?React.createElement(window.bbTabHome,p)
 const TabHistory  =(p)=>window.bbTabHistory?React.createElement(window.bbTabHistory,p):null;
 const TabStats    =(p)=>window.bbTabStats?React.createElement(window.bbTabStats,p):null;
 const TabSettings =(p)=>window.bbTabSettings?React.createElement(window.bbTabSettings,p):null;
+const GlitchText  =(p)=>window.bbGlitchText?React.createElement(window.bbGlitchText,p):(p.children||null);
 
 /* ══ CONFETTI BURST — kawaii hearts & stars ══ */
 (function(){
@@ -2507,7 +2533,7 @@ function DashboardEnhanced(props){
         )}
       </div>
 
-      <TabBar tab={tab} setTab={setTab} dark={dark}/>
+      <TabBar tab={tab} setTab={setTab} dark={dark} liteMode={liteMode}/>
 
       {/* ── Export Sheet ── */}
       {showExpSheet&&(
