@@ -3,7 +3,7 @@ import React from 'react';
 /* ══════════════════════════════════════════════════════════════════
    LEARNSY-DEV-ISLAND.JSX  ·  Bảng chẩn đoán "Dev Island" 🟢
    Thay thế badge debug tạm — Dynamic Island toast, mở rộng thành panel
-   tabs (Tổng quan/Console/Storage/Mạng/Globals/Eval). Toggle ở Cài đặt.
+   tabs (Tổng quan/Lệnh/Console/Storage/Mạng/Globals/Eval). Toggle ở Cài đặt.
 
    Animation morph pill→panel tái sử dụng đúng kiểu ScoreIsland trong
    quiz-player.jsx (cubic-bezier spring giống hệt, chỉ đổi kích thước).
@@ -126,8 +126,129 @@ function Row({k,v,warn,plain,small}){
   );
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  Danh sách lệnh nhanh — kiểm tra & sửa lỗi, bấm chạy trực tiếp
+// ═══════════════════════════════════════════════════════════════
+const QUICK_COMMANDS = [
+  {
+    group: '🔍 Kiểm tra',
+    items: [
+      { label:'PIXI có tồn tại?', run: ()=> `window.PIXI: ${typeof window.PIXI!=='undefined'?'✅ có':'❌ không có'}` },
+      { label:'Plavsky đang chạy?', run: ()=>{
+        const app = window._playskyApp && window._playskyApp();
+        return app ? '✅ Đang chạy' : '❌ Không chạy';
+      }},
+      { label:'Service Worker đã đăng ký', run: async ()=>{
+        if(!('serviceWorker' in navigator)) return 'Trình duyệt không hỗ trợ Service Worker';
+        const rs = await navigator.serviceWorker.getRegistrations();
+        return rs.length ? rs.map(r=>r.scope).join('\n') : 'Không có Service Worker nào';
+      }},
+      { label:'Cache Storage hiện có', run: async ()=>{
+        if(!('caches' in window)) return 'Trình duyệt không hỗ trợ Cache Storage';
+        const ks = await caches.keys();
+        return ks.length ? ks.join('\n') : 'Không có cache nào';
+      }},
+      { label:'Trạng thái mạng', run: ()=> navigator.onLine ? '✅ Online' : '❌ Offline' },
+      { label:'Toàn bộ key localStorage', run: ()=>{
+        const n = localStorage.length;
+        return n ? `${n} key: ` + Array.from({length:n},(_,i)=>localStorage.key(i)).join(', ') : 'Trống';
+      }},
+    ],
+  },
+  {
+    group: '🛠️ Sửa lỗi',
+    items: [
+      { label:'Gỡ Service Worker + tải lại', dangerous:true, run: async ()=>{
+        if(!('serviceWorker' in navigator)) return 'Trình duyệt không hỗ trợ Service Worker';
+        const rs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(rs.map(r=>r.unregister()));
+        setTimeout(()=>location.reload(), 500);
+        return `Đã gỡ ${rs.length} Service Worker, đang tải lại trang...`;
+      }},
+      { label:'Xoá Cache Storage', dangerous:true, run: async ()=>{
+        if(!('caches' in window)) return 'Trình duyệt không hỗ trợ Cache Storage';
+        const ks = await caches.keys();
+        await Promise.all(ks.map(k=>caches.delete(k)));
+        return `Đã xoá ${ks.length} cache. Nên tải lại trang.`;
+      }},
+      { label:'Khởi động lại Plavsky', run: ()=>{
+        window._stopPlavsky && window._stopPlavsky();
+        setTimeout(()=>window._startPlavsky && window._startPlavsky(), 300);
+        return 'Đã gửi lệnh dừng + khởi động lại (chờ ~1.5s để thấy hạt).';
+      }},
+      { label:'Tải lại bỏ qua cache', run: ()=>{
+        setTimeout(()=>{ location.href = location.pathname + '?_r=' + Date.now(); }, 400);
+        return 'Đang tải lại với URL mới (bypass cache)...';
+      }},
+      { label:'Xoá toàn bộ localStorage', dangerous:true, run: ()=>{
+        localStorage.clear();
+        setTimeout(()=>location.reload(), 500);
+        return 'Đã xoá toàn bộ localStorage, đang tải lại...';
+      }},
+    ],
+  },
+];
+
+function CommandsTab(){
+  const [results,setResults]     = useState({});
+  const [confirming,setConfirming] = useState(null);
+  const [running,setRunning]     = useState(null);
+
+  async function execute(cmd,key){
+    setRunning(key);
+    try{
+      const out = await cmd.run();
+      setResults(r=>({...r,[key]:{ok:true,out:String(out)}}));
+    }catch(err){
+      setResults(r=>({...r,[key]:{ok:false,out:err.message}}));
+    }
+    setRunning(null);
+    setConfirming(null);
+  }
+  function handleTap(cmd,key){
+    if(cmd.dangerous && confirming!==key){ setConfirming(key); return; }
+    execute(cmd,key);
+  }
+
+  return (
+    <div>
+      {QUICK_COMMANDS.map(group=>(
+        <div key={group.group} style={{marginBottom:14}}>
+          <div style={{fontSize:10,fontWeight:800,color:'#86efac',letterSpacing:'.03em',marginBottom:6,textTransform:'uppercase'}}>{group.group}</div>
+          {group.items.map((cmd,i)=>{
+            const key = group.group+i;
+            const res = results[key];
+            const isConfirming = confirming===key;
+            return (
+              <div key={key} style={{marginBottom:8,paddingBottom:8,borderBottom:'1px solid rgba(74,222,128,0.08)'}}>
+                <div style={{display:'flex',alignItems:'center',gap:6}}>
+                  <span style={{flex:1,fontSize:11}}>{cmd.label}</span>
+                  {isConfirming && <span onClick={()=>setConfirming(null)} style={{fontSize:10,color:'#86efac',cursor:'pointer',flexShrink:0}}>huỷ</span>}
+                  <span onClick={()=>handleTap(cmd,key)} style={{
+                    fontSize:10,fontWeight:800,padding:'4px 10px',borderRadius:999,cursor:'pointer',flexShrink:0,
+                    background:isConfirming?'#f87171':(cmd.dangerous?'transparent':'#4ade80'),
+                    color:isConfirming?'#fff':(cmd.dangerous?'#f87171':'#04150c'),
+                    border:(cmd.dangerous&&!isConfirming)?'1px solid rgba(248,113,113,0.4)':'none',
+                  }}>
+                    {running===key ? '...' : isConfirming ? 'Chắc chắn?' : 'Chạy'}
+                  </span>
+                </div>
+                {res && (
+                  <div style={{marginTop:5,padding:6,background:'rgba(0,0,0,0.3)',borderRadius:6,
+                    color:res.ok?'#86efac':'#f87171',fontSize:10,whiteSpace:'pre-wrap',wordBreak:'break-word'}}>{res.out}</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const TABS=[
   {key:'overview',label:'Tổng quan'},
+  {key:'commands',label:'Lệnh'},
   {key:'console', label:'Console'},
   {key:'storage', label:'Storage'},
   {key:'network', label:'Mạng'},
@@ -233,6 +354,8 @@ function DevIsland(){
                 <Row k="URL"             v={location.href.replace(location.origin,'')} plain small/>
               </div>
             )}
+
+            {tab==='commands' && <CommandsTab/>}
 
             {tab==='console' && (
               <div>
