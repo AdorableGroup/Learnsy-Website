@@ -844,7 +844,7 @@ function TabHome({student,lessons,loading,fetchError,onPlay,shuffleQ,shuffleA,se
   const badge=rankBadge(avgPct);
 
   return(
-    <div style={{paddingBottom:90}}>
+    <div style={{paddingBottom:90,animation:(liteMode||!flickerFx)?'none':'bb-blink 1.5s ease-in-out infinite'}}>
 
       {/* ── Hero Banner ── */}
       <div style={{
@@ -1072,11 +1072,12 @@ function TabHome({student,lessons,loading,fetchError,onPlay,shuffleQ,shuffleA,se
 }
 
 /* ══ TAB STATS ══ */
-function TabStats({history,dark}){
+function TabStats({history,dark,liteMode,flickerFx}){
   const C=dark?CD:CL;
+  const fxOff=liteMode||!flickerFx;
   if(!history.length)return(
     <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
-      minHeight:'60vh',gap:14,padding:32,textAlign:'center',animation:'bb-fadeUp .3s ease both'}}>
+      minHeight:'60vh',gap:14,padding:32,textAlign:'center',animation:fxOff?'bb-fadeUp .3s ease both':'bb-fadeUp .3s ease both, bb-blink 1.5s ease-in-out infinite'}}>
       <span style={{display:'inline-flex',color:'rgba(244,114,182,0.5)',animation:'bb-float 3s ease-in-out infinite'}}>
         <Icon name="stats" size={56} color="rgba(244,114,182,0.5)"/>
       </span>
@@ -1099,7 +1100,8 @@ function TabStats({history,dark}){
   });
 
   return(
-    <div style={{padding:'14px 14px 100px',display:'flex',flexDirection:'column',gap:14}}>
+    <div style={{padding:'14px 14px 100px',display:'flex',flexDirection:'column',gap:14,
+      animation:fxOff?'none':'bb-blink 1.5s ease-in-out infinite'}}>
 
       {/* ── Rank Card ── */}
       <div style={{
@@ -1211,12 +1213,13 @@ function TabStats({history,dark}){
 }
 
 /* ══ TAB HISTORY ══ */
-function TabHistory({history,onHistDetail,onClearHistory,dark}){
+function TabHistory({history,onHistDetail,onClearHistory,dark,liteMode,flickerFx}){
   const C=dark?CD:CL;
+  const fxOff=liteMode||!flickerFx;
   const [confirmClear,setConfirmClear]=useState(false);
   if(!history.length)return(
     <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
-      minHeight:'60vh',gap:14,padding:32,textAlign:'center',animation:'bb-fadeUp .3s ease both'}}>
+      minHeight:'60vh',gap:14,padding:32,textAlign:'center',animation:fxOff?'bb-fadeUp .3s ease both':'bb-fadeUp .3s ease both, bb-blink 1.5s ease-in-out infinite'}}>
       <span style={{display:'inline-flex',color:'rgba(244,114,182,0.5)',animation:'bb-float 3s ease-in-out infinite'}}>
         <Icon name="history" size={52} color="rgba(244,114,182,0.5)"/>
       </span>
@@ -1225,7 +1228,7 @@ function TabHistory({history,onHistDetail,onClearHistory,dark}){
     </div>
   );
   return(
-    <div style={{padding:'14px 14px 100px'}}>
+    <div style={{padding:'14px 14px 100px',animation:fxOff?'none':'bb-blink 1.5s ease-in-out infinite'}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
           <Icon name="history" size={18} color={C.accent}/>
@@ -1332,7 +1335,8 @@ function TabSettings({student,dark,setDark,shuffleQ,shuffleA,setShuffleQ,setShuf
   }
 
   return(
-    <div style={{padding:'14px 14px 100px',display:'flex',flexDirection:'column',gap:14}}>
+    <div style={{padding:'14px 14px 100px',display:'flex',flexDirection:'column',gap:14,
+      animation:(liteMode||!flickerFx)?'none':'bb-blink 1.5s ease-in-out infinite'}}>
 
       {/* ── Profile Card ── */}
       <div style={{
@@ -1707,8 +1711,8 @@ function Dashboard(props){
       {/* ── Content ── */}
       <div style={{animation:'bb-fadeUp .22s ease both',position:'relative',zIndex:1}}>
         {tab==='home'    &&<TabHome     {...{student:eff1,lessons,loading,fetchError,onPlay,shuffleQ,shuffleA,setShuffleQ,setShuffleA,history:normHistory,dark,setTab,avatarUrl,liteMode,flickerFx}}/>}
-        {tab==='stats'   &&<TabStats    {...{history:normHistory,dark}}/>}
-        {tab==='history' &&<TabHistory  {...{history:normHistory,onHistDetail,onClearHistory,dark}}/>}
+        {tab==='stats'   &&<TabStats    {...{history:normHistory,dark,liteMode,flickerFx}}/>}
+        {tab==='history' &&<TabHistory  {...{history:normHistory,onHistDetail,onClearHistory,dark,liteMode,flickerFx}}/>}
         {tab==='settings'&&<TabSettings {...{student:eff1,dark,setDark,shuffleQ,shuffleA,setShuffleQ,setShuffleA,onLogout,history:normHistory,avatarUrl,avatarLoading,onAvatarUpload:uploadAvatar,onAvatarRemove:removeAvatar,studentId:userId,liteMode,setLiteMode,flickerFx,setFlickerFx}}/>}
       </div>
 
@@ -2507,7 +2511,7 @@ function DashboardEnhanced(props){
 
         {tab==='stats'&&(
           <>
-            <TabStats history={normHistory} dark={dark}/>
+            <TabStats history={normHistory} dark={dark} liteMode={liteMode} flickerFx={flickerFx}/>
             {normHistory.length>0&&(
               <div style={{padding:'0 14px 100px'}}>
                 <WeekHeatmap history={normHistory} dark={dark}/>
@@ -2518,7 +2522,7 @@ function DashboardEnhanced(props){
 
         {tab==='history'&&(
           <TabHistory history={normHistory} onHistDetail={onHistDetail}
-            onClearHistory={onClearHistory} dark={dark}/>
+            onClearHistory={onClearHistory} dark={dark} liteMode={liteMode} flickerFx={flickerFx}/>
         )}
 
         {tab==='settings'&&(
