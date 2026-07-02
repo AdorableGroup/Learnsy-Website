@@ -41,6 +41,9 @@ const {useState}=React;
 //  (giữ nguyên logic hạt / chaos / breathing từ bản gốc Class 11A7)
 // ═══════════════════════════════════════════════════════════════
 const _hasPixi = typeof PIXI !== 'undefined';
+if (!_hasPixi) {
+  console.warn('[Plavsky] ⚠️ PIXI không tồn tại lúc file này load. Kiểm tra: (1) đã npm install pixi.js chưa, (2) trong main.js dòng "import PIXI + window.PIXI=PIXI" có đứng TRƯỚC dòng import learnsy-sparkle-settings.jsx không, (3) đã restart `npm run dev` sau khi sửa package.json chưa.');
+}
 
 const LEVEL_CFG = {
   low:   { max:500,  spawnEvery:2, burstEvery:14, prepop:220,  hues:[175,182,188,195,202] },
@@ -250,48 +253,55 @@ async function startPlavsky() {
   if (!_hasPixi || _running || _initing) return;
   _initing = true;
 
-  if (!_app) {
-    _app = new PIXI.Application();
-    await _app.init({
-      width:           window.innerWidth,
-      height:          window.innerHeight,
-      backgroundAlpha: 0,
-      antialias:       false,
-      autoDensity:     true,
-      resolution:      1,
-    });
-    _app.canvas.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:9999;'
-      + 'width:100%;height:100%;opacity:0;transition:opacity 1.2s ease;';
-    document.body.appendChild(_app.canvas);
+  try {
+    if (!_app) {
+      _app = new PIXI.Application();
+      await _app.init({
+        width:           window.innerWidth,
+        height:          window.innerHeight,
+        backgroundAlpha: 0,
+        antialias:       false,
+        autoDensity:     true,
+        resolution:      1,
+      });
+      _app.canvas.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:9999;'
+        + 'width:100%;height:100%;opacity:0;transition:opacity 1.2s ease;';
+      document.body.appendChild(_app.canvas);
 
-    const g = new PIXI.Graphics();
-    const R = 32;
-    for (let step = R; step > 0; step--) {
-      const a = Math.pow(1 - step / R, 1.5) * 0.09;
-      g.circle(R, R, step);
-      g.fill({ color: 0xffffff, alpha: a });
+      const g = new PIXI.Graphics();
+      const R = 32;
+      for (let step = R; step > 0; step--) {
+        const a = Math.pow(1 - step / R, 1.5) * 0.09;
+        g.circle(R, R, step);
+        g.fill({ color: 0xffffff, alpha: a });
+      }
+      g.circle(R, R, R * 0.18);
+      g.fill({ color: 0xffffff, alpha: 0.95 });
+      _glowTex = _app.renderer.generateTexture({ target: g });
+      g.destroy();
+
+      _container   = new PIXI.Container();
+      _app.stage.addChild(_container);
+
+      window.addEventListener('resize', () => {
+        if (_app) _app.renderer.resize(window.innerWidth, window.innerHeight);
+      });
+      _app.ticker.add(_tick);
+      console.log('[Plavsky] ✅ Khởi tạo PixiJS thành công, canvas đã gắn vào <body>, z-index:9999');
     }
-    g.circle(R, R, R * 0.18);
-    g.fill({ color: 0xffffff, alpha: 0.95 });
-    _glowTex = _app.renderer.generateTexture({ target: g });
-    g.destroy();
 
-    _container   = new PIXI.Container();
-    _app.stage.addChild(_container);
-
-    window.addEventListener('resize', () => {
-      if (_app) _app.renderer.resize(window.innerWidth, window.innerHeight);
-    });
-    _app.ticker.add(_tick);
+    _running = true; _initing = false; _frame = 0;
+    _chaosActive = false; _nextChaos = _randChaosInterval();
+    if (_pendingStop) { _pendingStop = false; stopPlavsky(); return; }
+    if (_stopTimer) { clearTimeout(_stopTimer); _stopTimer = null; }
+    _prepop();
+    _app.canvas.style.opacity = '1';
+    if (!_app.ticker.started) _app.ticker.start();
+    console.log(`[Plavsky] ▶️ Đang chạy · mức "${_level}" · ${_particles.length} hạt`);
+  } catch (err) {
+    _initing = false;
+    console.error('[Plavsky] ❌ Lỗi khởi tạo PixiJS:', err);
   }
-
-  _running = true; _initing = false; _frame = 0;
-  _chaosActive = false; _nextChaos = _randChaosInterval();
-  if (_pendingStop) { _pendingStop = false; stopPlavsky(); return; }
-  if (_stopTimer) { clearTimeout(_stopTimer); _stopTimer = null; }
-  _prepop();
-  _app.canvas.style.opacity = '1';
-  if (!_app.ticker.started) _app.ticker.start();
 }
 
 function stopPlavsky() {
