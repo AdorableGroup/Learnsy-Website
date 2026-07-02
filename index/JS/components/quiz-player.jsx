@@ -12,7 +12,8 @@ const _useRipple = typeof useRipple  !== 'undefined' ? useRipple  : () => () => 
 const _useSwipe  = typeof useSwipe   !== 'undefined' ? useSwipe   : () => ({});
 const _LETTERS   = typeof LETTERS    !== 'undefined' ? LETTERS    : ['A','B','C','D','E','F'];
 const _Heart     = typeof Heart      !== 'undefined' ? Heart
-                 : ({s,c}) => React.createElement('span',{style:{color:c,fontSize:s}},'♥');
+                 : ({s,c}) => React.createElement('svg',{width:s,height:s,viewBox:'0 0 24 24',fill:c,stroke:'none'},
+                     React.createElement('path',{d:'M12 21s-7.5-4.6-10.2-9.3C.3 8.9 1.4 5.4 4.6 4.3c2.1-.7 4.2.1 5.4 1.9.4.6.7 1.2 1 1.8.3-.6.6-1.2 1-1.8 1.2-1.8 3.3-2.6 5.4-1.9 3.2 1.1 4.3 4.6 2.8 7.4C19.5 16.4 12 21 12 21z'}));
 const _call = fn => (...a) => { try { if (typeof fn === 'function') fn(...a); } catch {} };
 
 /* ────────────────────────────────────────────────
@@ -453,7 +454,7 @@ function ScoreIsland({visible,onClose,pct,s,t,rc,questions,answers}){
 
   if(!mounted||!visible&&!leaving)return null;
 
-  const label=pct>=0.8?'Xuất sắc! 🎉':pct>=0.5?'Khá tốt! ✨':'Cần ôn thêm 📖';
+  const label=pct>=0.8?'Xuất sắc!':pct>=0.5?'Khá tốt!':'Cần ôn thêm';
   const correct=questions.filter((q2,qi)=>isAnswerCorrect(q2,answers[qi])).length;
   const wrong  =questions.length-correct;
   const pillBg='linear-gradient(135deg,rgba(14,6,14,0.97) 0%,rgba(26,10,20,0.97) 100%)';
@@ -522,8 +523,8 @@ function ScoreIsland({visible,onClose,pct,s,t,rc,questions,answers}){
       <div style={{flexShrink:0,display:'flex',flexDirection:'column',gap:3,position:'relative',zIndex:1,
         animation:'di-content-in 0.55s cubic-bezier(.34,1.3,.64,1) both',
       }}>
-        <span style={{fontSize:9,fontWeight:800,color:'#10B981',background:'rgba(16,185,129,0.15)',padding:'1px 6px',borderRadius:999}}>{correct}✓</span>
-        <span style={{fontSize:9,fontWeight:800,color:'#F87171',background:'rgba(239,68,68,0.15)',padding:'1px 6px',borderRadius:999}}>{wrong}✗</span>
+        <span style={{fontSize:9,fontWeight:800,color:'#10B981',background:'rgba(16,185,129,0.15)',padding:'1px 6px',borderRadius:999,display:'inline-flex',alignItems:'center',gap:3}}>{correct}<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+        <span style={{fontSize:9,fontWeight:800,color:'#F87171',background:'rgba(239,68,68,0.15)',padding:'1px 6px',borderRadius:999,display:'inline-flex',alignItems:'center',gap:3}}>{wrong}<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
       </div>
 
       {/* Dismiss dot */}
@@ -1047,12 +1048,15 @@ function QuizPlayer({lesson,onBack,dark,setDark,onSaveHistory}){
             {timeLeft!==null&&<TimerBadge timeLeft={timeLeft} dark={dark}/>}
             {streak>=2&&(
               <div style={{display:'flex',alignItems:'center',gap:4,padding:'4px 11px',borderRadius:999,background:'rgba(252,211,77,0.1)',border:'1.5px solid rgba(252,211,77,0.4)',boxShadow:'0 0 0 3px rgba(252,211,77,0.07)'}}>
-                <span style={{fontSize:11}}>🔥</span><span style={{fontSize:11,fontWeight:900,color:'#C89700'}}>{streak} liên tiếp</span>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="#F59E0B" stroke="none"><path d="M12 2c1 3-2 4.5-2 7.5 0 1.5 1 2.5 2 2.5s2-1 2-2.5c0-.8-.3-1.3-.6-1.9 1.8 1 3.6 3 3.6 5.9 0 3.6-2.7 6.5-6 6.5s-6-2.9-6-6.5c0-4.5 3-6 4-9 .3-.9.7-1.7 3-2z"/></svg><span style={{fontSize:11,fontWeight:900,color:'#C89700'}}>{streak} liên tiếp</span>
               </div>
             )}
             <button onClick={()=>setPracticeMode(p=>!p)} title="Xem giải thích ngay khi làm hay đợi đến lúc nộp bài"
               style={{display:'flex',alignItems:'center',gap:5,padding:'4px 11px',borderRadius:999,border:`1.5px solid ${practiceMode?'rgba(110,231,183,0.45)':QC.navBtnBorder}`,background:practiceMode?'rgba(110,231,183,0.12)':QC.navBtn,cursor:'pointer'}}>
-              <span style={{fontSize:11,fontWeight:900,color:practiceMode?'#10B981':QC.navBtnText}}>{practiceMode?'📖 Luyện tập':'📝 Thi cử'}</span>
+              {practiceMode
+                ?<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                :<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={QC.navBtnText} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>}
+              <span style={{fontSize:11,fontWeight:900,color:practiceMode?'#10B981':QC.navBtnText}}>{practiceMode?'Luyện tập':'Thi cử'}</span>
             </button>
           </div>
         )}
@@ -1094,8 +1098,8 @@ function QuizPlayer({lesson,onBack,dark,setDark,onSaveHistory}){
           <span style={{fontSize:11,fontWeight:800,color:info.c,background:QC.typeBadge,padding:'2px 10px',borderRadius:999,border:`1px solid ${info.c}22`}}>{info.l}</span>
           <div style={{display:'flex',alignItems:'center',gap:9}}>
             <button onClick={toggleFlag} title={flags[cur]?'Bỏ đánh dấu':'Đánh dấu câu này'}
-              style={{background:'none',border:'none',cursor:'pointer',padding:0,fontSize:14,lineHeight:1,opacity:flags[cur]?1:0.32,transform:flags[cur]?'scale(1.18)':'scale(1)',transition:'all .18s'}}>
-              🚩
+              style={{background:'none',border:'none',cursor:'pointer',padding:0,lineHeight:1,display:'flex',opacity:flags[cur]?1:0.32,transform:flags[cur]?'scale(1.18)':'scale(1)',transition:'all .18s'}}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill={flags[cur]?'#F87171':'none'} stroke={flags[cur]?'#F87171':'currentColor'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
             </button>
             <span style={{fontSize:11,color:QC.textMid,fontWeight:700}}>
               {cur+1} <span style={{opacity:.4}}>/</span> {total}
@@ -1168,11 +1172,13 @@ function QuizPlayer({lesson,onBack,dark,setDark,onSaveHistory}){
                   </div>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
                     <button onClick={()=>{if(submitted)return;const n=[...(answers[cur]||q.items.map(()=>null))];n[ii]=n[ii]===true?null:true;setA(n);_sfxClick();}} style={{padding:'8px 0',borderRadius:12,fontSize:12,fontWeight:800,transition:'all .18s',background:sv===true?(rowRevealed?(ok?'rgba(16,185,129,0.25)':'rgba(239,68,68,0.2)'):'rgba(16,185,129,0.18)'):'rgba(16,185,129,0.07)',color:sv===true?(rowRevealed?(ok?'#10B981':'#EF4444'):'#10B981'):'#6EE7B7',border:'1.5px solid '+(sv===true?(rowRevealed?(ok?'#10B981':'#EF4444'):'#10B981'):'rgba(110,231,183,0.35)'),cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:5}}>
-                      <span style={{fontSize:14}}>&#10003;</span> Đúng</button>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Đúng</button>
                     <button onClick={()=>{if(submitted)return;const n=[...(answers[cur]||q.items.map(()=>null))];n[ii]=n[ii]===false?null:false;setA(n);_sfxClick();}} style={{padding:'8px 0',borderRadius:12,fontSize:12,fontWeight:800,transition:'all .18s',background:sv===false?(rowRevealed?(ok?'rgba(16,185,129,0.25)':'rgba(239,68,68,0.2)'):'rgba(239,68,68,0.18)'):'rgba(239,68,68,0.07)',color:sv===false?(rowRevealed?(ok?'#10B981':'#EF4444'):'#EF4444'):'#FCA5A5',border:'1.5px solid '+(sv===false?(rowRevealed?(ok?'#10B981':'#EF4444'):'#EF4444'):'rgba(252,165,165,0.35)'),cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:5}}>
-                      <span style={{fontSize:14}}>&#10007;</span> Sai</button>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Sai</button>
                   </div>
-                  {rowRevealed&&<div style={{marginTop:6,textAlign:'right'}}><span style={{fontSize:11,fontWeight:800,color:'#C084FC',background:'rgba(196,181,253,0.15)',padding:'2px 9px',borderRadius:999}}>Đáp án: {item.answer?'✓ Đúng':'✗ Sai'}</span></div>}
+                  {rowRevealed&&<div style={{marginTop:6,textAlign:'right'}}><span style={{fontSize:11,fontWeight:800,color:'#C084FC',background:'rgba(196,181,253,0.15)',padding:'2px 9px',borderRadius:999,display:'inline-flex',alignItems:'center',gap:4}}>Đáp án: {item.answer
+                    ?<><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Đúng</>
+                    :<><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Sai</>}</span></div>}
                 </div>
               );
             })}
@@ -1200,8 +1206,8 @@ function QuizPlayer({lesson,onBack,dark,setDark,onSaveHistory}){
                 style={{display:'flex',alignItems:'center',gap:11,background:ok?'rgba(16,185,129,0.12)':bad?'rgba(239,68,68,0.1)':missed?'rgba(245,158,11,0.1)':isSel?QC.optSel:QC.optBg,border:'1.5px solid '+(ok?'#10B981':bad?'#EF4444':missed?'#F59E0B':isSel?'#B07CF0':QC.optBorder),borderRadius:16,padding:'12px 13px',cursor:'pointer',textAlign:'left',transition:'all .22s cubic-bezier(.4,0,.2,1)',width:'100%',boxShadow:isSel?QC.optShadowSel:'none',transform:isSel?'scale(1.005)':'scale(1)'}}>
                   <span style={{width:30,height:30,borderRadius:q.type==='multiple'?'50%':9,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:900,transition:'all .22s',background:isSel?(questionRevealed?(ok?'#10B981':bad?'#EF4444':'linear-gradient(135deg,#B07CF0,#8B5CF6)'):'linear-gradient(135deg,#D490FF,#8B5CF6)'):'rgba(176,124,240,0.14)',color:isSel?'#fff':'#B07CF0'}}>{_LETTERS[i]}</span>
                   <span style={{fontSize:13,lineHeight:1.7,color:QC.text2,flex:1,fontWeight:600}} dangerouslySetInnerHTML={{__html:opt}}/>
-                  {questionRevealed&&isCor&&<span style={{color:'#10B981',fontWeight:900,fontSize:15,flexShrink:0}}>&#10003;</span>}
-                  {questionRevealed&&bad&&<span style={{color:'#EF4444',fontWeight:900,fontSize:15,flexShrink:0}}>&#10007;</span>}
+                  {questionRevealed&&isCor&&<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><polyline points="20 6 9 17 4 12"/></svg>}
+                  {questionRevealed&&bad&&<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>}
                 </button>
               );
             })}
@@ -1230,11 +1236,11 @@ function QuizPlayer({lesson,onBack,dark,setDark,onSaveHistory}){
                 color:(answers[cur]||'').trim().toLowerCase()===(q.answer||'').trim().toLowerCase()?'#6EE7B7':'#FCA5A5',
                 display:'flex',alignItems:'center',gap:5}}>
                 {(answers[cur]||'').trim().toLowerCase()===(q.answer||'').trim().toLowerCase()
-                  ?'✓ Chính xác!'
-                  :`✗ Đáp án đúng: ${q.answer||'—'}`}
+                  ?<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Chính xác!</>
+                  :<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Đáp án đúng: {q.answer||'—'}</>}
               </div>
             )}
-            {!submitted&&q.hint&&<div style={{marginTop:6,fontSize:12,color:QC.textMid,fontWeight:700}}>💡 {q.hint}</div>}
+            {!submitted&&q.hint&&<div style={{marginTop:6,fontSize:12,color:QC.textMid,fontWeight:700,display:'flex',alignItems:'center',gap:5}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a6 6 0 0 0-6 6c0 2.2 1.2 3.7 2.2 4.8.6.6 1.3 1.4 1.5 2.2h4.6c.2-.8.9-1.6 1.5-2.2C16.8 11.7 18 10.2 18 8a6 6 0 0 0-6-6z"/></svg>{q.hint}</div>}
           </div>
         )}
 
@@ -1242,7 +1248,7 @@ function QuizPlayer({lesson,onBack,dark,setDark,onSaveHistory}){
         {questionRevealed&&q.explanation&&(
           <div style={{marginTop:13,background:dark?'rgba(176,124,240,0.07)':'rgba(176,124,240,0.07)',border:'1.5px solid rgba(176,124,240,0.28)',borderRadius:16,padding:'12px 14px',boxShadow:'0 2px 12px rgba(176,124,240,0.08)'}}>
             <div style={{fontSize:10,fontWeight:900,color:'#B07CF0',marginBottom:6,letterSpacing:1,display:'flex',alignItems:'center',gap:5}}>
-              <span style={{fontSize:13}}>&#128161;</span> GIẢI THÍCH
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a6 6 0 0 0-6 6c0 2.2 1.2 3.7 2.2 4.8.6.6 1.3 1.4 1.5 2.2h4.6c.2-.8.9-1.6 1.5-2.2C16.8 11.7 18 10.2 18 8a6 6 0 0 0-6-6z"/></svg> GIẢI THÍCH
             </div>
             <div style={{fontSize:13,color:QC.text2,lineHeight:1.7,fontWeight:500}} dangerouslySetInnerHTML={{__html:q.explanation}}/>
           </div>
@@ -1313,7 +1319,7 @@ function QuizPlayer({lesson,onBack,dark,setDark,onSaveHistory}){
           <div onClick={e=>e.stopPropagation()} style={{background:dark?'linear-gradient(160deg,#1A0640,#110228)':'linear-gradient(160deg,#FFF0F8,#F4E8FF)',border:`1.5px solid ${dark?'rgba(196,181,253,0.18)':'rgba(220,180,255,0.5)'}`,borderRadius:26,padding:'22px 19px',maxWidth:340,width:'100%',maxHeight:'85vh',overflowY:'auto',animation:'pop .28s cubic-bezier(.34,1.56,.64,1) both',boxShadow:dark?'0 20px 60px rgba(0,0,0,0.55)':'0 20px 60px rgba(140,60,220,0.15)'}}>
             <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:16}}>
               <span style={{fontSize:14,fontWeight:900,color:dark?'#F2EAFF':'#2D1245',flex:1}}>Thống kê bài làm</span>
-              <button onClick={()=>setShowStats(false)} style={{width:28,height:28,borderRadius:999,background:'rgba(128,100,180,0.12)',border:'none',color:dark?'#9B7FC0':'#8060A0',fontSize:16,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>&#10005;</button>
+              <button onClick={()=>setShowStats(false)} style={{width:28,height:28,borderRadius:999,background:'rgba(128,100,180,0.12)',border:'none',color:dark?'#9B7FC0':'#8060A0',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
             </div>
             <div style={{textAlign:'center',marginBottom:16}}>
               <div style={{fontSize:40,fontWeight:900,color:rc,lineHeight:1,letterSpacing:-1}}>{fmtS(pct*10)}<span style={{fontSize:18,opacity:0.35,fontWeight:700}}>/10</span></div>
@@ -1358,8 +1364,8 @@ function QuizPlayer({lesson,onBack,dark,setDark,onSaveHistory}){
       {warnModal&&(
         <div style={{position:'fixed',inset:0,background:'rgba(8,1,22,0.87)',backdropFilter:'blur(18px)',WebkitBackdropFilter:'blur(18px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:10000,padding:20}}>
           <div style={{background:dark?'linear-gradient(160deg,#1A0640,#110228)':'linear-gradient(160deg,#FFF5E8,#FFF0F6)',border:'1.5px solid rgba(252,211,77,0.3)',borderRadius:26,padding:'28px 22px',maxWidth:300,width:'100%',textAlign:'center',animation:'pop .3s cubic-bezier(.34,1.56,.64,1) both',boxShadow:dark?'0 20px 60px rgba(0,0,0,0.5)':'0 20px 60px rgba(252,211,77,0.12)'}}>
-            <div style={{width:56,height:56,borderRadius:999,background:'rgba(252,211,77,0.12)',border:'2px solid rgba(252,211,77,0.3)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 14px',fontSize:26}}>
-              &#9888;
+            <div style={{width:56,height:56,borderRadius:999,background:'rgba(252,211,77,0.12)',border:'2px solid rgba(252,211,77,0.3)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 14px'}}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#EEB800" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             </div>
             <div style={{fontSize:16,fontWeight:900,color:dark?'#FDE68A':'#C89700',marginBottom:8}}>Còn câu chưa làm!</div>
             <div style={{fontSize:13,color:dark?'#C0A0D8':'#806090',marginBottom:20,lineHeight:1.7}}>
