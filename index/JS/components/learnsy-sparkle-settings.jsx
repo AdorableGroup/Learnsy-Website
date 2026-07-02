@@ -445,6 +445,32 @@ function SparkleSettingsCard({ dark }) {
 }
 
 window.SparkleSettingsCard = SparkleSettingsCard;
+
+// ═══════════════════════════════════════════════════════════════
+//  🔧 BADGE DEBUG TẠM THỜI — xoá cả khối này sau khi fix xong
+//  Tắt nhanh không cần xoá code: localStorage.setItem('bb-sparkle-debug','0')
+// ═══════════════════════════════════════════════════════════════
+if (localStorage.getItem('bb-sparkle-debug') !== '0') {
+  const _badge = document.createElement('div');
+  _badge.style.cssText = 'position:fixed;top:56px;left:8px;z-index:999999;'
+    + 'background:rgba(0,0,0,0.88);color:#3f3;font:11px/1.6 monospace;'
+    + 'padding:8px 11px;border-radius:9px;pointer-events:none;white-space:pre;'
+    + 'border:1px solid rgba(255,255,255,0.15);';
+  document.addEventListener('DOMContentLoaded', () => document.body.appendChild(_badge));
+  if (document.body) document.body.appendChild(_badge);
+  setInterval(() => {
+    _badge.textContent =
+      'PIXI: '        + (_hasPixi ? '✅' : '❌ THIẾU') + '\n' +
+      'App tạo: '     + (_app ? '✅' : '⛔ chưa') + '\n' +
+      'Running: '     + (_running ? '✅' : '❌') + '\n' +
+      'Initing: '     + (_initing ? '⏳' : '—') + '\n' +
+      'Số hạt: '      + _particles.length + '\n' +
+      'Canvas trong DOM: ' + (_app && document.body.contains(_app.canvas) ? '✅' : '❌') + '\n' +
+      'Canvas opacity: '   + (_app ? _app.canvas.style.opacity : '—') + '\n' +
+      'body.dark class: '  + (document.body.classList.contains('dark') ? '✅' : '❌') + '\n' +
+      'sparkleOn: '        + (_sparkleOn ? '✅' : '❌') + ' · level: ' + _level;
+  }, 500);
+}
 })();
 
 /* ══ END OF LEARNSY-SPARKLE-SETTINGS.JSX ══ */
