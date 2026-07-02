@@ -34,7 +34,6 @@ import './components/learnsy-dev-island.jsx'
 import './components/listening-practice.jsx'
 import './app.jsx'
 import './ripple-haptic.jsx'
-import './swipe.jsx'
 import './components/score-client.jsx'
 import './components/pw-gate.jsx'
 
