@@ -1441,6 +1441,9 @@ function TabSettings({student,dark,setDark,shuffleQ,shuffleA,setShuffleQ,setShuf
       {/* ── Sparkle Settings Card — quản lý bởi learnsy-sparkle-settings.jsx ── */}
       {window.SparkleSettingsCard&&React.createElement(window.SparkleSettingsCard,{dark})}
 
+      {/* ── Dev Island Settings Card — quản lý bởi learnsy-dev-island.jsx ── */}
+      {window.DevIslandSettingsCard&&React.createElement(window.DevIslandSettingsCard,{dark})}
+
       {/* ── About Card ── */}
       <div style={{background:C.card,borderRadius:20,padding:'16px 18px',
         border:`1.5px solid ${dark?'rgba(244,114,182,0.15)':'rgba(244,114,182,0.15)'}`,
