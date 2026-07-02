@@ -90,6 +90,29 @@ function _runEval(code){
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  Icon SVG mặc định (không phụ thuộc learnsy-dev-icon.jsx)
+// ═══════════════════════════════════════════════════════════════
+function DevIcon({ size = 18, color = '#4ade80' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect
+        x="3" y="5" width="18" height="14" rx="2"
+        stroke={color} strokeWidth="1.8" strokeLinejoin="round"
+        fill="rgba(0,0,0,0.25)"
+      />
+      <text
+        x="6" y="14"
+        fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+        fontWeight="900"
+        fontSize="9"
+        fill={color}
+        letterSpacing="-0.5"
+      >&gt;_</text>
+    </svg>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  Style injection — morph pill↔panel (spring giống ScoreIsland) + nhấp nháy
 // ═══════════════════════════════════════════════════════════════
 function _injectStyles(){
@@ -295,6 +318,12 @@ function DevIsland(){
 
   const errCount = _logBuf.filter(l=>l.type==='error').length;
 
+  // Icon ưu tiên window.DevIslandIcon, nếu không dùng SVG mặc định
+  const IconComponent = window.DevIslandIcon || DevIcon;
+  const iconProps = (size, color) => window.DevIslandIcon
+    ? { size, color }
+    : { size, color };
+
   return (
     <div style={{
       position:'fixed',top:10,left:'50%',zIndex:999999,
@@ -312,18 +341,14 @@ function DevIsland(){
         <div onClick={toggleOpen} style={{width:40,height:40,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',position:'relative'}}>
           <span style={{position:'absolute',top:5,right:5,width:6,height:6,borderRadius:'50%',
             background:errCount>0?'#f87171':'#4ade80',animation:'bb-blink 1.3s ease-in-out infinite'}}/>
-          {window.DevIslandIcon
-            ? <window.DevIslandIcon size={18} color="#4ade80"/>
-            : <span style={{color:'#4ade80',fontSize:15,fontWeight:900}}>{'>_'}</span>}
+          <IconComponent {...iconProps(18, '#4ade80')} />
         </div>
       )}
 
       {open && (
         <div style={{display:'flex',flexDirection:'column',width:'100%',height:'100%',animation:'bb-di-content-in .3s ease .1s both'}}>
           <div style={{display:'flex',alignItems:'center',gap:8,padding:'10px 12px',borderBottom:'1px solid rgba(74,222,128,0.15)',flexShrink:0}}>
-            {window.DevIslandIcon
-              ? <window.DevIslandIcon size={16} color="#4ade80"/>
-              : <span style={{color:'#4ade80'}}>{'>_'}</span>}
+            <IconComponent {...iconProps(16, '#4ade80')} />
             <span style={{color:'#4ade80',fontWeight:800,fontSize:12,letterSpacing:'.03em',animation:'bb-blink 1.6s ease-in-out infinite'}}>DEV ISLAND</span>
             <span style={{flex:1}}/>
             <span onClick={()=>{refreshStorage();refreshNetwork();}} style={{color:'#86efac',fontSize:11,cursor:'pointer',padding:'2px 7px',border:'1px solid rgba(74,222,128,0.3)',borderRadius:7}}>↻</span>
@@ -477,6 +502,12 @@ function DevIslandSettingsCard({ dark }){
     setDevIslandOn(next);
   }
 
+  // Icon ưu tiên window.DevIslandIcon, nếu không dùng SVG mặc định
+  const IconComponent = window.DevIslandIcon || DevIcon;
+  const iconProps = (size, color) => window.DevIslandIcon
+    ? { size, color }
+    : { size, color };
+
   return (
     <div style={{
       background:C.card, borderRadius:20, padding:'16px 18px',
@@ -486,9 +517,7 @@ function DevIslandSettingsCard({ dark }){
     }}>
       <div style={{display:'flex',alignItems:'center',gap:12}}>
         <span style={{display:'inline-flex',flexShrink:0,color:on?'#4ade80':C.sub}}>
-          {window.DevIslandIcon
-            ? <window.DevIslandIcon size={20} color={on?'#4ade80':C.sub}/>
-            : <svg viewBox="0 0 24 24" fill="none" width="20" height="20"><rect x="2.5" y="4.5" width="19" height="15" rx="3" stroke="currentColor" strokeWidth="1.8"/></svg>}
+          <IconComponent {...iconProps(20, on ? '#4ade80' : C.sub)} />
         </span>
         <div style={{flex:1}}>
           <div style={{fontSize:14,fontWeight:700,color:C.fg,fontFamily:"'Baloo 2',cursive"}}>Dev Island</div>
