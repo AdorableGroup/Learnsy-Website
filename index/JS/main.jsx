@@ -37,4 +37,4 @@ import './components/score-client.jsx'
 import './components/pw-gate.jsx'
 
 
-console.log('[index] v2 ✅ loaded!')
+console.log('[index] v2 ✅ loaded!') 
