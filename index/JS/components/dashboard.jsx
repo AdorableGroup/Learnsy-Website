@@ -247,6 +247,17 @@ const {useState,useEffect,useRef,useCallback,useMemo}=React;
       0%,100% { opacity:0.5; }
       50%     { opacity:1; }
     }
+    /* Nhấp nháy kiểu "kích hoạt tương lai" — chạy 1 lần lúc icon/chữ xuất hiện */
+    @keyframes di-activate-flicker {
+      0%   { opacity:1; filter:brightness(1); }
+      6%   { opacity:0.15; filter:brightness(2.2); }
+      12%  { opacity:1; filter:brightness(1); }
+      18%  { opacity:0.2; filter:brightness(2.4); }
+      26%  { opacity:1; filter:brightness(1); }
+      34%  { opacity:0.4; filter:brightness(1.8); }
+      42%  { opacity:1; filter:brightness(1); }
+      100% { opacity:1; filter:brightness(1); }
+    }
 
     .bb-btn-tap { transition: transform 0.12s !important; }
     .bb-btn-tap:active { transform: scale(0.92) !important; }
@@ -1267,7 +1278,7 @@ function TabHistory({history,onHistDetail,onClearHistory,dark}){
 /* AvatarUploader → avatar.js */
 
 /* ══ TAB SETTINGS ══ */
-function TabSettings({student,dark,setDark,shuffleQ,shuffleA,setShuffleQ,setShuffleA,onLogout,history,avatarUrl,avatarLoading,onAvatarUpload,onAvatarRemove,studentId,liteMode,setLiteMode}){
+function TabSettings({student,dark,setDark,shuffleQ,shuffleA,setShuffleQ,setShuffleA,onLogout,history,avatarUrl,avatarLoading,onAvatarUpload,onAvatarRemove,studentId,liteMode,setLiteMode,onPreviewActivate}){
   const C=dark?CD:CL;
   const [logoutConfirm,setLogoutConfirm]=useState(false);
   const [detectState,setDetectState]=useState(null);
@@ -1280,6 +1291,12 @@ function TabSettings({student,dark,setDark,shuffleQ,shuffleA,setShuffleQ,setShuf
     setDetectState(res);
     if(res.isLow&&!liteMode){ setLiteMode(true); }
     else if(!res.isLow&&liteMode&&res.score>=80){ setLiteMode(false); }
+  }
+
+  const [activatePulse,setActivatePulse]=useState(0);
+  function handlePreviewActivate(){
+    setActivatePulse(p=>p+1); /* đổi key để CSS animation chạy lại mỗi lần bấm */
+    onPreviewActivate&&onPreviewActivate();
   }
 
   function ToggleRow({icon,label,sub,val,onChange}){
@@ -1433,6 +1450,38 @@ function TabSettings({student,dark,setDark,shuffleQ,shuffleA,setShuffleQ,setShuf
             ?<><span style={{display:'inline-flex',animation:'bb-spin 1s linear infinite'}}><Icon name="spinner" size={15} color="#a855f7"/></span> Đang đo...</>
             :<><Icon name="cpu" size={15} color="#a855f7"/> Phát hiện tự động</>
           }
+        </button>
+      </div>
+
+      {/* ── Kích hoạt hiệu ứng (demo) Card ── */}
+      <div style={{background:C.card,borderRadius:20,padding:'16px 18px',
+        border:`1.5px solid ${dark?'rgba(168,85,247,0.2)':'rgba(168,85,247,0.18)'}`,
+        animation:'bb-fadeUp .39s ease both'}}>
+        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
+          <div style={{width:32,height:32,borderRadius:10,
+            background:'rgba(168,85,247,0.14)',
+            display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <Icon name="zap" size={16} color="#a855f7"/>
+          </div>
+          <div className="bb-section-title" style={{color:C.fg}}>Hiệu ứng kích hoạt</div>
+        </div>
+        <p style={{fontSize:12,color:C.sub,marginBottom:14,lineHeight:1.55}}>
+          Bấm để xem trước hiệu ứng nhấp nháy khi mở khoá thành tích, bất cứ lúc nào bạn thích.
+        </p>
+        <button key={activatePulse} className="bb-btn-tap" onClick={handlePreviewActivate}
+          style={{
+            width:'100%',padding:'12px 0',borderRadius:14,cursor:'pointer',border:'none',
+            background:'linear-gradient(135deg,#f472b6,#a855f7)',
+            color:'#fff',fontWeight:800,fontSize:13,
+            display:'flex',alignItems:'center',justifyContent:'center',gap:8,
+            fontFamily:'Nunito,sans-serif',
+            boxShadow:'0 4px 18px rgba(168,85,247,0.35)',
+            animation: liteMode?'none':'di-activate-flicker .55s steps(1,end) 1 both',
+          }}>
+          <span style={{display:'inline-flex'}}>
+            <Icon name="zap" size={16} color="#fff"/>
+          </span>
+          Kích hoạt ngay
         </button>
       </div>
 
@@ -2014,7 +2063,7 @@ function MotivationalQuote({dark,studentName}){
 }
 
 /* ══ ACHIEVEMENT TOAST — pop-up when unlocking ══ */
-function AchievementToast({achievement,onClose,dark}){
+function AchievementToast({achievement,onClose,dark,liteMode}){
   const [leaving,setLeaving]=useState(false);
 
   useEffect(()=>{
@@ -2074,11 +2123,13 @@ function AchievementToast({achievement,onClose,dark}){
         pointerEvents:'none',
       }}/>
 
-      {/* Icon */}
+      {/* Icon — nhấp nháy kiểu "kích hoạt" 1 lần rồi mới pulse đều */}
       <div style={{
         flexShrink:0,
         display:'inline-flex',
-        animation:'di-icon-pulse 1s ease-in-out infinite',
+        animation: liteMode
+          ? 'di-icon-pulse 1s ease-in-out infinite'
+          : 'di-activate-flicker .65s steps(1,end) 1 both, di-icon-pulse 1s ease-in-out infinite .65s',
         position:'relative',zIndex:1,
       }}>
         <Icon name={achievement.icon} size={24} color={glowColor}/>
@@ -2097,15 +2148,26 @@ function AchievementToast({achievement,onClose,dark}){
           marginBottom:1,
           fontFamily:'Nunito,sans-serif',
         }}>
-          <Icon name="ribbon" size={10} color={glowColor}/> Thành tích mới!
+          <span style={{
+            display:'inline-flex',
+            animation: liteMode?'none':'di-activate-flicker .5s steps(1,end) 1 both',
+          }}>
+            <Icon name="ribbon" size={10} color={glowColor}/>
+          </span>
+          Thành tích mới!
+          {!liteMode&&(
+            <span style={{
+              display:'inline-block',width:1.5,height:9,marginLeft:1,
+              background:glowColor,borderRadius:1,
+              animation:'hud-cursor-blink .55s step-start infinite',
+            }}/>
+          )}
         </div>
-        <div style={{
-          fontFamily:"'Baloo 2',cursive",
-          fontSize:14,fontWeight:800,
-          color:'#fce4f0',
-          overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',
-          lineHeight:1.15,
-        }}>{achievement.label}</div>
+        <div style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',lineHeight:1.15}}>
+          <GlitchText color={'#fce4f0'} liteMode={liteMode} style={{fontSize:14}}>
+            {achievement.label}
+          </GlitchText>
+        </div>
       </div>
 
       {/* Tap-to-dismiss dot */}
@@ -2337,6 +2399,14 @@ function DashboardEnhanced(props){
     }
   },[normHistory]);
 
+  /* ── Test/preview kích hoạt hiệu ứng — gọi từ nút bấm trong Settings ── */
+  function triggerActivateDemo(){
+    setAchievementQueue(q=>[...q,{
+      icon:'zap', label:'Hiệu ứng kích hoạt!', color:'#a855f7',
+    }]);
+    setTimeout(()=>window.bbBurstConfetti&&window.bbBurstConfetti(window.innerWidth/2,120,24),300);
+  }
+
   /* ── Intercept play → show preview first ── */
   function handlePlay(lesson){ setPreviewLesson(lesson); }
   function confirmPlay(lesson){ setPreviewLesson(null); onPlay(lesson); }
@@ -2432,7 +2502,8 @@ function DashboardEnhanced(props){
         {tab==='settings'&&(
           <TabSettings {...{student:eff,dark,setDark,shuffleQ,shuffleA,
             setShuffleQ,setShuffleA,onLogout,history:normHistory,
-            avatarUrl,avatarLoading,onAvatarUpload:uploadAvatar,onAvatarRemove:removeAvatar,studentId:userId,liteMode,setLiteMode}}/>
+            avatarUrl,avatarLoading,onAvatarUpload:uploadAvatar,onAvatarRemove:removeAvatar,studentId:userId,liteMode,setLiteMode,
+            onPreviewActivate:triggerActivateDemo}}/>
         )}
       </div>
 
@@ -2519,6 +2590,7 @@ function DashboardEnhanced(props){
         <AchievementToast
           achievement={achievementQueue[0]}
           dark={dark}
+          liteMode={liteMode}
           onClose={()=>setAchievementQueue(q=>q.slice(1))}
         />
       )}
