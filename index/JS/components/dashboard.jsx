@@ -247,7 +247,7 @@ const {useState,useEffect,useRef,useCallback,useMemo}=React;
       0%,100% { opacity:0.5; }
       50%     { opacity:1; }
     }
-    /* Nhấp nháy kiểu "kích hoạt tương lai" — chạy 1 lần lúc icon/chữ xuất hiện */
+    /* Nhấp nháy kiểu "kích hoạt" — chạy 1 lần khi achievement toast xuất hiện */
     @keyframes di-activate-flicker {
       0%   { opacity:1; filter:brightness(1); }
       6%   { opacity:0.15; filter:brightness(2.2); }
@@ -262,6 +262,10 @@ const {useState,useEffect,useRef,useCallback,useMemo}=React;
     @keyframes bb-blink {
       0%,100% { opacity:1; }
       50%     { opacity:.32; }
+    }
+    /* Khi "kích hoạt" (mở khoá thành tích) — TOÀN BỘ icon SVG trên trang nhấp nháy cùng lúc */
+    body.bb-activate-all svg {
+      animation: di-activate-flicker .65s steps(1,end) 1 both !important;
     }
 
     .bb-btn-tap { transition: transform 0.12s !important; }
@@ -788,7 +792,7 @@ function TabBar({tab,setTab,dark,liteMode,flickerFx}){
             }}>
               <span style={{
                 display:'inline-flex',
-                animation: (liteMode||!flickerFx)?'none':`bb-blink 1.5s ease-in-out ${idx*0.15}s infinite`,
+                animation:(liteMode||!flickerFx)?'none':`bb-blink 1.5s ease-in-out ${idx*0.15}s infinite`,
               }}>
                 {TabIcons[t.id](col)}
               </span>
@@ -797,7 +801,7 @@ function TabBar({tab,setTab,dark,liteMode,flickerFx}){
               fontSize:10,fontWeight:800,letterSpacing:'0.2px',transition:'color .2s',
               color:active?C.accent:C.sub,
               display:'inline-block',
-              animation: (liteMode||!flickerFx)?'none':`bb-blink 1.5s ease-in-out ${idx*0.15}s infinite`,
+              animation:(liteMode||!flickerFx)?'none':`bb-blink 1.5s ease-in-out ${idx*0.15}s infinite`,
             }}>{t.label}</span>
             {active&&<div style={{width:4,height:4,borderRadius:'50%',background:C.accent,boxShadow:`0 0 6px ${C.accent}`}}/>}
           </button>
@@ -844,7 +848,7 @@ function TabHome({student,lessons,loading,fetchError,onPlay,shuffleQ,shuffleA,se
   const badge=rankBadge(avgPct);
 
   return(
-    <div style={{paddingBottom:90,animation:(liteMode||!flickerFx)?'none':'bb-blink 1.5s ease-in-out infinite'}}>
+    <div style={{paddingBottom:90}}>
 
       {/* ── Hero Banner ── */}
       <div style={{
@@ -1026,7 +1030,7 @@ function TabHome({student,lessons,loading,fetchError,onPlay,shuffleQ,shuffleA,se
                   background:done?`linear-gradient(135deg,${col}30,${col}18)`:(dark?'rgba(244,114,182,0.12)':'rgba(244,114,182,0.12)'),
                   display:'flex',alignItems:'center',justifyContent:'center',
                   boxShadow:done?`0 2px 10px ${col}25`:'none',
-                  animation: (liteMode||!flickerFx)?'none':`bb-blink 1.5s ease-in-out ${(i%8)*0.15}s infinite`,
+                  animation:(liteMode||!flickerFx)?'none':`bb-blink 1.5s ease-in-out ${(i%8)*0.15}s infinite`,
                 }}>
                   {l.password
                     ?<Icon name="lock" size={20} color={dark?'rgba(255,180,210,0.6)':'#be4e8a'}/>
@@ -1038,7 +1042,7 @@ function TabHome({student,lessons,loading,fetchError,onPlay,shuffleQ,shuffleA,se
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontWeight:800,fontSize:14,color:C.fg,fontFamily:"'Baloo 2',cursive",
                     overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',
-                    animation: (liteMode||!flickerFx)?'none':`bb-blink 1.5s ease-in-out ${(i%8)*0.15}s infinite`,
+                    animation:(liteMode||!flickerFx)?'none':`bb-blink 1.5s ease-in-out ${(i%8)*0.15}s infinite`,
                   }}>
                     <GlitchText color={C.fg} liteMode={liteMode} style={{fontSize:14}}>{l.title}</GlitchText>
                   </div>
@@ -1072,12 +1076,11 @@ function TabHome({student,lessons,loading,fetchError,onPlay,shuffleQ,shuffleA,se
 }
 
 /* ══ TAB STATS ══ */
-function TabStats({history,dark,liteMode,flickerFx}){
+function TabStats({history,dark}){
   const C=dark?CD:CL;
-  const fxOff=liteMode||!flickerFx;
   if(!history.length)return(
     <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
-      minHeight:'60vh',gap:14,padding:32,textAlign:'center',animation:fxOff?'bb-fadeUp .3s ease both':'bb-fadeUp .3s ease both, bb-blink 1.5s ease-in-out infinite'}}>
+      minHeight:'60vh',gap:14,padding:32,textAlign:'center',animation:'bb-fadeUp .3s ease both'}}>
       <span style={{display:'inline-flex',color:'rgba(244,114,182,0.5)',animation:'bb-float 3s ease-in-out infinite'}}>
         <Icon name="stats" size={56} color="rgba(244,114,182,0.5)"/>
       </span>
@@ -1100,8 +1103,7 @@ function TabStats({history,dark,liteMode,flickerFx}){
   });
 
   return(
-    <div style={{padding:'14px 14px 100px',display:'flex',flexDirection:'column',gap:14,
-      animation:fxOff?'none':'bb-blink 1.5s ease-in-out infinite'}}>
+    <div style={{padding:'14px 14px 100px',display:'flex',flexDirection:'column',gap:14}}>
 
       {/* ── Rank Card ── */}
       <div style={{
@@ -1213,13 +1215,12 @@ function TabStats({history,dark,liteMode,flickerFx}){
 }
 
 /* ══ TAB HISTORY ══ */
-function TabHistory({history,onHistDetail,onClearHistory,dark,liteMode,flickerFx}){
+function TabHistory({history,onHistDetail,onClearHistory,dark}){
   const C=dark?CD:CL;
-  const fxOff=liteMode||!flickerFx;
   const [confirmClear,setConfirmClear]=useState(false);
   if(!history.length)return(
     <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
-      minHeight:'60vh',gap:14,padding:32,textAlign:'center',animation:fxOff?'bb-fadeUp .3s ease both':'bb-fadeUp .3s ease both, bb-blink 1.5s ease-in-out infinite'}}>
+      minHeight:'60vh',gap:14,padding:32,textAlign:'center',animation:'bb-fadeUp .3s ease both'}}>
       <span style={{display:'inline-flex',color:'rgba(244,114,182,0.5)',animation:'bb-float 3s ease-in-out infinite'}}>
         <Icon name="history" size={52} color="rgba(244,114,182,0.5)"/>
       </span>
@@ -1228,7 +1229,7 @@ function TabHistory({history,onHistDetail,onClearHistory,dark,liteMode,flickerFx
     </div>
   );
   return(
-    <div style={{padding:'14px 14px 100px',animation:fxOff?'none':'bb-blink 1.5s ease-in-out infinite'}}>
+    <div style={{padding:'14px 14px 100px'}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
           <Icon name="history" size={18} color={C.accent}/>
@@ -1296,7 +1297,7 @@ function TabHistory({history,onHistDetail,onClearHistory,dark,liteMode,flickerFx
 /* AvatarUploader → avatar.js */
 
 /* ══ TAB SETTINGS ══ */
-function TabSettings({student,dark,setDark,shuffleQ,shuffleA,setShuffleQ,setShuffleA,onLogout,history,avatarUrl,avatarLoading,onAvatarUpload,onAvatarRemove,studentId,liteMode,setLiteMode,flickerFx,setFlickerFx,onPreviewActivate}){
+function TabSettings({student,dark,setDark,shuffleQ,shuffleA,setShuffleQ,setShuffleA,onLogout,history,avatarUrl,avatarLoading,onAvatarUpload,onAvatarRemove,studentId,liteMode,setLiteMode,flickerFx,setFlickerFx}){
   const C=dark?CD:CL;
   const [logoutConfirm,setLogoutConfirm]=useState(false);
   const [detectState,setDetectState]=useState(null);
@@ -1309,12 +1310,6 @@ function TabSettings({student,dark,setDark,shuffleQ,shuffleA,setShuffleQ,setShuf
     setDetectState(res);
     if(res.isLow&&!liteMode){ setLiteMode(true); }
     else if(!res.isLow&&liteMode&&res.score>=80){ setLiteMode(false); }
-  }
-
-  const [activatePulse,setActivatePulse]=useState(0);
-  function handlePreviewActivate(){
-    setActivatePulse(p=>p+1); /* đổi key để CSS animation chạy lại mỗi lần bấm */
-    onPreviewActivate&&onPreviewActivate();
   }
 
   function ToggleRow({icon,label,sub,val,onChange}){
@@ -1335,8 +1330,7 @@ function TabSettings({student,dark,setDark,shuffleQ,shuffleA,setShuffleQ,setShuf
   }
 
   return(
-    <div style={{padding:'14px 14px 100px',display:'flex',flexDirection:'column',gap:14,
-      animation:(liteMode||!flickerFx)?'none':'bb-blink 1.5s ease-in-out infinite'}}>
+    <div style={{padding:'14px 14px 100px',display:'flex',flexDirection:'column',gap:14}}>
 
       {/* ── Profile Card ── */}
       <div style={{
@@ -1470,38 +1464,6 @@ function TabSettings({student,dark,setDark,shuffleQ,shuffleA,setShuffleQ,setShuf
             ?<><span style={{display:'inline-flex',animation:'bb-spin 1s linear infinite'}}><Icon name="spinner" size={15} color="#a855f7"/></span> Đang đo...</>
             :<><Icon name="cpu" size={15} color="#a855f7"/> Phát hiện tự động</>
           }
-        </button>
-      </div>
-
-      {/* ── Kích hoạt hiệu ứng (demo) Card ── */}
-      <div style={{background:C.card,borderRadius:20,padding:'16px 18px',
-        border:`1.5px solid ${dark?'rgba(168,85,247,0.2)':'rgba(168,85,247,0.18)'}`,
-        animation:'bb-fadeUp .39s ease both'}}>
-        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
-          <div style={{width:32,height:32,borderRadius:10,
-            background:'rgba(168,85,247,0.14)',
-            display:'flex',alignItems:'center',justifyContent:'center'}}>
-            <Icon name="zap" size={16} color="#a855f7"/>
-          </div>
-          <div className="bb-section-title" style={{color:C.fg}}>Hiệu ứng kích hoạt</div>
-        </div>
-        <p style={{fontSize:12,color:C.sub,marginBottom:14,lineHeight:1.55}}>
-          Bấm để xem trước hiệu ứng nhấp nháy khi mở khoá thành tích, bất cứ lúc nào bạn thích.
-        </p>
-        <button key={activatePulse} className="bb-btn-tap" onClick={handlePreviewActivate}
-          style={{
-            width:'100%',padding:'12px 0',borderRadius:14,cursor:'pointer',border:'none',
-            background:'linear-gradient(135deg,#f472b6,#a855f7)',
-            color:'#fff',fontWeight:800,fontSize:13,
-            display:'flex',alignItems:'center',justifyContent:'center',gap:8,
-            fontFamily:'Nunito,sans-serif',
-            boxShadow:'0 4px 18px rgba(168,85,247,0.35)',
-            animation: (liteMode||!flickerFx)?'none':'di-activate-flicker .55s steps(1,end) 1 both',
-          }}>
-          <span style={{display:'inline-flex'}}>
-            <Icon name="zap" size={16} color="#fff"/>
-          </span>
-          Kích hoạt ngay
         </button>
       </div>
 
@@ -1711,8 +1673,8 @@ function Dashboard(props){
       {/* ── Content ── */}
       <div style={{animation:'bb-fadeUp .22s ease both',position:'relative',zIndex:1}}>
         {tab==='home'    &&<TabHome     {...{student:eff1,lessons,loading,fetchError,onPlay,shuffleQ,shuffleA,setShuffleQ,setShuffleA,history:normHistory,dark,setTab,avatarUrl,liteMode,flickerFx}}/>}
-        {tab==='stats'   &&<TabStats    {...{history:normHistory,dark,liteMode,flickerFx}}/>}
-        {tab==='history' &&<TabHistory  {...{history:normHistory,onHistDetail,onClearHistory,dark,liteMode,flickerFx}}/>}
+        {tab==='stats'   &&<TabStats    {...{history:normHistory,dark}}/>}
+        {tab==='history' &&<TabHistory  {...{history:normHistory,onHistDetail,onClearHistory,dark}}/>}
         {tab==='settings'&&<TabSettings {...{student:eff1,dark,setDark,shuffleQ,shuffleA,setShuffleQ,setShuffleA,onLogout,history:normHistory,avatarUrl,avatarLoading,onAvatarUpload:uploadAvatar,onAvatarRemove:removeAvatar,studentId:userId,liteMode,setLiteMode,flickerFx,setFlickerFx}}/>}
       </div>
 
@@ -2346,6 +2308,19 @@ function DashboardEnhanced(props){
   const prevHistLen=useRef(normHistory.length);
   const C=dark?CD:CL;
 
+  /* ── Khi có thành tích mới (achievementQueue tăng) — nhấp nháy TOÀN BỘ icon trên trang ── */
+  const prevAchQLen=useRef(0);
+  useEffect(()=>{
+    if(achievementQueue.length>prevAchQLen.current&&!liteMode&&flickerFx){
+      document.body.classList.add('bb-activate-all');
+      const t=setTimeout(()=>document.body.classList.remove('bb-activate-all'),700);
+      prevAchQLen.current=achievementQueue.length;
+      return()=>clearTimeout(t);
+    }
+    prevAchQLen.current=achievementQueue.length;
+  },[achievementQueue.length,liteMode,flickerFx]);
+
+
   function setLiteMode(val){
     setLiteModeRaw(val);
     localStorage.setItem('bb-lite-mode',val?'1':'0');
@@ -2425,14 +2400,6 @@ function DashboardEnhanced(props){
     }
   },[normHistory]);
 
-  /* ── Test/preview kích hoạt hiệu ứng — gọi từ nút bấm trong Settings ── */
-  function triggerActivateDemo(){
-    setAchievementQueue(q=>[...q,{
-      icon:'zap', label:'Hiệu ứng kích hoạt!', color:'#a855f7',
-    }]);
-    setTimeout(()=>window.bbBurstConfetti&&window.bbBurstConfetti(window.innerWidth/2,120,24),300);
-  }
-
   /* ── Intercept play → show preview first ── */
   function handlePlay(lesson){ setPreviewLesson(lesson); }
   function confirmPlay(lesson){ setPreviewLesson(null); onPlay(lesson); }
@@ -2511,7 +2478,7 @@ function DashboardEnhanced(props){
 
         {tab==='stats'&&(
           <>
-            <TabStats history={normHistory} dark={dark} liteMode={liteMode} flickerFx={flickerFx}/>
+            <TabStats history={normHistory} dark={dark}/>
             {normHistory.length>0&&(
               <div style={{padding:'0 14px 100px'}}>
                 <WeekHeatmap history={normHistory} dark={dark}/>
@@ -2522,15 +2489,14 @@ function DashboardEnhanced(props){
 
         {tab==='history'&&(
           <TabHistory history={normHistory} onHistDetail={onHistDetail}
-            onClearHistory={onClearHistory} dark={dark} liteMode={liteMode} flickerFx={flickerFx}/>
+            onClearHistory={onClearHistory} dark={dark}/>
         )}
 
         {tab==='settings'&&(
           <TabSettings {...{student:eff,dark,setDark,shuffleQ,shuffleA,
             setShuffleQ,setShuffleA,onLogout,history:normHistory,
             avatarUrl,avatarLoading,onAvatarUpload:uploadAvatar,onAvatarRemove:removeAvatar,studentId:userId,liteMode,setLiteMode,
-            flickerFx,setFlickerFx,
-            onPreviewActivate:triggerActivateDemo}}/>
+            flickerFx,setFlickerFx}}/>
         )}
       </div>
 
