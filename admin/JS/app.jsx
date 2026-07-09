@@ -302,6 +302,8 @@ function App(){
   const [leaving,setLeaving]=useState(false); // ẩn QEditors trước khi unmount — tránh Samsung WebView crash
   const [headerMenuOpen,setHeaderMenuOpen]=useState(false);
   const headerMenuRef=useRef();
+  const [sortMenuOpen,setSortMenuOpen]=useState(false);
+  const sortMenuRef=useRef();
   C=dark?CD:CL;
   // Helper: card blur style (áp dụng cho lesson cards & student cards)
   const cardBlurStyle=cardBlur==='off'?{}:{
@@ -475,6 +477,13 @@ function App(){
     document.addEventListener('touchstart',handler);
     return()=>{document.removeEventListener('mousedown',handler);document.removeEventListener('touchstart',handler);};
   },[headerMenuOpen]);
+  useEffect(()=>{
+    if(!sortMenuOpen)return;
+    const handler=(e)=>{if(sortMenuRef.current&&!sortMenuRef.current.contains(e.target))setSortMenuOpen(false);};
+    document.addEventListener('mousedown',handler);
+    document.addEventListener('touchstart',handler);
+    return()=>{document.removeEventListener('mousedown',handler);document.removeEventListener('touchstart',handler);};
+  },[sortMenuOpen]);
 
   const addQ=useCallback((t)=>{setQ(p=>[...p,newQ(t)]);setAddMenu(false);setTimeout(()=>window.scrollTo({top:9999,behavior:'smooth'}),60);},[]);
   const removeQ=useCallback((id)=>setQ(p=>p.filter(q=>q.id!==id)),[]);
@@ -695,12 +704,7 @@ function App(){
             <span className="logo-flb"><Sparkle s={13} c="#6366f1"/></span>
             <span style={{fontSize:10,fontWeight:900,color:C.lav,background:C.lavL,border:`1.5px solid ${C.border2}`,borderRadius:99,padding:'2px 7px',marginLeft:1,flexShrink:0}}>Admin</span>
             <div style={{flex:1}}/>
-            {/* Logout — luôn hiện */}
-            <button title="Đăng xuất" onClick={()=>{try{localStorage.removeItem(AUTH_KEY);}catch{}setAuthed(false);}}
-              style={{display:'flex',alignItems:'center',justifyContent:'center',width:32,height:32,borderRadius:999,border:`1.5px solid ${C.border}`,background:C.bg,color:C.text3,cursor:'pointer',flexShrink:0}}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            </button>
-            {/* Menu bung — chứa các nút còn lại */}
+            {/* Menu — gồm tất cả tuỳ chọn, kể cả đăng xuất */}
             <div ref={headerMenuRef} style={{position:'relative',flexShrink:0}}>
               <button title="Menu" onClick={()=>setHeaderMenuOpen(p=>!p)}
                 style={{display:'flex',alignItems:'center',justifyContent:'center',width:32,height:32,borderRadius:999,
@@ -766,6 +770,16 @@ function App(){
                       :<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#A855F7" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>}
                     {dark?'Sáng':'Tối'}
                   </button>
+                  {/* Đăng xuất */}
+                  <div style={{height:1,background:C.border,margin:'4px 2px'}}/>
+                  <button onClick={()=>{try{localStorage.removeItem(AUTH_KEY);}catch{}setAuthed(false);setHeaderMenuOpen(false);}}
+                    style={{display:'flex',alignItems:'center',gap:10,padding:'9px 12px',borderRadius:10,border:'none',
+                      background:'transparent',color:'#EF4444',cursor:'pointer',fontSize:13,fontWeight:800,textAlign:'left',transition:'background .12s'}}
+                    onMouseEnter={e=>e.currentTarget.style.background=dark?'rgba(239,68,68,0.14)':'#FEF2F2'}
+                    onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Đăng xuất
+                  </button>
                 </div>
               )}
             </div>
@@ -821,88 +835,100 @@ function App(){
           </div>
           </div>
 
+          {lessons.length>0&&(<>
           {/* Search bar */}
-          <div style={{position:'relative',marginBottom:6}}>
+          <div style={{position:'relative'}}>
             <input value={searchQuery} onChange={e=>setSearchQuery(e.target.value)}
               placeholder="🔍 Tìm kiếm bộ câu hỏi..."
-              style={{width:'100%',padding:'9px 14px 9px 36px',borderRadius:999,border:`1.5px solid ${searchQuery?C.lav:C.border}`,background:C.surface,color:C.text,fontSize:13,fontWeight:700,outline:'none',fontFamily:'Nunito,sans-serif',transition:'all .2s'}}/>
+              style={{width:'100%',padding:'10px 14px 10px 36px',borderRadius:999,border:`1.5px solid ${searchQuery?C.lav:C.border}`,background:C.surface,color:C.text,fontSize:13,fontWeight:700,outline:'none',fontFamily:'Nunito,sans-serif',transition:'all .2s'}}/>
             <svg style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={searchQuery?C.lav:C.text3} strokeWidth="2.5" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             {searchQuery&&<button onClick={()=>setSearchQuery('')} style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:C.text3,fontSize:16,lineHeight:1}}>×</button>}
           </div>
-          {/* Sort bar */}
-          <div style={{display:'flex',gap:6,marginBottom:8,overflowX:'auto',paddingBottom:2}}>
-            {[['newest','Mới nhất'],['oldest','Cũ nhất'],['name','Tên A-Z'],['count','Nhiều câu nhất']].map(([k,l])=>(
-              <button key={k} onClick={()=>setSortBy(k)}
-                style={{flexShrink:0,padding:'5px 13px',borderRadius:999,fontSize:11,fontWeight:800,cursor:'pointer',border:`1.5px solid ${sortBy===k?C.lav:C.border}`,background:sortBy===k?C.lavL:C.bg,color:sortBy===k?C.lav:C.text3,transition:'all .15s'}}>
-                {l}
-              </button>
-            ))}
-            <div style={{flex:1}}/>
-            {/* Blur quick toggle */}
-            <button onClick={()=>setCardBlurPersist(cardBlur==='off'?'50':cardBlur==='50'?'85':'off')}
-              title={"Blur card: "+(cardBlur==='off'?'Tắt':cardBlur+'%')}
-              style={{flexShrink:0,display:'flex',alignItems:'center',gap:4,padding:'5px 10px',borderRadius:999,fontSize:11,fontWeight:800,cursor:'pointer',
-                border:`1.5px solid ${cardBlur!=='off'?'#8B5CF6':C.border}`,
-                background:cardBlur!=='off'?C.lavL:C.bg,
-                color:cardBlur!=='off'?'#8B5CF6':C.text3,transition:'all .15s'}}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="5"/><circle cx="16" cy="16" r="5" opacity=".5"/></svg>
-              {cardBlur==='off'?'Blur':cardBlur+'%'}
-            </button>
-          </div>
 
-          {/* Subject Filter Tabs */}
+          {/* Bộ lọc + sắp xếp — gộp 8 nút rời rạc (4 sort + Blur + 3 môn) thành 1 thanh gọn */}
           {(()=>{
             const tabDefs=[
               {key:'all',text:'Tất cả',count:lessons.length},
               {key:'english',text:'Tiếng Anh',count:lessons.filter(l=>l.subject==='Tiếng Anh').length},
               {key:'other',text:'Các môn',count:lessons.filter(l=>l.subject!=='Tiếng Anh').length},
             ];
-            const TabIcon=({k})=>{
-              if(k==='all')return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16M4 10h16M4 14h8M4 18h6"/></svg>;
-              if(k==='english')return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 8l4 4-4 4"/><path d="M12 16h7"/></svg>;
-              return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>;
-            };
+            const sortDefs=[['newest','Mới nhất'],['oldest','Cũ nhất'],['name','Tên A-Z'],['count','Nhiều câu nhất']];
+            const sortLabel=(sortDefs.find(([k])=>k===sortBy)||sortDefs[0])[1];
+            const blurDefs=[['off','Tắt'],['50','50%'],['85','85%']];
             return(
-              <div style={{display:'flex',gap:7,marginBottom:4}}>
-                {tabDefs.map(({key,text,count})=>{
-                  const active=lessonFilter===key;
-                  return(
-                    <button key={key} onClick={()=>setLessonFilter(key)}
-                      style={{
-                        flex:1,padding:'8px 4px',borderRadius:13,
-                        border:`1.5px solid ${active?C.lav:C.border}`,
-                        background:active?C.grad:(dark?'#261018':'#FFFFFF'),
-                        color:active?'#fff':C.text2,
-                        fontSize:11,fontWeight:900,cursor:'pointer',transition:'all .18s',
-                        display:'flex',flexDirection:'column',alignItems:'center',gap:3,
-                        boxShadow:active?'0 4px 14px rgba(168,85,247,0.28)':'none',
-                      }}>
-                      <span style={{display:'flex',alignItems:'center',gap:4}}><TabIcon k={key}/><span style={{fontSize:11}}>{text}</span></span>
-                      <span style={{
-                        fontSize:10,fontWeight:800,
-                        background:active?'rgba(255,255,255,0.22)':'transparent',
-                        color:active?'rgba(255,255,255,0.85)':C.text3,
-                        borderRadius:99,padding:'1px 7px',
-                        border:active?'none':`1px solid ${C.border}`,
-                      }}>{count} bộ</span>
-                    </button>
-                  );
-                })}
+              <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                {/* Lọc theo môn — segmented, 3 nút cũ gộp thành 1 thanh */}
+                <div style={{display:'flex',flex:1,gap:2,padding:3,borderRadius:999,background:C.bg,border:`1.5px solid ${C.border}`,minWidth:0}}>
+                  {tabDefs.map(({key,text,count})=>{
+                    const active=lessonFilter===key;
+                    return(
+                      <button key={key} onClick={()=>setLessonFilter(key)}
+                        style={{flex:1,minWidth:0,padding:'7px 4px',borderRadius:999,border:'none',textAlign:'center',
+                          background:active?C.grad:'transparent',
+                          color:active?'#fff':C.text3,
+                          fontSize:11.5,fontWeight:800,cursor:'pointer',transition:'all .18s',
+                          whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
+                          boxShadow:active?'0 3px 10px rgba(168,85,247,0.3)':'none'}}>
+                        {text} <span style={{opacity:.72}}>· {count}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {/* Sắp xếp + độ mờ thẻ — 4 nút sort + nút Blur cũ gộp vào 1 dropdown */}
+                <div ref={sortMenuRef} style={{position:'relative',flexShrink:0}}>
+                  <button onClick={()=>setSortMenuOpen(p=>!p)}
+                    style={{display:'flex',alignItems:'center',gap:5,padding:'8px 12px',borderRadius:999,
+                      border:`1.5px solid ${sortMenuOpen?C.lav:C.border}`,
+                      background:sortMenuOpen?C.lavL:C.bg,
+                      color:sortMenuOpen?C.lav:C.text3,fontSize:11.5,fontWeight:800,cursor:'pointer',transition:'all .15s',whiteSpace:'nowrap'}}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                    {sortLabel}
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{transition:'transform .2s',transform:sortMenuOpen?'rotate(180deg)':'none'}}><polyline points="6 9 12 15 18 9"/></svg>
+                  </button>
+                  {sortMenuOpen&&(
+                    <div style={{position:'absolute',top:'calc(100% + 8px)',right:0,minWidth:196,
+                      background:dark?'#1E0D15':'#fff',border:`1.5px solid ${C.border2}`,borderRadius:16,
+                      boxShadow:'0 8px 32px rgba(168,85,247,0.18)',padding:8,zIndex:120,animation:'fadeUp .15s ease both'}}>
+                      <div style={{fontSize:10,fontWeight:800,color:C.text4,textTransform:'uppercase',letterSpacing:.5,padding:'4px 8px 6px'}}>Sắp xếp theo</div>
+                      {sortDefs.map(([k,l])=>(
+                        <button key={k} onClick={()=>{setSortBy(k);setSortMenuOpen(false);}}
+                          style={{display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',padding:'8px 10px',borderRadius:10,border:'none',
+                            background:sortBy===k?C.lavL:'transparent',color:sortBy===k?C.lav:C.text2,
+                            fontSize:12.5,fontWeight:sortBy===k?800:700,cursor:'pointer',textAlign:'left'}}>
+                          {l}
+                          {sortBy===k&&<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                        </button>
+                      ))}
+                      <div style={{height:1,background:C.border,margin:'6px 2px'}}/>
+                      <div style={{fontSize:10,fontWeight:800,color:C.text4,textTransform:'uppercase',letterSpacing:.5,padding:'6px 8px 6px'}}>Độ mờ thẻ</div>
+                      <div style={{display:'flex',gap:4,padding:'0 2px'}}>
+                        {blurDefs.map(([v,l])=>(
+                          <button key={v} onClick={()=>setCardBlurPersist(v)}
+                            style={{flex:1,padding:'6px 4px',borderRadius:8,fontSize:11,fontWeight:800,cursor:'pointer',
+                              border:`1.5px solid ${cardBlur===v?C.lav:C.border}`,
+                              background:cardBlur===v?C.lavL:'transparent',color:cardBlur===v?C.lav:C.text3,transition:'all .15s'}}>{l}</button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })()}
+          </>)}
 
           {/* Empty state */}
           {lessons.length===0&&(
-            <div style={{textAlign:'center',padding:'48px 20px',background:C.surface,border:`2px dashed ${C.border}`,borderRadius:20,marginTop:8}}>
-              <div style={{fontSize:40,marginBottom:12}}>
-                <Flower s={48} c="#FFB7C9"/>
+            <div style={{textAlign:'center',padding:'44px 20px 40px',background:C.surface,border:`1.5px dashed ${C.border2}`,borderRadius:24}}>
+              <div style={{width:76,height:76,margin:'0 auto 16px',borderRadius:'50%',background:C.gradSoft,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <Flower s={40} c="#FFB7C9"/>
               </div>
-              <div style={{fontSize:15,fontWeight:900,color:C.text2,marginBottom:6}}>Chưa có bộ câu hỏi nào</div>
-              <div style={{fontSize:12,color:C.text3,lineHeight:1.7,marginBottom:16}}>Bấm "Thêm bộ mới" để bắt đầu tạo đề thi nhé!</div>
+              <div style={{fontSize:16,fontWeight:900,color:C.text2,marginBottom:6}}>Chưa có bộ câu hỏi nào</div>
+              <div style={{fontSize:12.5,color:C.text3,lineHeight:1.7,marginBottom:20}}>Bấm nút bên dưới để tạo bộ câu hỏi<br/>đầu tiên cho lớp của bạn nhé!</div>
               <button onClick={addLesson}
-                style={{padding:'10px 24px',borderRadius:999,border:'none',background:C.grad,color:'#fff',fontSize:13,fontWeight:900,cursor:'pointer',boxShadow:'0 4px 16px rgba(168,85,247,0.25)'}}>
-                + Thêm bộ đầu tiên
+                style={{display:'inline-flex',alignItems:'center',gap:6,padding:'11px 26px',borderRadius:999,border:'none',background:C.grad,color:'#fff',fontSize:13,fontWeight:900,cursor:'pointer',boxShadow:'0 4px 16px rgba(168,85,247,0.3)'}}>
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M11 9h4v2h-4v4H9v-4H5V9h4V5h2v4z"/></svg>
+                Thêm bộ đầu tiên
               </button>
             </div>
           )}
