@@ -519,6 +519,90 @@ const rankBadge=pct=>{
 const toScore=pct=>+(pct/10).toFixed(1);
 const fmtScore=pct=>{const s=toScore(pct);return s%1===0?String(s|0):s.toFixed(1);};
 
+/* ══ ACRYLIC 3D AVATAR CARD ══
+   Thẻ mica trong suốt, viền neon phát sáng khi dark mode, tilt 3D theo con trỏ/chạm.
+   Bọc quanh LetterAvatar hiện có — không đổi logic upload/avatar.js. */
+function AcrylicAvatarCard({name,avatarUrl,dark,size=58,liteMode,verified=true}){
+  const ref=useRef(null);
+  const [tilt,setTilt]=useState({rx:0,ry:0,mx:50,my:50});
+  const resetTilt=useCallback(()=>setTilt({rx:0,ry:0,mx:50,my:50}),[]);
+
+  const handleMove=useCallback((clientX,clientY)=>{
+    if(liteMode||!ref.current)return;
+    const r=ref.current.getBoundingClientRect();
+    const px=(clientX-r.left)/r.width;
+    const py=(clientY-r.top)/r.height;
+    const ry=(px-0.5)*18;   // rotateY
+    const rx=(0.5-py)*14;   // rotateX
+    setTilt({rx,ry,mx:px*100,my:py*100});
+  },[liteMode]);
+
+  const glowColor=dark?'rgba(244,114,182,0.55)':'rgba(168,85,247,0.35)';
+  const cardBg=dark
+    ?'linear-gradient(135deg,rgba(255,255,255,0.10),rgba(244,114,182,0.06) 40%,rgba(168,85,247,0.10))'
+    :'linear-gradient(135deg,rgba(255,255,255,0.75),rgba(252,231,243,0.55) 40%,rgba(233,213,255,0.65))';
+  const borderColor=dark?'rgba(244,114,182,0.45)':'rgba(168,85,247,0.3)';
+
+  return(
+    <div
+      ref={ref}
+      onMouseMove={e=>handleMove(e.clientX,e.clientY)}
+      onMouseLeave={resetTilt}
+      onTouchMove={e=>{const t=e.touches[0];if(t)handleMove(t.clientX,t.clientY);}}
+      onTouchEnd={resetTilt}
+      style={{
+        position:'relative',flexShrink:0,
+        width:size+22,height:size+22,
+        perspective:600,
+      }}
+    >
+      <div style={{
+        position:'relative',width:'100%',height:'100%',borderRadius:18,
+        transformStyle:'preserve-3d',
+        transform:`rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg)`,
+        transition: liteMode ? 'none' : 'transform .25s cubic-bezier(.2,.8,.2,1)',
+        background:cardBg,
+        backdropFilter: liteMode?'none':'blur(6px)',
+        WebkitBackdropFilter: liteMode?'none':'blur(6px)',
+        border:`1.4px solid ${borderColor}`,
+        boxShadow: dark
+          ? `0 0 18px ${glowColor}, 0 0 4px rgba(244,114,182,0.5), 0 6px 20px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.18)`
+          : `0 6px 20px rgba(168,85,247,0.18), inset 0 1px 0 rgba(255,255,255,0.6)`,
+        display:'flex',alignItems:'center',justifyContent:'center',
+        overflow:'hidden',
+      }}>
+        {!liteMode&&(
+          <div style={{
+            position:'absolute',inset:0,pointerEvents:'none',borderRadius:18,
+            background:`radial-gradient(circle at ${tilt.mx}% ${tilt.my}%, rgba(255,255,255,${dark?0.28:0.5}) 0%, transparent 55%)`,
+            mixBlendMode:dark?'screen':'overlay',
+          }}/>
+        )}
+        {dark&&(
+          <div style={{
+            position:'absolute',inset:-1,borderRadius:18,pointerEvents:'none',
+            boxShadow:'0 0 12px rgba(244,114,182,0.35), 0 0 22px rgba(168,85,247,0.25)',
+            opacity:liteMode?0.4:0.85,
+          }}/>
+        )}
+        {verified&&(
+          <div style={{
+            position:'absolute',top:3,right:3,width:14,height:14,borderRadius:'50%',
+            background:'linear-gradient(135deg,#fde68a,#f59e0b)',
+            display:'flex',alignItems:'center',justifyContent:'center',
+            boxShadow:'0 2px 6px rgba(245,158,11,0.5)',zIndex:2,
+          }}>
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#78350f" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+        )}
+        <div style={{transform:'translateZ(16px)',position:'relative'}}>
+          <LetterAvatar name={name} size={size} dark={dark} animate avatarUrl={avatarUrl}/>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* useAvatar, LetterAvatar, AvatarUploader — lazy từ window (avatar.js) */
 const _avatarNoop=()=>({avatarUrl:null,loading:false,
   uploadAvatar:async()=>({ok:false,msg:'avatar.js chưa load'}),
@@ -866,7 +950,7 @@ function TabHome({student,lessons,loading,fetchError,onPlay,shuffleQ,shuffleA,se
           borderRadius:'50%',background:dark?'rgba(168,85,247,0.1)':'rgba(168,85,247,0.12)',pointerEvents:'none'}}/>
 
         <div style={{display:'flex',alignItems:'center',gap:14,position:'relative'}}>
-          <LetterAvatar name={student?.display_name||student?.username} size={58} dark={dark} animate avatarUrl={avatarUrl}/>
+          <AcrylicAvatarCard name={student?.display_name||student?.username} size={58} dark={dark} liteMode={liteMode} avatarUrl={avatarUrl}/>
           <div style={{flex:1,minWidth:0}}>
             <div style={{fontSize:11,color:C.accent,fontWeight:700,display:'flex',alignItems:'center',gap:4,marginBottom:2}}>
               <span style={{animation:'bb-wiggle 3s ease-in-out infinite',display:'inline-flex',color:C.accent}}>
