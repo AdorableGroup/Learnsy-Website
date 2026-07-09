@@ -169,6 +169,12 @@ const {useState,useEffect,useRef,useCallback,useMemo}=React;
       0% { transform: translateY(-10px) rotate(0deg); opacity:1; }
       100% { transform: translateY(60px) rotate(360deg); opacity:0; }
     }
+    @keyframes bb-scanline {
+      0%   { transform: translateY(-120%); opacity:0; }
+      15%  { opacity:1; }
+      85%  { opacity:1; }
+      100% { transform: translateY(420%); opacity:0; }
+    }
     @keyframes bb-pulse-ring {
       0% { box-shadow: 0 0 0 0 rgba(244,114,182,0.45); }
       70% { box-shadow: 0 0 0 12px rgba(244,114,182,0); }
@@ -603,6 +609,167 @@ function AcrylicAvatarCard({name,avatarUrl,dark,size=58,liteMode,verified=true})
   );
 }
 
+/* ══ ID CARD FULL MODAL — thẻ acrylic 3D full-size, phong cách hologram ══
+   Bấm vào avatar ở hero để mở. Ảnh thật (nếu có) được phủ filter neon/wireframe;
+   nếu không có ảnh, fallback ra LetterAvatar phóng to bên trong khung hologram. */
+function IdCardFullModal({student,avatarUrl,dark,liteMode,avgPct,streak,badge,totalDone,onClose}){
+  const cardRef=useRef(null);
+  const [tilt,setTilt]=useState({rx:0,ry:0,mx:50,my:50});
+  const resetTilt=useCallback(()=>setTilt({rx:6,ry:0,mx:50,my:35}),[]);
+  useEffect(()=>{resetTilt();},[resetTilt]);
+
+  const handleMove=useCallback((clientX,clientY)=>{
+    if(liteMode||!cardRef.current)return;
+    const r=cardRef.current.getBoundingClientRect();
+    const px=(clientX-r.left)/r.width;
+    const py=(clientY-r.top)/r.height;
+    setTilt({rx:(0.5-py)*14,ry:(px-0.5)*20,mx:px*100,my:py*100});
+  },[liteMode]);
+
+  const name=student?.display_name||student?.username||'Học sinh';
+
+  return(
+    <div style={{
+      position:'fixed',inset:0,zIndex:6000,
+      background:'radial-gradient(circle at 50% 30%, rgba(40,10,30,0.92), rgba(0,0,0,0.96))',
+      display:'flex',alignItems:'center',justifyContent:'center',
+      animation:'bb-fadeUp .2s ease both',padding:24,
+    }} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+
+      {/* Nút đóng */}
+      <button onClick={onClose} style={{
+        position:'absolute',top:20,right:20,width:36,height:36,borderRadius:'50%',
+        background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.2)',
+        display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',zIndex:2,
+      }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+
+      {/* Sparkle trang trí góc */}
+      <div style={{position:'absolute',bottom:'12%',right:'8%',opacity:0.6,animation:liteMode?'none':'bb-sparkle-rotate 4s linear infinite'}}>
+        <Icon name="sparkle" size={26} color="#fff"/>
+      </div>
+
+      <div style={{perspective:900,width:'100%',maxWidth:300}}>
+        <div
+          ref={cardRef}
+          onMouseMove={e=>handleMove(e.clientX,e.clientY)}
+          onMouseLeave={resetTilt}
+          onTouchMove={e=>{const t=e.touches[0];if(t)handleMove(t.clientX,t.clientY);}}
+          onTouchEnd={resetTilt}
+          style={{
+            position:'relative',width:'100%',aspectRatio:'0.62',borderRadius:26,
+            transformStyle:'preserve-3d',
+            transform:`rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg)`,
+            transition:liteMode?'none':'transform .3s cubic-bezier(.2,.8,.2,1)',
+            background:'linear-gradient(150deg,rgba(255,255,255,0.10),rgba(244,114,182,0.05) 45%,rgba(168,85,247,0.10))',
+            backdropFilter:liteMode?'none':'blur(10px)',
+            WebkitBackdropFilter:liteMode?'none':'blur(10px)',
+            border:'1.5px solid rgba(255,180,220,0.35)',
+            boxShadow:`0 0 30px rgba(244,114,182,0.45), 0 0 60px rgba(168,85,247,0.25), 0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.25)`,
+            overflow:'hidden',padding:'20px 18px',
+            animation:'bb-fadeUp .3s cubic-bezier(.34,1.56,.64,1) both',
+          }}
+        >
+          {/* Sheen theo con trỏ */}
+          {!liteMode&&(
+            <div style={{
+              position:'absolute',inset:0,pointerEvents:'none',
+              background:`radial-gradient(circle at ${tilt.mx}% ${tilt.my}%, rgba(255,255,255,0.22) 0%, transparent 50%)`,
+              mixBlendMode:'screen',
+            }}/>
+          )}
+          {/* Viền sáng chạy quanh mép — mô phỏng cạnh mica bắt đèn */}
+          <div style={{position:'absolute',inset:0,borderRadius:26,pointerEvents:'none',
+            background:'linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.18) 48%, transparent 62%)',
+            opacity:liteMode?0.3:0.8}}/>
+
+          {/* ── Header: avatar nhỏ + tên + verified ── */}
+          <div style={{display:'flex',alignItems:'center',gap:10,position:'relative',transform:'translateZ(20px)'}}>
+            <div style={{width:38,height:38,borderRadius:'50%',flexShrink:0,overflow:'hidden',
+              border:'1.5px solid rgba(255,255,255,0.5)',boxShadow:'0 0 10px rgba(244,114,182,0.6)'}}>
+              <LetterAvatar name={name} size={38} dark={true} animate avatarUrl={avatarUrl}/>
+            </div>
+            <div style={{flex:1,minWidth:0,color:'#fff',fontFamily:"'Baloo 2',cursive",fontSize:17,fontWeight:800,
+              overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textShadow:'0 0 12px rgba(244,114,182,0.6)'}}>
+              {name}
+            </div>
+            <div style={{width:26,height:26,borderRadius:'50%',flexShrink:0,
+              background:'linear-gradient(135deg,#fde68a,#f59e0b)',
+              display:'flex',alignItems:'center',justifyContent:'center',
+              boxShadow:'0 0 10px rgba(245,158,11,0.7)'}}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#78350f" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+          </div>
+
+          {/* ── Portrait lớn hologram wireframe ── */}
+          <div style={{
+            position:'relative',marginTop:16,borderRadius:18,overflow:'hidden',
+            height:'52%',transform:'translateZ(14px)',
+            background:'radial-gradient(circle at 50% 35%, rgba(244,114,182,0.14), rgba(0,0,0,0.35))',
+            border:'1px solid rgba(255,150,200,0.25)',
+          }}>
+            {avatarUrl?(
+              <img src={avatarUrl} alt={name} style={{
+                width:'100%',height:'100%',objectFit:'cover',
+                filter:liteMode
+                  ?'saturate(1.4) contrast(1.1)'
+                  :'saturate(0) contrast(1.3) brightness(1.05) drop-shadow(0 0 10px rgba(244,114,182,0.6))',
+                mixBlendMode:liteMode?'normal':'luminosity',
+                opacity:liteMode?1:0.92,
+              }}/>
+            ):(
+              <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <div style={{transform:'scale(2.1)'}}>
+                  <LetterAvatar name={name} size={64} dark={true} animate avatarUrl={avatarUrl}/>
+                </div>
+              </div>
+            )}
+            {/* Overlay lưới hologram + gradient màu neon quét qua ảnh */}
+            {!liteMode&&(
+              <>
+                <div style={{position:'absolute',inset:0,pointerEvents:'none',mixBlendMode:'color',
+                  background:'linear-gradient(135deg,#f472b6,#a855f7 50%,#22d3ee)'}}/>
+                <div style={{position:'absolute',inset:0,pointerEvents:'none',opacity:0.25,
+                  backgroundImage:'repeating-linear-gradient(0deg, rgba(255,255,255,0.5) 0 1px, transparent 1px 8px), repeating-linear-gradient(90deg, rgba(255,255,255,0.5) 0 1px, transparent 1px 8px)'}}/>
+                <div style={{position:'absolute',left:0,right:0,height:'26%',pointerEvents:'none',
+                  background:'linear-gradient(180deg, transparent, rgba(255,255,255,0.35), transparent)',
+                  animation:'bb-scanline 2.6s ease-in-out infinite'}}/>
+              </>
+            )}
+          </div>
+
+          {/* ── Stats dưới thẻ ── */}
+          <div style={{marginTop:14,position:'relative',transform:'translateZ(18px)',color:'rgba(255,255,255,0.85)'}}>
+            <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:8}}>
+              <span className="bb-sticker" style={{
+                background:badge.gradient,color:'#fff',padding:'3px 10px',fontSize:10,
+                boxShadow:`0 2px 8px ${badge.glow}`,display:'inline-flex',alignItems:'center',gap:4,
+              }}>
+                <Icon name={badge.icon} size={11} color="#fff"/>{badge.label}
+              </span>
+              {streak>0&&(
+                <span className="bb-sticker" style={{
+                  background:'linear-gradient(135deg,#fde68a,#fbbf24)',color:'#92400e',
+                  padding:'3px 10px',fontSize:10,boxShadow:'0 2px 8px rgba(251,191,36,0.4)',
+                  display:'inline-flex',alignItems:'center',gap:4,
+                }}>
+                  <Icon name="fire" size={11} color="#92400e"/>{streak} ngày
+                </span>
+              )}
+            </div>
+            <div style={{fontSize:10,letterSpacing:0.4,lineHeight:1.7,color:'rgba(255,255,255,0.55)',fontFamily:'monospace'}}>
+              ID: {(student?.username||'guest').toUpperCase().slice(0,14)}<br/>
+              ĐIỂM TB: {avgPct}/100 · ĐÃ HỌC: {totalDone} BÀI<br/>
+              STATUS: ĐÃ XÁC THỰC
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* useAvatar, LetterAvatar, AvatarUploader — lazy từ window (avatar.js) */
 const _avatarNoop=()=>({avatarUrl:null,loading:false,
   uploadAvatar:async()=>({ok:false,msg:'avatar.js chưa load'}),
@@ -900,6 +1067,7 @@ function TabHome({student,lessons,loading,fetchError,onPlay,shuffleQ,shuffleA,se
   const C=dark?CD:CL;
   const [search,setSearch]=useState('');
   const [subject,setSubject]=useState('all');
+  const [showIdCard,setShowIdCard]=useState(false);
   const subjects=useMemo(()=>['all',...new Set(lessons.map(l=>l.subject||'Tiếng Anh'))]  ,[lessons]);
   const filtered=useMemo(()=>lessons.filter(l=>{
     const q=search.toLowerCase();
@@ -950,7 +1118,9 @@ function TabHome({student,lessons,loading,fetchError,onPlay,shuffleQ,shuffleA,se
           borderRadius:'50%',background:dark?'rgba(168,85,247,0.1)':'rgba(168,85,247,0.12)',pointerEvents:'none'}}/>
 
         <div style={{display:'flex',alignItems:'center',gap:14,position:'relative'}}>
-          <AcrylicAvatarCard name={student?.display_name||student?.username} size={58} dark={dark} liteMode={liteMode} avatarUrl={avatarUrl}/>
+          <div onClick={()=>setShowIdCard(true)} style={{cursor:'pointer'}}>
+            <AcrylicAvatarCard name={student?.display_name||student?.username} size={58} dark={dark} liteMode={liteMode} avatarUrl={avatarUrl}/>
+          </div>
           <div style={{flex:1,minWidth:0}}>
             <div style={{fontSize:11,color:C.accent,fontWeight:700,display:'flex',alignItems:'center',gap:4,marginBottom:2}}>
               <span style={{animation:'bb-wiggle 3s ease-in-out infinite',display:'inline-flex',color:C.accent}}>
@@ -1154,6 +1324,15 @@ function TabHome({student,lessons,loading,fetchError,onPlay,shuffleQ,shuffleA,se
             );
           })}
         </div>
+      )}
+
+      {/* ── Thẻ ID Acrylic 3D (full portrait) ── */}
+      {showIdCard&&(
+        <IdCardFullModal
+          student={student} avatarUrl={avatarUrl} dark={dark} liteMode={liteMode}
+          avgPct={avgPct} streak={streak} badge={badge} totalDone={history.length}
+          onClose={()=>setShowIdCard(false)}
+        />
       )}
     </div>
   );
