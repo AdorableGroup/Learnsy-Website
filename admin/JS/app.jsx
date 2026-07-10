@@ -714,7 +714,7 @@ function App(){
                   cursor:'pointer',transition:'all .18s',boxShadow:headerMenuOpen?'0 2px 12px rgba(168,85,247,0.3)':'none'}}>
                 {headerMenuOpen
                   ?<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  :<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="7" x2="21" y2="7"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="17" x2="21" y2="17"/></svg>}
+                  :<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{filter:'drop-shadow(0 0 3px rgba(168,85,247,.6))'}}><line x1="3" y1="7" x2="21" y2="7"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="17" x2="21" y2="17"/></svg>}
               </button>
               {/* Dropdown */}
               {headerMenuOpen&&(
@@ -798,18 +798,26 @@ function App(){
           );
         })()}
         {/* BODY */}
-        {/* ── Home Tab Bar ── */}
-        <div style={{display:'flex',gap:6,padding:'10px 14px 0',borderBottom:`1.5px solid ${C.border}`,background:dark?'rgba(30,13,21,0.97)':'rgba(255,255,255,0.95)'}}>
-          {[['lessons',<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>,'Bài học'],['listening',<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 18v-6a9 9 0 0118 0v6"/><path d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3zM3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z"/></svg>,'Listening'],['students',<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,'Học sinh']].map(([k,icon,l])=>(
-            <button key={k} onClick={()=>setHomeTab(k)} style={{
-              display:'flex',alignItems:'center',gap:5,padding:'8px 16px',
-              borderRadius:'12px 12px 0 0',fontSize:13,fontWeight:800,cursor:'pointer',
-              border:`1.5px solid ${homeTab===k?C.border:'transparent'}`,
-              borderBottom:homeTab===k?`2px solid ${C.rose}`:'2px solid transparent',
-              background:homeTab===k?(dark?'rgba(255,100,150,0.08)':'rgba(255,240,248,0.8)'):'transparent',
-              color:homeTab===k?C.rose:C.text3,transition:'all .18s',
-            }}>{icon}{l}</button>
-          ))}
+        {/* ── Home Tab Bar — gộp 3 nút (Bài học/Listening/Học sinh) thành 1 thanh segmented ── */}
+        <div style={{padding:'10px 14px',borderBottom:`1.5px solid ${C.border}`,background:dark?'rgba(30,13,21,0.97)':'rgba(255,255,255,0.95)'}}>
+          <div style={{display:'flex',gap:2,padding:3,borderRadius:999,background:C.bg,border:`1.5px solid ${C.border}`}}>
+            {[['lessons',<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>,'Bài học'],['listening',<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 18v-6a9 9 0 0118 0v6"/><path d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3zM3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z"/></svg>,'Listening'],['students',<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,'Học sinh']].map(([k,icon,l])=>{
+              const active=homeTab===k;
+              return(
+                <button key={k} onClick={()=>setHomeTab(k)} style={{
+                  flex:1,minWidth:0,display:'flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 6px',
+                  borderRadius:999,border:'none',fontSize:12.5,fontWeight:800,cursor:'pointer',
+                  whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
+                  background:active?C.grad:'transparent',
+                  color:active?'#fff':C.text3,transition:'all .18s',
+                  boxShadow:active?'0 3px 10px rgba(168,85,247,0.3)':'none',
+                }}>
+                  <span style={{display:'flex',flexShrink:0,filter:active?'none':'drop-shadow(0 0 3px rgba(168,85,247,.55))'}}>{icon}</span>
+                  {l}
+                </button>
+              );
+            })}
+          </div>
         </div>
         {homeTab==='students'&&<StudentManager dark={dark} C={C} cardBlur={cardBlur} cardBlurStyle={cardBlurStyle}/>}
         {homeTab==='listening'&&ListeningManager&&<ListeningManager dark={dark} C={C} confirm_={confirm_} toast_={toast_}/>}
@@ -821,6 +829,7 @@ function App(){
               <div style={{fontSize:18,fontWeight:900,color:C.text,lineHeight:1.2}}>Bài học</div>
               <div style={{fontSize:12,color:C.text3,marginTop:2}}>{lessons.length} bài · {lessons.reduce((a,l)=>a+(l.questions?.length||0),0)} câu hỏi</div>
             </div>
+            {lessons.length>0&&(
             <button onClick={()=>confirm_({
                 iconType:'add',title:'Tạo bộ câu hỏi mới?',
                 message:'Bộ câu hỏi mới sẽ được tạo và lưu vào Supabase.',
@@ -832,6 +841,7 @@ function App(){
               <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M11 9h4v2h-4v4H9v-4H5V9h4V5h2v4z"/></svg>
               Thêm bài mới
             </button>
+            )}
           </div>
           </div>
 
@@ -841,7 +851,7 @@ function App(){
             <input value={searchQuery} onChange={e=>setSearchQuery(e.target.value)}
               placeholder="🔍 Tìm kiếm bộ câu hỏi..."
               style={{width:'100%',padding:'10px 14px 10px 36px',borderRadius:999,border:`1.5px solid ${searchQuery?C.lav:C.border}`,background:C.surface,color:C.text,fontSize:13,fontWeight:700,outline:'none',fontFamily:'Nunito,sans-serif',transition:'all .2s'}}/>
-            <svg style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={searchQuery?C.lav:C.text3} strokeWidth="2.5" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <svg style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',filter:'drop-shadow(0 0 3px rgba(168,85,247,.5))'}} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={searchQuery?C.lav:C.text3} strokeWidth="2.5" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             {searchQuery&&<button onClick={()=>setSearchQuery('')} style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:C.text3,fontSize:16,lineHeight:1}}>×</button>}
           </div>
 
@@ -881,7 +891,7 @@ function App(){
                       border:`1.5px solid ${sortMenuOpen?C.lav:C.border}`,
                       background:sortMenuOpen?C.lavL:C.bg,
                       color:sortMenuOpen?C.lav:C.text3,fontSize:11.5,fontWeight:800,cursor:'pointer',transition:'all .15s',whiteSpace:'nowrap'}}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{filter:'drop-shadow(0 0 3px rgba(168,85,247,.55))'}}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
                     {sortLabel}
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{transition:'transform .2s',transform:sortMenuOpen?'rotate(180deg)':'none'}}><polyline points="6 9 12 15 18 9"/></svg>
                   </button>
