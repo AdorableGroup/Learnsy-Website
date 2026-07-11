@@ -369,18 +369,19 @@ function StudentManager({dark, C}){
   }, [students, search, filterClass, filterStatus, sortBy]);
 
   // ── Colors ──
-  const bord = dark ? 'rgba(255,100,150,0.15)' : '#F5D5E8';
+  const bord = dark ? 'rgba(255,100,150,0.10)' : 'rgba(244,114,182,0.14)';
+  const cardShadow = dark ? '0 4px 16px rgba(0,0,0,0.35)' : '0 4px 16px rgba(216,120,170,0.10)';
   const card = dark ? 'rgba(38,16,24,0.97)' : '#fff';
   const tMain = dark ? '#F0DCE8' : '#3D1830';
   const tSub = dark ? '#8A6080' : '#A07090';
   const inBg = dark ? 'rgba(255,255,255,0.05)' : 'rgba(255,240,248,0.7)';
   const inBgF = dark ? 'rgba(255,255,255,0.08)' : '#fff';
 
-  const inputSt = {width:'100%', padding:'10px 14px', border:`1.5px solid ${bord}`, borderRadius:12, fontSize:13, fontWeight:700, color:tMain, background:inBg, outline:'none', fontFamily:"'Nunito',sans-serif", transition:'all .2s'};
+  const inputSt = {width:'100%', padding:'7px 14px', border:`1.5px solid ${bord}`, borderRadius:12, fontSize:13, fontWeight:700, color:tMain, background:inBg, outline:'none', fontFamily:"'Nunito',sans-serif", transition:'all .2s'};
   const labelSt = {display:'block', fontSize:10, fontWeight:900, color:tSub, letterSpacing:.8, textTransform:'uppercase', marginBottom:4};
   const btnPrimary = {padding:'10px 18px', borderRadius:999, border:'none', background:'linear-gradient(135deg,#F472B6,#A855F7)', color:'#fff', fontSize:13, fontWeight:900, fontFamily:"'Nunito',sans-serif", cursor:'pointer', boxShadow:'0 3px 14px rgba(168,85,247,0.28)', transition:'all .2s', display:'flex', alignItems:'center', gap:5};
   const btnGhost = {padding:'9px 16px', borderRadius:999, border:`1.5px solid ${bord}`, background:'transparent', color:tSub, fontSize:13, fontWeight:800, fontFamily:"'Nunito',sans-serif", cursor:'pointer', transition:'all .2s'};
-  const selSt = {padding:'7px 10px', border:`1.5px solid ${bord}`, borderRadius:10, fontSize:12, fontWeight:700, color:tMain, background:inBg, outline:'none', fontFamily:"'Nunito',sans-serif", cursor:'pointer'};
+  const selSt = {padding:'5px 10px', border:`1.5px solid ${bord}`, borderRadius:10, fontSize:12, fontWeight:700, color:tMain, background:inBg, outline:'none', fontFamily:"'Nunito',sans-serif", cursor:'pointer'};
 
   const active = students.filter(s => s.is_active).length;
   const locked = students.length - active;
@@ -396,7 +397,7 @@ function StudentManager({dark, C}){
           {label:'Khoá', val:locked, color:'#EF4444'},
           {label:'Lớp', val:classes.length, color:'#F472B6'},
         ].map(({label, val, color}) => (
-          <div key={label} style={{background:card, border:`1.5px solid ${bord}`, borderRadius:14, padding:'10px 8px', textAlign:'center', boxShadow:'0 2px 10px rgba(244,114,182,0.06)'}}>
+          <div key={label} style={{background:card, border:`1px solid ${bord}`, borderRadius:22, padding:'12px 8px', textAlign:'center', boxShadow:cardShadow}}>
             <div style={{fontSize:20, fontWeight:900, color, lineHeight:1}}>{val}</div>
             <div style={{fontSize:10, fontWeight:800, color:tSub, marginTop:3, letterSpacing:.5}}>{label.toUpperCase()}</div>
           </div>
@@ -404,15 +405,16 @@ function StudentManager({dark, C}){
       </div>
 
       {/* ── Header row ── */}
-      <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:10}}>
+      <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:20}}>
         <div style={{flex:1, fontSize:15, fontWeight:900, color:tMain}}>Tài khoản học sinh</div>
-        <button onClick={() => exportCSV(filtered)} title="Xuất CSV" style={{...btnGhost, padding:'8px 10px', display:'flex', alignItems:'center', gap:4, fontSize:12}}>
+        <button onClick={() => exportCSV(filtered)} title="Xuất CSV" style={{...btnGhost, padding:'8px 10px', display:'flex', alignItems:'center', gap:4, fontSize:12, background:'rgba(168,85,247,0.1)', border:'1.5px solid rgba(168,85,247,0.2)', color:'#A855F7'}}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           CSV
         </button>
         <button onClick={() => { setBulkMode(b => !b); setBulkSelected(new Set()); }} title="Chọn nhiều" style={{
           ...btnGhost, padding:'8px 10px', display:'flex', alignItems:'center', gap:4, fontSize:12,
-          ...(bulkMode ? {borderColor:'#A855F7', color:'#A855F7'} : {}),
+          background:'rgba(168,85,247,0.1)', border:'1.5px solid rgba(168,85,247,0.2)', color:'#A855F7',
+          ...(bulkMode ? {background:'#A855F7', border:'1.5px solid #A855F7', color:'#fff'} : {}),
         }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
           {bulkMode ? `${bulkSelected.size} chọn` : 'Chọn'}
@@ -486,9 +488,9 @@ function StudentManager({dark, C}){
             return (
             <div key={s.id} style={{
               background:card,
-              border:`1.5px solid ${isBulkSel ? '#A855F7' : bord}`,
+              border:`1px solid ${isBulkSel ? '#A855F7' : bord}`,
               borderRadius:16, padding:'12px 14px', display:'flex', alignItems:'center', gap:10,
-              boxShadow:isBulkSel ? '0 0 0 3px rgba(168,85,247,0.15)' : '0 2px 12px rgba(244,114,182,0.06)',
+              boxShadow:isBulkSel ? '0 0 0 3px rgba(168,85,247,0.15)' : cardShadow,
               opacity:s.is_active ? 1 : 0.55, transition:'all .2s',
             }}>
               {/* Bulk checkbox */}
@@ -502,7 +504,7 @@ function StudentManager({dark, C}){
               {/* Avatar */}
               <div title="Click để đổi ảnh đại diện"
                 onClick={() => { if (bulkMode) return; setAvatarTargetId(s.id); avatarInputRef.current?.click(); }}
-                style={{width:40, height:40, borderRadius:13, flexShrink:0, background:'linear-gradient(135deg,#F472B6,#A855F7)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:900, color:'#fff', cursor:bulkMode ? 'default' : 'pointer', position:'relative', overflow:'hidden', boxShadow:'0 2px 8px rgba(168,85,247,0.22)', transition:'box-shadow .2s'}}
+                style={{width:40, height:40, borderRadius:13, flexShrink:0, background:'linear-gradient(135deg,#F472B6,#A855F7)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:900, color:'#fff', cursor:bulkMode ? 'default' : 'pointer', position:'relative', overflow:'hidden', border: avatarUrls[s.id] ? '2px solid #fff' : 'none', boxShadow: avatarUrls[s.id] ? '0 2px 8px rgba(168,85,247,0.3)' : '0 2px 8px rgba(168,85,247,0.22)', transition:'box-shadow .2s'}}
                 onMouseEnter={e => { if (!bulkMode) { const o = e.currentTarget.querySelector('.av-overlay'); if (o) o.style.opacity = 1; }}}
                 onMouseLeave={e => { const o = e.currentTarget.querySelector('.av-overlay'); if (o) o.style.opacity = 0; }}>
                 {avatarUrls[s.id]
@@ -563,30 +565,30 @@ function StudentManager({dark, C}){
               {!bulkMode && (
               <div style={{display:'flex', gap:5, flexShrink:0}}>
                 <button title="Sửa thông tin" onClick={() => openEdit(s)}
-                  style={{width:30, height:30, borderRadius:9, border:`1.5px solid ${bord}`, background:'transparent', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:tSub, transition:'all .2s'}}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#A855F7'; e.currentTarget.style.color = '#A855F7'; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = bord; e.currentTarget.style.color = tSub; }}>
+                  style={{width:30, height:30, borderRadius:9, border:'1.5px solid rgba(168,85,247,0.28)', background:'rgba(168,85,247,0.08)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#A855F7', transition:'all .2s'}}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(168,85,247,0.16)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(168,85,247,0.08)'; }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 </button>
                 <button title="Đặt lại mật khẩu" onClick={() => {
                   if (typeof window.showConfirm === 'function') {
                     window.showConfirm({iconType:'key', title:'Đặt lại mật khẩu?', message:'Tài khoản <b>@' + s.username + '</b><br/>Mật khẩu mới sẽ được tạo tự động theo định dạng Google.', confirmLabel:'Đặt lại', confirmColor:'#A855F7', onConfirm: () => doResetPass(s)});
                   } else { if (window.confirm('Đặt lại mật khẩu cho @' + s.username + '?')) doResetPass(s); }
-                }} style={{width:30, height:30, borderRadius:9, border:`1.5px solid ${bord}`, background:'transparent', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:tSub, transition:'all .2s'}}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#F472B6'; e.currentTarget.style.color = '#F472B6'; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = bord; e.currentTarget.style.color = tSub; }}>
+                }} style={{width:30, height:30, borderRadius:9, border:`1.5px solid ${dark ? 'rgba(160,160,170,0.3)' : '#E2E2E8'}`, background:dark ? 'rgba(160,160,170,0.08)' : 'rgba(160,160,170,0.1)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:tSub, transition:'all .2s'}}
+                  onMouseEnter={e => { e.currentTarget.style.color = dark ? '#D0D0D8' : '#6B6B76'; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = tSub; }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
                 </button>
                 <button title={s.is_active ? 'Khoá tài khoản' : 'Mở khoá'} onClick={() => doToggle(s)}
-                  style={{width:30, height:30, borderRadius:9, border:`1.5px solid ${s.is_active ? 'rgba(239,68,68,0.3)' : bord}`, background:'transparent', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:s.is_active ? '#EF4444' : '#10B981', transition:'all .2s'}}>
+                  style={{width:30, height:30, borderRadius:9, border:`1.5px solid ${s.is_active ? 'rgba(245,158,11,0.32)' : 'rgba(16,185,129,0.32)'}`, background:s.is_active ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:s.is_active ? '#F59E0B' : '#10B981', transition:'all .2s'}}>
                   {s.is_active
                     ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0"/></svg>}
                 </button>
                 <button title="Xoá" onClick={() => setConfirmDel(s)}
-                  style={{width:30, height:30, borderRadius:9, border:'1.5px solid rgba(239,68,68,0.25)', background:'transparent', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#EF4444', transition:'all .2s'}}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                  style={{width:30, height:30, borderRadius:9, border:'1.5px solid rgba(239,68,68,0.3)', background:'rgba(239,68,68,0.08)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#EF4444', transition:'all .2s'}}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.16)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                 </button>
               </div>
