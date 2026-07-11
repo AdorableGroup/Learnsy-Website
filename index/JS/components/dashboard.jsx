@@ -1843,6 +1843,8 @@ window.bbTabSettings     = TabSettings;
 window.bbInjectLiteCSS   = injectLiteCSS;
 window.bbDetectPerf      = detectDevicePerformance;
 window.bbGlitchText      = GlitchText;
+window._bbCL             = CL;
+window._bbCD             = CD;
 })();
 
 /* ══════════════════════════════════════════════════════════════════
