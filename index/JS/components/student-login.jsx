@@ -52,6 +52,10 @@ import React from 'react';
             0% { opacity: 0; transform: scale(0.95); }
             100% { opacity: 1; transform: scale(1); }
           }
+          @keyframes ls-shimmer {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+          }
           .do-shake { animation: ls-shake .4s cubic-bezier(.36,.07,.19,.97) both; }
           .ls-float { animation: ls-float 4s ease-in-out infinite; }
           .ls-fadeUp { animation: ls-fadeUp .5s cubic-bezier(.16,1,.3,1) both; }
@@ -149,22 +153,28 @@ import React from 'react';
             <div style={{ textAlign: 'center', marginBottom: 28 }}>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                 <span className="ls-float">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="url(#logoGrad)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="url(#logoGrad)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <defs>
                       <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                         <stop offset="0%" stopColor="#6366F1" />
                         <stop offset="100%" stopColor="#a855f7" />
                       </linearGradient>
                     </defs>
-                    <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
-                    <path d="M6 12v5c3 3 9 3 12 0v-5" />
+                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
                   </svg>
                 </span>
-                <span style={{
-                  fontSize: 26, fontWeight: 900, letterSpacing: '-0.5px',
-                  background: 'linear-gradient(135deg, #6366F1, #a855f7)',
-                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                }}>Learnsy</span>
+                <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1 }}>
+                  <span style={{
+                    fontSize: 26, fontWeight: 900, letterSpacing: '-0.5px',
+                    background: 'linear-gradient(120deg, #6366F1, #a855f7, #f472b6, #6366F1)',
+                    backgroundSize: '300% 300%',
+                    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                    animation: 'ls-shimmer 4s ease infinite',
+                  }}>TA&amp;NA</span>
+                  <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.2px', color: tSub, marginTop: 2, opacity: 0.85, whiteSpace: 'nowrap' }}>
+                    Thu Anh &amp; Ngọc Anh
+                  </span>
+                </span>
               </div>
               
               <div style={{
@@ -202,9 +212,8 @@ import React from 'react';
                   margin: '0 auto 16px',
                   boxShadow: '0 8px 20px rgba(99, 102, 241, 0.15)',
                 }}>
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
-                    <path d="M6 12v5c3 3 9 3 12 0v-5" />
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={primary} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
                   </svg>
                 </div>
                 <div style={{ fontSize: 18, fontWeight: 900, color: tMain, marginBottom: 4 }}>Chào mừng trở lại! 📚</div>
@@ -347,7 +356,7 @@ import React from 'react';
 
             {/* Brand footer */}
             <div style={{ textAlign: 'center', marginTop: 20, fontSize: 12, color: tSub, opacity: 0.6, fontWeight: 700 }}>
-              Learnsy © 2026 · Nền tảng học tập trực tuyến
+              TA&amp;NA © 2026 · Nền tảng học tập trực tuyến
             </div>
           </div>
 
