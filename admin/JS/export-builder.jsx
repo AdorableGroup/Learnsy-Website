@@ -1153,12 +1153,12 @@ function renderShuffleBar(){
       +'<svg class="setn-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>'
     +'</button>'
     +'<div class="setn-pop" id="setn-pop">'
-      +'<div class="setn-row'+(shuffleQ?' on-q':'')+'" id="setn-row-q" onclick="toggleShuffleSetting(\'Q\')">'
+      +'<div class="setn-row'+(shuffleQ?' on-q':'')+'" id="setn-row-q" onclick="toggleShuffleSetting(\\'Q\\')">'
         +'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F472B6" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6"/></svg>'
         +'<span class="setn-row-label">Xáo thứ tự câu</span>'
         +'<div class="shuf-track"><div class="shuf-thumb"></div></div>'
       +'</div>'
-      +'<div class="setn-row'+(shuffleA?' on-a':'')+'" id="setn-row-a" onclick="toggleShuffleSetting(\'A\')">'
+      +'<div class="setn-row'+(shuffleA?' on-a':'')+'" id="setn-row-a" onclick="toggleShuffleSetting(\\'A\\')">'
         +'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#A855F7" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6"/></svg>'
         +'<span class="setn-row-label">Xáo đáp án</span>'
         +'<div class="shuf-track"><div class="shuf-thumb"></div></div>'
@@ -1689,7 +1689,6 @@ applyBgTheme(_bgKey,_bgBlur);
 
 showHome();
 <\/script>
-</script>
 </body>
 </html>`;
 }
