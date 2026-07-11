@@ -565,30 +565,24 @@ function StudentManager({dark, C}){
               {!bulkMode && (
               <div style={{display:'flex', gap:5, flexShrink:0}}>
                 <button title="Sửa thông tin" onClick={() => openEdit(s)}
-                  style={{width:30, height:30, borderRadius:9, border:'1.5px solid rgba(168,85,247,0.28)', background:'rgba(168,85,247,0.08)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#A855F7', transition:'all .2s'}}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(168,85,247,0.16)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(168,85,247,0.08)'; }}>
+                  style={{width:30, height:30, borderRadius:9, border:'1.5px solid rgba(168,85,247,0.28)', background:'rgba(168,85,247,0.08)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#A855F7', transition:'all .2s'}}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 </button>
                 <button title="Đặt lại mật khẩu" onClick={() => {
                   if (typeof window.showConfirm === 'function') {
                     window.showConfirm({iconType:'key', title:'Đặt lại mật khẩu?', message:'Tài khoản <b>@' + s.username + '</b><br/>Mật khẩu mới sẽ được tạo tự động theo định dạng Google.', confirmLabel:'Đặt lại', confirmColor:'#A855F7', onConfirm: () => doResetPass(s)});
                   } else { if (window.confirm('Đặt lại mật khẩu cho @' + s.username + '?')) doResetPass(s); }
-                }} style={{width:30, height:30, borderRadius:9, border:`1.5px solid ${dark ? 'rgba(160,160,170,0.3)' : '#E2E2E8'}`, background:dark ? 'rgba(160,160,170,0.08)' : 'rgba(160,160,170,0.1)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:tSub, transition:'all .2s'}}
-                  onMouseEnter={e => { e.currentTarget.style.color = dark ? '#D0D0D8' : '#6B6B76'; }}
-                  onMouseLeave={e => { e.currentTarget.style.color = tSub; }}>
+                }} style={{width:30, height:30, borderRadius:9, border:`1.5px solid ${dark ? 'rgba(160,160,170,0.3)' : '#E2E2E8'}`, background:dark ? 'rgba(160,160,170,0.08)' : 'rgba(160,160,170,0.1)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:tSub, transition:'all .2s'}}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
                 </button>
                 <button title={s.is_active ? 'Khoá tài khoản' : 'Mở khoá'} onClick={() => doToggle(s)}
-                  style={{width:30, height:30, borderRadius:9, border:`1.5px solid ${s.is_active ? 'rgba(245,158,11,0.32)' : 'rgba(16,185,129,0.32)'}`, background:s.is_active ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:s.is_active ? '#F59E0B' : '#10B981', transition:'all .2s'}}>
+                  style={{width:30, height:30, borderRadius:9, border:`1.5px solid ${s.is_active ? 'rgba(245,158,11,0.32)' : 'rgba(16,185,129,0.4)'}`, background:s.is_active ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.16)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:s.is_active ? '#F59E0B' : '#059669', transition:'all .2s'}}>
                   {s.is_active
                     ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0"/></svg>}
                 </button>
                 <button title="Xoá" onClick={() => setConfirmDel(s)}
-                  style={{width:30, height:30, borderRadius:9, border:'1.5px solid rgba(239,68,68,0.3)', background:'rgba(239,68,68,0.08)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#EF4444', transition:'all .2s'}}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.16)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}>
+                  style={{width:30, height:30, borderRadius:9, border:'1.5px solid rgba(239,68,68,0.3)', background:'rgba(239,68,68,0.08)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#EF4444', transition:'all .2s'}}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                 </button>
               </div>
