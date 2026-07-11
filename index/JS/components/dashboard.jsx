@@ -325,6 +325,17 @@ const {useState,useEffect,useRef,useCallback,useMemo}=React;
       font-family: 'Baloo 2', cursive;
       font-weight:800; letter-spacing:1px;
     }
+    .bb-logo-wrap { display:inline-flex; flex-direction:column; align-items:flex-start; line-height:1; }
+    .bb-logo-taNa {
+      font-weight:900; letter-spacing:-0.5px;
+      background:linear-gradient(120deg,#f472b6,#a855f7,#6366f1,#06b6d4,#10b981,#f472b6);
+      background-size:300% 300%; -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+      background-clip:text; animation:bb-shimmer 4s ease infinite;
+    }
+    .bb-logo-sub {
+      font-size:7px; font-weight:800; letter-spacing:.2px; color:#B090C8;
+      margin-top:1px; opacity:.75; white-space:nowrap;
+    }
     .bb-score-big {
       font-family: 'Baloo 2', cursive;
       font-weight:800; line-height:1;
@@ -1747,11 +1758,14 @@ function TabSettings({student,dark,setDark,shuffleQ,shuffleA,setShuffleQ,setShuf
             background:'linear-gradient(135deg,#fce7f3,#ede9fe)',
             display:'flex',alignItems:'center',justifyContent:'center',
             border:'1.5px solid rgba(244,114,182,0.25)'}}>
-            <Icon name="learnsy" size={24} color="#f472b6"/>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="url(#bbLgAbout)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <defs><linearGradient id="bbLgAbout" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#f472b6"/><stop offset="100%" stopColor="#6366f1"/></linearGradient></defs>
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+            </svg>
           </div>
           <div>
-            <div className="bb-logo-text" style={{fontSize:17,color:C.fg}}>Learnsy</div>
-            <div style={{fontSize:11,color:C.sub}}>Nền tảng luyện tập thông minh · v3</div>
+            <div className="bb-logo-taNa" style={{fontSize:17}}>TA&amp;NA</div>
+            <div style={{fontSize:11,color:C.sub}}>Thu Anh &amp; Ngọc Anh · v3</div>
             <div style={{fontSize:10,color:C.accent,marginTop:2,fontWeight:700,display:'flex',alignItems:'center',gap:3}}>
               Made with <Icon name="heart" size={10} color={C.accent}/> for you~
             </div>
@@ -1802,230 +1816,7 @@ function TabSettings({student,dark,setDark,shuffleQ,shuffleA,setShuffleQ,setShuf
   );
 }
 
-/* ══ DASHBOARD SHELL ══ */
-function Dashboard(props){
-  const {student,lessons,loading,fetchError,history,dark,setDark,
-    onPlay,onClearHistory,onHistDetail,shuffleQ,shuffleA,setShuffleQ,setShuffleA,onLogout}=props;
-
-  const normHistory=useMemo(()=>(history||[]).map(h=>({
-    ...h,
-    pct:(h.total>0&&h.score!=null)?Math.round(h.score/h.total*100):(h.pct!=null?h.pct:0),
-  })),[history]);
-
-  const [tab,setTab]=useState('home');
-  const [showExpSheet,setShowExpSheet]=useState(false);
-  const [expSel,setExpSel]=useState({});
-  const [liteMode,setLiteModeRaw]=useState(()=>localStorage.getItem('bb-lite-mode')==='1');
-  const [flickerFx,setFlickerFxRaw]=useState(()=>localStorage.getItem('bb-flicker-fx')!=='0');
-  function setFlickerFx(val){ setFlickerFxRaw(val); localStorage.setItem('bb-flicker-fx',val?'1':'0'); }
-  const C=dark?CD:CL;
-
-  function setLiteMode(val){
-    setLiteModeRaw(val);
-    localStorage.setItem('bb-lite-mode',val?'1':'0');
-    injectLiteCSS(val);
-  }
-
-  /* ── Auto perf check khi student vừa login (null → có giá trị) ── */
-  const prevStudentRef=useRef(null);
-  useEffect(()=>{
-    const wasNull=prevStudentRef.current==null;
-    const hasNow=!!(student?.id||student?.username);
-    prevStudentRef.current=student;
-    if(!wasNull||!hasNow)return; /* chỉ chạy lần đầu sau login */
-    if(sessionStorage.getItem('bb-perf-checked')==='1')return; /* đã check ở login screen rồi */
-    runLoginPerfCheck().then(r=>{ if(r.liteMode&&!liteMode) setLiteMode(true); });
-  },[student]); // eslint-disable-line
-
-  // ── Sync display_name từ Supabase (khớp với student-manager) ──
-  const [liveStudent1,setLiveStudent1]=useState(student);
-  const fetchStudentInfo1=useCallback(async()=>{
-    if(!student?.id&&!student?.username)return;
-    try{
-      const q=student?.id
-        ?window.supa.from('students').select('id,username,display_name,class_name').eq('id',student.id).single()
-        :window.supa.from('students').select('id,username,display_name,class_name').eq('username',student.username).single();
-      const{data}=await q;
-      if(data)setLiveStudent1(s=>({...s,...data}));
-    }catch(e){}
-  },[student?.id,student?.username]);
-  useEffect(()=>{
-    fetchStudentInfo1();
-    window.addEventListener('learnsy:student-saved',fetchStudentInfo1);
-    return()=>window.removeEventListener('learnsy:student-saved',fetchStudentInfo1);
-  },[fetchStudentInfo1]);
-  const eff1=liveStudent1||student;
-
-  // Avatar
-  const userId=eff1?.id||eff1?.username;
-  const {avatarUrl,loading:avatarLoading,uploadAvatar,removeAvatar}=useAvatar(userId);
-
-  useEffect(()=>{
-    // Khởi tạo lite mode từ localStorage
-    const saved=localStorage.getItem('bb-lite-mode')==='1';
-    if(saved) injectLiteCSS(true);
-  },[]);
-
-  useEffect(()=>{
-    // Dark mode class — background được quản lý bởi background-settings.js
-    if(window.applyBackground&&window.loadBgSettings){
-      window.applyBackground(window.loadBgSettings());
-    }
-  },[dark]);
-
-  useEffect(()=>{
-    // Sparkle particles (Plavsky) — quản lý bởi learnsy-sparkle-settings.jsx
-    window.bbApplySparkle&&window.bbApplySparkle(dark);
-  },[dark]);
-
-  const tabTitles={home:'Trang chủ',stats:'Thống kê',history:'Lịch sử',settings:'Cài đặt'};
-
-  return(
-    <div style={{maxWidth:760,margin:'0 auto',minHeight:'100vh',color:C.fg,position:'relative',fontFamily:'Nunito,sans-serif'}}>
-      {!liteMode&&<FloatingDecos dark={dark}/>}
-
-      {/* ── Top Bar ── */}
-      <div style={{
-        position:'sticky',top:0,zIndex:100,
-        background:dark?'rgba(18,0,12,0.93)':'rgba(255,245,250,0.93)',
-        backdropFilter:'blur(20px)',
-        borderBottom:`1px solid ${dark?'rgba(244,114,182,0.2)':'rgba(244,114,182,0.18)'}`,
-        padding:'11px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',
-        boxShadow:dark?'0 2px 20px rgba(244,114,182,0.1)':'0 2px 20px rgba(244,114,182,0.08)',
-      }}>
-        <div className="bb-logo-text" style={{fontSize:19,color:C.fg,display:'flex',alignItems:'center',gap:5}}>
-          <span style={{animation:'bb-heartbeat 2.5s ease-in-out infinite',display:'inline-flex',color:'#f472b6'}}>
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="#f472b6"><path d="M12 2C9.5 2 8 4 8 4S6.5 2 4 2C1.5 2 0 4 0 6.5c0 4 4 7 8 10.5C12 13.5 16 10.5 16 6.5 16 4 14.5 2 12 2z" transform="translate(4,1)"/><circle cx="12" cy="20" r="1.5" fill="#f9a8d4"/><circle cx="7" cy="18" r="1" fill="#f9a8d4"/><circle cx="17" cy="18" r="1" fill="#f9a8d4"/></svg>
-          </span>
-          Learnsy
-          <span style={{animation:'bb-sparkle-rotate 3s linear infinite',display:'inline-flex',color:'#f9a8d4',opacity:0.85}}>
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="#f9a8d4"><path d="M12 0l2.59 9.41L24 12l-9.41 2.59L12 24l-2.59-9.41L0 12l9.41-2.59z"/></svg>
-          </span>
-        </div>
-        <div style={{fontSize:13,fontWeight:700,color:C.sub}}>{tabTitles[tab]}</div>
-        <div style={{display:'flex',alignItems:'center',gap:8}}>
-          <button className="bb-dm-btn" onClick={()=>{
-              const sel={};(lessons||[]).forEach((_,i)=>{sel[i]=true;});
-              setExpSel(sel);setShowExpSheet(true);
-            }}
-            style={{
-              width:38,height:38,borderRadius:12,
-              background:dark?'rgba(244,114,182,0.1)':'rgba(244,114,182,0.08)',
-              border:`1.5px solid ${dark?'rgba(244,114,182,0.25)':'rgba(244,114,182,0.22)'}`,
-              display:'flex',alignItems:'center',justifyContent:'center',
-              transition:'all .25s cubic-bezier(.34,1.56,.64,1)',
-            }}>
-            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#f472b6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          </button>
-          <button className="bb-dm-btn" onClick={()=>setDark(d=>!d)}
-            style={{
-              width:38,height:38,borderRadius:12,
-              background:dark?'rgba(245,158,11,0.15)':'rgba(168,85,247,0.1)',
-              border:`1.5px solid ${dark?'rgba(245,158,11,0.3)':'rgba(168,85,247,0.25)'}`,
-              display:'flex',alignItems:'center',justifyContent:'center',
-              transition:'all .25s cubic-bezier(.34,1.56,.64,1)',
-            }}>
-            {dark
-              ?<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-              :<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#a855f7" strokeWidth="2" strokeLinecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-            }
-          </button>
-        </div>
-      </div>
-
-      {/* ── Content ── */}
-      <div style={{animation:'bb-fadeUp .22s ease both',position:'relative',zIndex:1}}>
-        {tab==='home'    &&<TabHome     {...{student:eff1,lessons,loading,fetchError,onPlay,shuffleQ,shuffleA,setShuffleQ,setShuffleA,history:normHistory,dark,setTab,avatarUrl,liteMode,flickerFx}}/>}
-        {tab==='stats'   &&<TabStats    {...{history:normHistory,dark}}/>}
-        {tab==='history' &&<TabHistory  {...{history:normHistory,onHistDetail,onClearHistory,dark}}/>}
-        {tab==='settings'&&<TabSettings {...{student:eff1,dark,setDark,shuffleQ,shuffleA,setShuffleQ,setShuffleA,onLogout,history:normHistory,avatarUrl,avatarLoading,onAvatarUpload:uploadAvatar,onAvatarRemove:removeAvatar,studentId:userId,liteMode,setLiteMode,flickerFx,setFlickerFx}}/>}
-      </div>
-
-      <>
-      <TabBar tab={tab} setTab={setTab} dark={dark} liteMode={liteMode} flickerFx={flickerFx}/>
-
-      {showExpSheet&&(
-        <>
-          <div onClick={()=>setShowExpSheet(false)} style={{position:'fixed',inset:0,background:'rgba(10,2,25,0.72)',zIndex:8800,backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}}/>
-          <div style={{position:'fixed',bottom:0,left:'50%',transform:'translateX(-50%)',width:'100%',maxWidth:760,zIndex:8801,borderRadius:'28px 28px 0 0',padding:'20px 20px 36px',background:'linear-gradient(160deg,#1E0845,#120330)',borderTop:'1.5px solid rgba(255,150,200,0.2)',boxShadow:'0 -12px 60px rgba(168,85,247,0.3)'}}>
-            <div style={{width:36,height:4,borderRadius:99,background:'rgba(255,255,255,0.15)',margin:'0 auto 18px'}}/>
-            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F472B6" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              <span style={{fontSize:15,fontWeight:900,color:'#F0DCE8',flex:1}}>Tải bài về máy</span>
-              <button onClick={()=>setShowExpSheet(false)} style={{background:'none',border:'none',cursor:'pointer',padding:4,color:'#8A6080',display:'flex'}}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              </button>
-            </div>
-            <p style={{fontSize:12,color:'#8A6080',marginBottom:14,lineHeight:1.6}}>File HTML hoạt động offline, không cần internet.</p>
-            <div style={{display:'flex',gap:7,marginBottom:12}}>
-              <button onClick={()=>{const s={};(lessons||[]).forEach((_,i)=>{s[i]=true;});setExpSel(s);}}
-                style={{padding:'5px 13px',borderRadius:999,border:'1.5px solid rgba(244,114,182,0.3)',background:'rgba(244,114,182,0.08)',color:'#F9A8D4',fontSize:11,fontWeight:800,cursor:'pointer',fontFamily:'Nunito,sans-serif'}}>Chọn tất cả</button>
-              <button onClick={()=>setExpSel({})}
-                style={{padding:'5px 13px',borderRadius:999,border:'1.5px solid rgba(168,85,247,0.3)',background:'rgba(168,85,247,0.08)',color:'#C084FC',fontSize:11,fontWeight:800,cursor:'pointer',fontFamily:'Nunito,sans-serif'}}>Bỏ chọn</button>
-            </div>
-            <div style={{maxHeight:'38vh',overflowY:'auto',display:'flex',flexDirection:'column',gap:6,marginBottom:16,paddingRight:2}}>
-              {(lessons||[]).map((l,i)=>(
-                <div key={i} onClick={()=>setExpSel(s=>({...s,[i]:!s[i]}))}
-                  style={{display:'flex',alignItems:'center',gap:10,padding:'9px 12px',borderRadius:14,border:`1.5px solid ${expSel[i]?'rgba(168,85,247,0.6)':'rgba(255,150,200,0.15)'}`,background:expSel[i]?'rgba(168,85,247,0.1)':'rgba(255,255,255,0.04)',cursor:'pointer',transition:'all .15s'}}>
-                  <div style={{width:18,height:18,borderRadius:6,border:`1.5px solid ${expSel[i]?'#A855F7':'rgba(255,255,255,0.2)'}`,background:expSel[i]?'linear-gradient(135deg,#F472B6,#A855F7)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'all .15s'}}>
-                    {expSel[i]&&<svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1.5 6 4.5 9 10.5 3"/></svg>}
-                  </div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:13,fontWeight:800,color:'#F0DCE8',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{l.password?'🔒 ':''}{l.title||'Chưa đặt tên'}</div>
-                    <div style={{fontSize:11,color:'#8A6080',marginTop:2}}>{(l.questions||[]).length} câu hỏi</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div style={{display:'flex',gap:8}}>
-              <button onClick={()=>{
-                const selected=(lessons||[]).filter((_,i)=>expSel[i]);
-                if(!selected.length){alert('Chọn ít nhất 1 bài nhé!');return;}
-                if(typeof window.buildExportLiteHTML==='function'){
-                  const html=window.buildExportLiteHTML(selected);
-                  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
-                  const url=URL.createObjectURL(blob);
-                  const a=document.createElement('a');
-                  const name=selected.length===1?(selected[0].title||'learnsy-quiz'):'learnsy-'+selected.length+'bai';
-                  a.href=url;a.download=name.replace(/[<>:"/\\|?*]/g,'').trim()+'.html';
-                  document.body.appendChild(a);a.click();
-                  setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1000);
-                  setShowExpSheet(false);
-                }
-              }} style={{flex:1,padding:'11px 0',borderRadius:999,border:'1.5px solid rgba(255,150,200,0.3)',background:'transparent',color:'#F9A8D4',fontSize:13,fontWeight:800,cursor:'pointer',fontFamily:'Nunito,sans-serif'}}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" style={{display:'inline',verticalAlign:-2,marginRight:4}}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Lite
-              </button>
-              <button onClick={()=>{
-                const selected=(lessons||[]).filter((_,i)=>expSel[i]);
-                if(!selected.length){alert('Chọn ít nhất 1 bài nhé!');return;}
-                if(typeof window.buildExportHTML==='function'){
-                  const html=window.buildExportHTML(selected);
-                  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
-                  const url=URL.createObjectURL(blob);
-                  const a=document.createElement('a');
-                  const name=selected.length===1?(selected[0].title||'learnsy-quiz'):'learnsy-'+selected.length+'bai';
-                  a.href=url;a.download=name.replace(/[<>:"/\\|?*]/g,'').trim()+'.html';
-                  document.body.appendChild(a);a.click();
-                  setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1000);
-                  setShowExpSheet(false);
-                }
-              }} style={{flex:1,padding:'11px 0',borderRadius:999,border:'none',background:'linear-gradient(135deg,#F472B6,#A855F7)',color:'#fff',fontSize:13,fontWeight:800,cursor:'pointer',fontFamily:'Nunito,sans-serif',boxShadow:'0 4px 18px rgba(168,85,247,0.35)'}}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" style={{display:'inline',verticalAlign:-2,marginRight:4}}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Full (âm thanh)
-              </button>
-            </div>
-          </div>
-        </>
-      )}
-      </>
-    </div>
-  );
-}
-
-window.Dashboard=Dashboard;
-window._bbCL=CL;
-window._bbCD=CD;
+/* ══ DASHBOARD SHELL ══ (biến 'Dashboard' legacy đã gỡ — DashboardEnhanced phía dưới luôn ghi đè window.Dashboard nên bản cũ là code chết) ══ */
 
 /* ══ RE-EXPORT HELPERS (must be inside IIFE — these reference local vars) ══ */
 window.bbScoreSVG        = ScoreSVG;
@@ -2682,13 +2473,19 @@ function DashboardEnhanced(props){
         padding:'11px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',
         boxShadow:dark?'0 2px 20px rgba(244,114,182,0.1)':'0 2px 20px rgba(244,114,182,0.08)',
       }}>
-        <div className="bb-logo-text" style={{fontSize:19,color:C.fg,display:'flex',alignItems:'center',gap:5}}>
-          <span style={{animation:'bb-heartbeat 2.5s ease-in-out infinite',display:'inline-flex',color:'#f472b6'}}>
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="#f472b6"><path d="M12 2C9.5 2 8 4 8 4S6.5 2 4 2C1.5 2 0 4 0 6.5c0 4 4 7 8 10.5C12 13.5 16 10.5 16 6.5 16 4 14.5 2 12 2z" transform="translate(4,1)"/><circle cx="12" cy="20" r="1.5" fill="#f9a8d4"/><circle cx="7" cy="18" r="1" fill="#f9a8d4"/><circle cx="17" cy="18" r="1" fill="#f9a8d4"/></svg>
+        <div style={{display:'flex',alignItems:'center',gap:6}}>
+          <span style={{animation:'bb-float 2.8s ease-in-out infinite',display:'inline-flex'}}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="url(#bbLgH)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <defs><linearGradient id="bbLgH" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#f472b6"/><stop offset="100%" stopColor="#6366f1"/></linearGradient></defs>
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+            </svg>
           </span>
-          Learnsy
+          <span className="bb-logo-wrap">
+            <span className="bb-logo-taNa" style={{fontSize:19}}>TA&amp;NA</span>
+            <span className="bb-logo-sub">Thu Anh &amp; Ngọc Anh</span>
+          </span>
           <span style={{animation:'bb-sparkle-rotate 3s linear infinite',display:'inline-flex',opacity:0.85}}>
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="#f9a8d4"><path d="M12 0l2.59 9.41L24 12l-9.41 2.59L12 24l-2.59-9.41L0 12l9.41-2.59z"/></svg>
+            <svg width="12" height="12" viewBox="0 0 20 20" fill="#6366f1"><path d="M10 0 L11.5 8.5 L20 10 L11.5 11.5 L10 20 L8.5 11.5 L0 10 L8.5 8.5 Z"/></svg>
           </span>
         </div>
         <div style={{fontSize:13,fontWeight:700,color:C.sub}}>{tabTitles[tab]}</div>
