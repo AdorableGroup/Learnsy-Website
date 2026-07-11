@@ -710,7 +710,7 @@ function App(){
                 <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
               </svg>
             </span>
-            <span className="logo-learnsy">Learnsy</span>
+            <span className="logo-learnsy">TA&amp;NA</span>
             <span className="logo-flb"><Sparkle s={13} c="#6366f1"/></span>
             <span style={{fontSize:10,fontWeight:900,color:C.lav,background:C.lavL,border:`1.5px solid ${C.border2}`,borderRadius:99,padding:'2px 7px',marginLeft:1,flexShrink:0}}>Admin</span>
             <div style={{flex:1}}/>
@@ -1228,7 +1228,7 @@ function App(){
                   <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
                 </svg>
               </span>
-              <span className="logo-learnsy">Learnsy</span>
+              <span className="logo-learnsy">TA&amp;NA</span>
               <span className="logo-flb"><Sparkle s={12} c="#6366f1"/></span>
               <span style={{fontSize:10,fontWeight:900,color:C.lav,background:C.lavL,border:`1.5px solid ${C.border2}`,borderRadius:99,padding:'2px 8px',marginLeft:2,flexShrink:0,display:'inline-flex',alignItems:'center',gap:3}}><Sparkle s={10} c={C.lav}/>Quiz Builder</span>
             </div>

@@ -211,7 +211,7 @@ function LoginScreen({onAuth, dark}){
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
             <span className="logo-fl"><IconBook /></span>
-            <span className="logo-learnsy" style={{ fontSize: 28 }}>Learnsy</span>
+            <span className="logo-learnsy" style={{ fontSize: 28 }}>TA&amp;NA</span>
             <span className="logo-flb"><IconSparkle /></span>
           </div>
           <div style={{
@@ -359,7 +359,7 @@ function LoginScreen({onAuth, dark}){
         </div>
 
         <div style={{ textAlign: 'center', marginTop: 16, fontSize: 11, color: tSub, opacity: .6, fontWeight: 600 }}>
-          Learnsy Admin · Chỉ dành cho giáo viên
+          TA&amp;NA Admin · Chỉ dành cho giáo viên
         </div>
       </div>
     </div>
