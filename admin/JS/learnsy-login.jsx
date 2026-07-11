@@ -211,7 +211,10 @@ function LoginScreen({onAuth, dark}){
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
             <span className="logo-fl"><IconBook /></span>
-            <span className="logo-learnsy" style={{ fontSize: 28 }}>TA&amp;NA</span>
+            <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1 }}>
+              <span className="logo-learnsy" style={{ fontSize: 28 }}>TA&amp;NA</span>
+              <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.2px', color: tSub, marginTop: 2, opacity: 0.75, whiteSpace: 'nowrap' }}>Thu Anh &amp; Ngọc Anh</span>
+            </span>
             <span className="logo-flb"><IconSparkle /></span>
           </div>
           <div style={{

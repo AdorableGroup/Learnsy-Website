@@ -306,6 +306,8 @@ function App(){
   const headerMenuRef=useRef();
   const [sortMenuOpen,setSortMenuOpen]=useState(false);
   const sortMenuRef=useRef();
+  const [homeTabMenuOpen,setHomeTabMenuOpen]=useState(false);
+  const homeTabMenuRef=useRef();
   const [cardMenuOpenId,setCardMenuOpenId]=useState(null);
   C=dark?CD:CL;
   // Helper: card blur style (áp dụng cho lesson cards & student cards)
@@ -487,6 +489,13 @@ function App(){
     document.addEventListener('touchstart',handler);
     return()=>{document.removeEventListener('mousedown',handler);document.removeEventListener('touchstart',handler);};
   },[sortMenuOpen]);
+  useEffect(()=>{
+    if(!homeTabMenuOpen)return;
+    const handler=(e)=>{if(homeTabMenuRef.current&&!homeTabMenuRef.current.contains(e.target))setHomeTabMenuOpen(false);};
+    document.addEventListener('mousedown',handler);
+    document.addEventListener('touchstart',handler);
+    return()=>{document.removeEventListener('mousedown',handler);document.removeEventListener('touchstart',handler);};
+  },[homeTabMenuOpen]);
   useEffect(()=>{
     if(!cardMenuOpenId)return;
     const handler=(e)=>{if(!e.target.closest('[data-card-menu]'))setCardMenuOpenId(null);};
@@ -710,7 +719,10 @@ function App(){
                 <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
               </svg>
             </span>
-            <span className="logo-learnsy">TA&amp;NA</span>
+            <span className="logo-wrap" style={{display:'inline-flex',flexDirection:'column',alignItems:'flex-start',lineHeight:1}}>
+              <span className="logo-learnsy">TA&amp;NA</span>
+              <span style={{fontSize:7,fontWeight:800,letterSpacing:'.2px',color:C.text3,marginTop:1,opacity:0.75,whiteSpace:'nowrap'}}>Thu Anh &amp; Ngọc Anh</span>
+            </span>
             <span className="logo-flb"><Sparkle s={13} c="#6366f1"/></span>
             <span style={{fontSize:10,fontWeight:900,color:C.lav,background:C.lavL,border:`1.5px solid ${C.border2}`,borderRadius:99,padding:'2px 7px',marginLeft:1,flexShrink:0}}>Admin</span>
             <div style={{flex:1}}/>
@@ -808,36 +820,71 @@ function App(){
           );
         })()}
         {/* BODY */}
-        {/* ── Home Tab Bar — gộp 3 nút (Bài học/Listening/Học sinh) thành 1 thanh segmented ── */}
+        {/* ── Home Tab Switcher — 1 nút pill, bấm bung dropdown mini giống menu header ── */}
         <div style={{padding:'10px 14px',borderBottom:`1.5px solid ${C.border}`,background:dark?'rgba(30,13,21,0.97)':'rgba(255,255,255,0.95)'}}>
-          <div style={{display:'flex',gap:2,padding:3,borderRadius:999,background:C.bg,border:`1.5px solid ${C.border}`}}>
-            {[['lessons',<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>,'Bài học'],['listening',<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 18v-6a9 9 0 0118 0v6"/><path d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3zM3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z"/></svg>,'Listening'],['students',<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,'Học sinh']].map(([k,icon,l])=>{
-              const active=homeTab===k;
-              return(
-                <button key={k} onClick={()=>setHomeTab(k)} style={{
-                  flex:1,minWidth:0,display:'flex',alignItems:'center',justifyContent:'center',gap:5,padding:'8px 6px',
-                  borderRadius:999,border:'none',fontSize:12.5,fontWeight:800,cursor:'pointer',
-                  whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
-                  background:active?C.grad:'transparent',
-                  color:active?'#fff':C.text3,transition:'all .18s',
-                  boxShadow:active?'0 3px 10px rgba(168,85,247,0.3)':'none',
+          {(()=>{
+            const HOME_TABS=[
+              ['lessons',<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>,'Bài học'],
+              ['listening',<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 18v-6a9 9 0 0118 0v6"/><path d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3zM3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z"/></svg>,'Listening'],
+              ['students',<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,'Học sinh'],
+            ];
+            const cur=HOME_TABS.find(t=>t[0]===homeTab)||HOME_TABS[0];
+            return(
+              <div ref={homeTabMenuRef} style={{position:'relative'}}>
+                <button onClick={()=>setHomeTabMenuOpen(p=>!p)} style={{
+                  display:'flex',alignItems:'center',gap:8,padding:'9px 14px',width:'100%',
+                  borderRadius:16,border:`1.5px solid ${homeTabMenuOpen?C.lav:'transparent'}`,
+                  background:C.grad,color:'#fff',fontSize:13,fontWeight:800,cursor:'pointer',
+                  boxShadow:'0 3px 14px rgba(168,85,247,0.28)',transition:'all .2s cubic-bezier(.34,1.56,.64,1)',
                 }}>
-                  <span style={{display:'flex',flexShrink:0,filter:active?'none':'drop-shadow(0 0 3px rgba(168,85,247,.55))'}}>{icon}</span>
-                  {l}
+                  <span style={{display:'flex',flexShrink:0}}>{cur[1]}</span>
+                  <span style={{flex:1,textAlign:'left'}}>{cur[2]}</span>
+                  <span style={{display:'flex',flexShrink:0,transition:'transform .25s cubic-bezier(.34,1.56,.64,1)',transform:homeTabMenuOpen?'rotate(180deg)':'rotate(0deg)'}}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  </span>
                 </button>
-              );
-            })}
-          </div>
+                {homeTabMenuOpen&&(
+                  <div style={{
+                    position:'absolute',top:'calc(100% + 8px)',left:0,right:0,zIndex:120,
+                    background:dark?'#1E0D15':'#fff',border:`1.5px solid ${C.border2}`,borderRadius:18,
+                    boxShadow:'0 10px 34px rgba(168,85,247,0.2)',padding:6,
+                    display:'flex',flexDirection:'column',gap:3,
+                    animation:'fadeUp .18s cubic-bezier(.16,1,.3,1) both',transformOrigin:'top center',
+                  }}>
+                    {HOME_TABS.map(([k,icon,l])=>{
+                      const active=homeTab===k;
+                      return(
+                        <button key={k} onClick={()=>{setHomeTab(k);setHomeTabMenuOpen(false);}} style={{
+                          display:'flex',alignItems:'center',gap:10,padding:'10px 12px',borderRadius:12,border:'none',
+                          background:active?C.lavL:'transparent',color:active?C.lav:C.text2,
+                          fontSize:13.5,fontWeight:active?900:700,cursor:'pointer',textAlign:'left',
+                          transition:'background .15s',
+                        }}
+                          onMouseEnter={e=>{if(!active)e.currentTarget.style.background=C.rosePale;}}
+                          onMouseLeave={e=>{if(!active)e.currentTarget.style.background='transparent';}}>
+                          <span style={{display:'flex',flexShrink:0}}>{icon}</span>
+                          {l}
+                          {active&&<span style={{marginLeft:'auto',display:'flex'}}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                          </span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
         {homeTab==='students'&&<StudentManager dark={dark} C={C} cardBlur={cardBlur} cardBlurStyle={cardBlurStyle}/>}
         {homeTab==='listening'&&ListeningManager&&<ListeningManager dark={dark} C={C} confirm_={confirm_} toast_={toast_}/>}
-        <div style={{display:homeTab==='lessons'?'flex':'none',padding:'16px 12px 100px',flexDirection:'column',gap:10}} className="fade-up">
+        <div style={{display:homeTab==='lessons'?'flex':'none',padding:'16px 12px 100px',flexDirection:'column',gap:16}} className="fade-up">
           {/* Stats + Add button */}
-          <div style={{paddingBottom:12,marginBottom:2,borderBottom:`2px solid ${C.border}`}}>
+          <div style={{paddingBottom:16,marginBottom:2,borderBottom:`1.5px solid ${C.border}`}}>
           <div style={{display:'flex',alignItems:'center',gap:10}}>
             <div style={{flex:1}}>
               <div style={{fontSize:18,fontWeight:900,color:C.text,lineHeight:1.2}}>Bài học</div>
-              <div style={{fontSize:12,color:C.text3,marginTop:2}}>{lessons.length} bài · {lessons.reduce((a,l)=>a+(l.questions?.length||0),0)} câu hỏi</div>
+              <div style={{fontSize:12,color:C.text3,marginTop:4}}>{lessons.length} bài · {lessons.reduce((a,l)=>a+(l.questions?.length||0),0)} câu hỏi</div>
             </div>
             {lessons.length>0&&(
             <button onClick={()=>confirm_({
@@ -973,38 +1020,38 @@ function App(){
             const dtCount=(l.questions||[]).filter(q=>q.type==='fill_blank').length;
             return(
               <div key={l.id} onClick={()=>{setEditingId(l.id);setTab('build');}}
-                style={{background:C.surface,...cardBlurStyle,border:`1.5px solid ${C.border}`,borderRadius:20,padding:'14px 16px',display:'flex',alignItems:'center',gap:12,boxShadow:`0 2px 14px rgba(255,100,150,0.09),0 0 0 1px ${C.border}`,cursor:'pointer',transition:'all .18s',animation:`fadeUp .2s ${idx*0.04}s both`}}
-                onMouseEnter={e=>{e.currentTarget.style.boxShadow=`0 6px 24px rgba(168,85,247,0.18),0 0 0 1.5px ${C.lav2}`;e.currentTarget.style.borderColor=C.lav2;e.currentTarget.style.transform='translateY(-1px)';}}
-                onMouseLeave={e=>{e.currentTarget.style.boxShadow=`0 2px 14px rgba(255,100,150,0.09),0 0 0 1px ${C.border}`;e.currentTarget.style.borderColor=C.border;e.currentTarget.style.transform='translateY(0)';}}>
-                {/* Icon — đổi màu xanh lạc tông cũ sang tím-hồng gradient nhẹ, đồng bộ theme */}
-                <div style={{width:44,height:44,borderRadius:14,background:C.gradSoft,border:`1.5px solid ${C.border2}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={C.lav} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                style={{background:C.surface,...cardBlurStyle,border:'none',borderRadius:24,padding:'18px 18px',display:'flex',alignItems:'center',gap:14,boxShadow:dark?'0 4px 18px rgba(0,0,0,0.28)':'0 4px 18px rgba(168,85,247,0.10)',cursor:'pointer',transition:'all .2s cubic-bezier(.34,1.56,.64,1)',animation:`fadeUp .2s ${idx*0.04}s both`}}
+                onMouseEnter={e=>{e.currentTarget.style.boxShadow=dark?'0 8px 28px rgba(0,0,0,0.36)':'0 8px 28px rgba(168,85,247,0.18)';e.currentTarget.style.transform='translateY(-2px)';}}
+                onMouseLeave={e=>{e.currentTarget.style.boxShadow=dark?'0 4px 18px rgba(0,0,0,0.28)':'0 4px 18px rgba(168,85,247,0.10)';e.currentTarget.style.transform='translateY(0)';}}>
+                {/* Icon — tím pastel dịu, không dùng tím đậm gốc để mềm mắt hơn */}
+                <div style={{width:52,height:52,borderRadius:18,background:dark?'rgba(192,132,252,0.14)':'linear-gradient(135deg,#FDEBF3,#F3ECFC)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={dark?'#D8B4FE':'#C4A0F0'} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
                     <line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="13" y2="13"/>
                   </svg>
                 </div>
                 {/* Info — gộp môn học + số câu vào 1 dòng meta thay vì để rời trên pill bên phải, title không còn bị bóp */}
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:15,fontWeight:800,color:C.text,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{l.title||'Chưa đặt tên'}</div>
-                  <div style={{fontSize:11.5,color:C.text3,fontWeight:700,marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{l.subject||'Tiếng Anh'} · {qCount} câu</div>
+                  <div style={{fontSize:15.5,fontWeight:800,color:C.text,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{l.title||'Chưa đặt tên'}</div>
+                  <div style={{fontSize:12,color:C.text3,fontWeight:700,marginTop:4,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{l.subject||'Tiếng Anh'} · {qCount} câu</div>
                   {(qCount>0||l.password)&&(
-                    <div style={{display:'flex',gap:5,marginTop:6,flexWrap:'wrap'}}>
-                      {l.password&&<span style={{fontSize:9,fontWeight:800,color:'#6366f1',background:'#EEF2FF',border:'1px solid #C7D2FE',borderRadius:99,padding:'1px 6px',display:'inline-flex',alignItems:'center',gap:3}}><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Mật khẩu</span>}
-                      {tfCount>0&&<span style={{fontSize:9,fontWeight:800,color:'#A855F7',background:C.lavL,border:`1px solid ${C.border2}`,borderRadius:99,padding:'1px 6px'}}>{tfCount} ĐS</span>}
-                      {tnCount>0&&<span style={{fontSize:9,fontWeight:800,color:'#10B981',background:C.mintL,border:'1px solid #BBF7D0',borderRadius:99,padding:'1px 6px'}}>{tnCount} TN</span>}
-                      {dtCount>0&&<span style={{fontSize:9,fontWeight:800,color:'#F97316',background:C.peachL,border:'1px solid #FED7AA',borderRadius:99,padding:'1px 6px'}}>{dtCount} ĐT</span>}
+                    <div style={{display:'flex',gap:6,marginTop:8,flexWrap:'wrap'}}>
+                      {l.password&&<span style={{fontSize:9,fontWeight:800,color:'#8B93F0',background:dark?'rgba(99,102,241,0.14)':'#EEF2FF',borderRadius:99,padding:'2px 7px',display:'inline-flex',alignItems:'center',gap:3}}><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#8B93F0" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Mật khẩu</span>}
+                      {tfCount>0&&<span style={{fontSize:9,fontWeight:800,color:'#C4A0F0',background:dark?'rgba(192,132,252,0.14)':'#F3ECFC',borderRadius:99,padding:'2px 7px'}}>{tfCount} ĐS</span>}
+                      {tnCount>0&&<span style={{fontSize:9,fontWeight:800,color:'#6EC9A0',background:dark?'rgba(16,185,129,0.14)':'#EAFAF3',borderRadius:99,padding:'2px 7px'}}>{tnCount} TN</span>}
+                      {dtCount>0&&<span style={{fontSize:9,fontWeight:800,color:'#F0A870',background:dark?'rgba(249,115,22,0.14)':'#FFF3E8',borderRadius:99,padding:'2px 7px'}}>{dtCount} ĐT</span>}
                     </div>
                   )}
                 </div>
                 {/* Actions — gộp Sao chép + Xoá thành 1 menu ⋮ thay vì 2 nút màu rời */}
-                <div style={{display:'flex',alignItems:'center',gap:4,flexShrink:0}}>
+                <div style={{display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
                   <div data-card-menu style={{position:'relative'}}>
                     <button onClick={(e)=>{e.stopPropagation();setCardMenuOpenId(p=>p===l.id?null:l.id);}}
-                      style={{width:30,height:30,borderRadius:9,border:`1.5px solid ${cardMenuOpenId===l.id?C.lav:C.border2}`,background:cardMenuOpenId===l.id?C.lavL:'transparent',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,transition:'all .15s'}}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill={cardMenuOpenId===l.id?C.lav:C.text3}><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+                      style={{width:32,height:32,borderRadius:'50%',border:'none',background:cardMenuOpenId===l.id?C.lavL:C.bg,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,transition:'all .15s'}}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill={cardMenuOpenId===l.id?C.lav:C.text3}><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
                     </button>
                     {cardMenuOpenId===l.id&&(
-                      <div onClick={e=>e.stopPropagation()} style={{position:'absolute',top:'calc(100% + 6px)',right:0,minWidth:154,background:dark?'#1E0D15':'#fff',border:`1.5px solid ${C.border2}`,borderRadius:14,boxShadow:'0 8px 28px rgba(168,85,247,0.2)',padding:6,zIndex:80,animation:'fadeUp .15s ease both'}}>
+                      <div onClick={e=>e.stopPropagation()} style={{position:'absolute',top:'calc(100% + 6px)',right:0,minWidth:154,background:dark?'#1E0D15':'#fff',border:'none',borderRadius:16,boxShadow:'0 10px 30px rgba(168,85,247,0.22)',padding:6,zIndex:80,animation:'fadeUp .15s ease both'}}>
                         <button onClick={()=>{setCardMenuOpenId(null);
                             const _t=l.title||'Chưa đặt tên';
                             confirm_({
@@ -1038,8 +1085,10 @@ function App(){
                       </div>
                     )}
                   </div>
-                  {/* Mũi tên — sửa lại hướng phải (điều hướng vào trong) thay vì hướng xuống */}
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={C.lav2} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+                  {/* Mũi tên — nền tròn nhạt thay vì icon trần, mềm mại hơn */}
+                  <div style={{width:32,height:32,borderRadius:'50%',background:C.lavPale,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={C.lav2} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+                  </div>
                 </div>
               </div>
             );
@@ -1228,7 +1277,10 @@ function App(){
                   <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
                 </svg>
               </span>
-              <span className="logo-learnsy">TA&amp;NA</span>
+              <span className="logo-wrap" style={{display:'inline-flex',flexDirection:'column',alignItems:'flex-start',lineHeight:1}}>
+                <span className="logo-learnsy">TA&amp;NA</span>
+                <span style={{fontSize:6,fontWeight:800,letterSpacing:'.2px',color:C.text3,marginTop:1,opacity:0.75,whiteSpace:'nowrap'}}>Thu Anh &amp; Ngọc Anh</span>
+              </span>
               <span className="logo-flb"><Sparkle s={12} c="#6366f1"/></span>
               <span style={{fontSize:10,fontWeight:900,color:C.lav,background:C.lavL,border:`1.5px solid ${C.border2}`,borderRadius:99,padding:'2px 8px',marginLeft:2,flexShrink:0,display:'inline-flex',alignItems:'center',gap:3}}><Sparkle s={10} c={C.lav}/>Quiz Builder</span>
             </div>
