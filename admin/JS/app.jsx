@@ -180,28 +180,30 @@ const ConfirmDialog=({open,onClose,dark})=>{
   const isDel=iconType==='delete';
   const isCopy=iconType==='copy';
   const isAdd=iconType==='add';
+  const glow=isDel?'rgba(239,68,68,.5)':isCopy?'rgba(168,85,247,.5)':'rgba(16,185,129,.5)';
   return(
     <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(10,2,25,0.82)',backdropFilter:'blur(12px)',display:'flex',alignItems:'flex-end',justifyContent:'center',zIndex:9999}}>
-      <div onClick={e=>e.stopPropagation()} style={{width:'100%',maxWidth:480,background:dark?'#1E0D15':'#fff',borderRadius:'24px 24px 0 0',padding:'24px 20px 32px',boxShadow:'0 -8px 40px rgba(168,85,247,0.25)',animation:'slideIn .22s ease both'}}>
+      <div onClick={e=>e.stopPropagation()} style={{width:'100%',maxWidth:480,background:dark?'#1E0D15':'#fff',borderRadius:'28px 28px 0 0',padding:'14px 20px 32px',boxShadow:'0 -8px 40px rgba(168,85,247,0.25)',animation:'slideIn .22s ease both'}}>
+        <div style={{width:36,height:4,borderRadius:99,background:C.border2,margin:'0 auto 18px'}}/>
         <div style={{textAlign:'center',marginBottom:14}}>
-          <div style={{width:52,height:52,borderRadius:16,
+          <div style={{width:54,height:54,borderRadius:18,
             background:isDel?'#FFF0F0':isCopy?C.lavL:C.mintL,
             border:`1.5px solid ${isDel?'#FECDD3':isCopy?C.border2:'#BBF7D0'}`,
-            display:'inline-flex',alignItems:'center',justifyContent:'center',marginBottom:10}}>
-            {isDel&&<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>}
-            {isCopy&&<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.lav} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>}
-            {(isAdd||(!isDel&&!isCopy))&&<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.mint} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>}
+            display:'inline-flex',alignItems:'center',justifyContent:'center',marginBottom:12}}>
+            {isDel&&<svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{filter:`drop-shadow(0 0 5px ${glow})`}}><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>}
+            {isCopy&&<svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke={C.lav} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{filter:`drop-shadow(0 0 5px ${glow})`}}><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>}
+            {(isAdd||(!isDel&&!isCopy))&&<svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke={C.mint} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{filter:`drop-shadow(0 0 5px ${glow})`}}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>}
           </div>
-          <div style={{fontSize:17,fontWeight:900,color:dark?'#F0DCE8':'#3D1830',marginBottom:6}}>{title}</div>
-          {message&&<div style={{fontSize:13,color:dark?'#8A6080':'#A07090',lineHeight:1.65}} dangerouslySetInnerHTML={{__html:message}}/>}
+          <div style={{fontSize:17,fontWeight:900,color:C.text,marginBottom:6}}>{title}</div>
+          {message&&<div style={{fontSize:13,color:C.text3,lineHeight:1.65}} dangerouslySetInnerHTML={{__html:message}}/>}
         </div>
         <div style={{display:'flex',gap:10,marginTop:18}}>
           <button onClick={onClose}
-            style={{flex:1,padding:'10px',borderRadius:999,border:`1.5px solid ${dark?'#421526':'#F5D5E8'}`,background:'transparent',color:dark?'#C898B8':'#6B3050',fontSize:14,fontWeight:800,cursor:'pointer'}}>
+            style={{flex:1,padding:'11px',borderRadius:999,border:`1.5px solid ${C.border}`,background:'transparent',color:C.text2,fontSize:14,fontWeight:800,cursor:'pointer'}}>
             Huỷ
           </button>
           <button onClick={()=>{onConfirm&&onConfirm();onClose();}}
-            style={{flex:1,padding:'10px',borderRadius:999,border:'none',
+            style={{flex:1,padding:'11px',borderRadius:999,border:'none',
               background:confirmGrad||confirmColor,color:'#fff',
               fontSize:14,fontWeight:900,cursor:'pointer',
               boxShadow:`0 4px 16px ${confirmColor}55`,transition:'all .18s'}}>
@@ -304,6 +306,7 @@ function App(){
   const headerMenuRef=useRef();
   const [sortMenuOpen,setSortMenuOpen]=useState(false);
   const sortMenuRef=useRef();
+  const [cardMenuOpenId,setCardMenuOpenId]=useState(null);
   C=dark?CD:CL;
   // Helper: card blur style (áp dụng cho lesson cards & student cards)
   const cardBlurStyle=cardBlur==='off'?{}:{
@@ -484,6 +487,13 @@ function App(){
     document.addEventListener('touchstart',handler);
     return()=>{document.removeEventListener('mousedown',handler);document.removeEventListener('touchstart',handler);};
   },[sortMenuOpen]);
+  useEffect(()=>{
+    if(!cardMenuOpenId)return;
+    const handler=(e)=>{if(!e.target.closest('[data-card-menu]'))setCardMenuOpenId(null);};
+    document.addEventListener('mousedown',handler);
+    document.addEventListener('touchstart',handler);
+    return()=>{document.removeEventListener('mousedown',handler);document.removeEventListener('touchstart',handler);};
+  },[cardMenuOpenId]);
 
   const addQ=useCallback((t)=>{setQ(p=>[...p,newQ(t)]);setAddMenu(false);setTimeout(()=>window.scrollTo({top:9999,behavior:'smooth'}),60);},[]);
   const removeQ=useCallback((id)=>setQ(p=>p.filter(q=>q.id!==id)),[]);
@@ -963,67 +973,73 @@ function App(){
             const dtCount=(l.questions||[]).filter(q=>q.type==='fill_blank').length;
             return(
               <div key={l.id} onClick={()=>{setEditingId(l.id);setTab('build');}}
-                style={{background:C.surface,...cardBlurStyle,border:`2px solid ${C.border}`,borderRadius:18,padding:'14px 16px',display:'flex',alignItems:'center',gap:12,boxShadow:`0 2px 14px rgba(255,100,150,0.09),0 0 0 1px ${C.border}`,cursor:'pointer',transition:'all .18s',animation:`fadeUp .2s ${idx*0.04}s both`}}
+                style={{background:C.surface,...cardBlurStyle,border:`1.5px solid ${C.border}`,borderRadius:20,padding:'14px 16px',display:'flex',alignItems:'center',gap:12,boxShadow:`0 2px 14px rgba(255,100,150,0.09),0 0 0 1px ${C.border}`,cursor:'pointer',transition:'all .18s',animation:`fadeUp .2s ${idx*0.04}s both`}}
                 onMouseEnter={e=>{e.currentTarget.style.boxShadow=`0 6px 24px rgba(168,85,247,0.18),0 0 0 1.5px ${C.lav2}`;e.currentTarget.style.borderColor=C.lav2;e.currentTarget.style.transform='translateY(-1px)';}}
                 onMouseLeave={e=>{e.currentTarget.style.boxShadow=`0 2px 14px rgba(255,100,150,0.09),0 0 0 1px ${C.border}`;e.currentTarget.style.borderColor=C.border;e.currentTarget.style.transform='translateY(0)';}}>
-                {/* Icon */}
-                <div style={{width:46,height:46,borderRadius:13,background:'rgba(100,160,255,0.13)',border:'1.5px solid rgba(100,160,255,0.2)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6BA4E8" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                {/* Icon — đổi màu xanh lạc tông cũ sang tím-hồng gradient nhẹ, đồng bộ theme */}
+                <div style={{width:44,height:44,borderRadius:14,background:C.gradSoft,border:`1.5px solid ${C.border2}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={C.lav} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
                     <line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="13" y2="13"/>
                   </svg>
                 </div>
-                {/* Info */}
+                {/* Info — gộp môn học + số câu vào 1 dòng meta thay vì để rời trên pill bên phải, title không còn bị bóp */}
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:15,fontWeight:800,color:C.text,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{l.title||'Chưa đặt tên'}</div>
-                  <div style={{fontSize:11,color:C.lav2,fontWeight:600,marginTop:2,display:'flex',alignItems:'center',gap:5}}>
-                    {l.password&&<span style={{fontSize:9,fontWeight:800,color:'#6366f1',background:'#EEF2FF',border:'1px solid #C7D2FE',borderRadius:99,padding:'1px 6px',display:'inline-flex',alignItems:'center',gap:3}}><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Mật khẩu</span>}
-                    Bài tập trắc nghiệm
-                  </div>
-                  {qCount>0&&(
-                    <div style={{display:'flex',gap:5,marginTop:5,flexWrap:'wrap'}}>
+                  <div style={{fontSize:11.5,color:C.text3,fontWeight:700,marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{l.subject||'Tiếng Anh'} · {qCount} câu</div>
+                  {(qCount>0||l.password)&&(
+                    <div style={{display:'flex',gap:5,marginTop:6,flexWrap:'wrap'}}>
+                      {l.password&&<span style={{fontSize:9,fontWeight:800,color:'#6366f1',background:'#EEF2FF',border:'1px solid #C7D2FE',borderRadius:99,padding:'1px 6px',display:'inline-flex',alignItems:'center',gap:3}}><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Mật khẩu</span>}
                       {tfCount>0&&<span style={{fontSize:9,fontWeight:800,color:'#A855F7',background:C.lavL,border:`1px solid ${C.border2}`,borderRadius:99,padding:'1px 6px'}}>{tfCount} ĐS</span>}
                       {tnCount>0&&<span style={{fontSize:9,fontWeight:800,color:'#10B981',background:C.mintL,border:'1px solid #BBF7D0',borderRadius:99,padding:'1px 6px'}}>{tnCount} TN</span>}
                       {dtCount>0&&<span style={{fontSize:9,fontWeight:800,color:'#F97316',background:C.peachL,border:'1px solid #FED7AA',borderRadius:99,padding:'1px 6px'}}>{dtCount} ĐT</span>}
                     </div>
                   )}
                 </div>
-                {/* Badges + actions */}
-                <div style={{display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
-                  <span style={{fontSize:11,fontWeight:700,color:C.text2,background:dark?'rgba(255,255,255,0.07)':'rgba(100,160,255,0.1)',border:`1px solid ${dark?'rgba(255,255,255,0.1)':'rgba(100,160,255,0.2)'}`,borderRadius:99,padding:'3px 9px',whiteSpace:'nowrap'}}>{l.subject||'Tiếng Anh'}</span>
-                  <span style={{fontSize:11,fontWeight:700,color:C.text2,background:dark?'rgba(255,255,255,0.07)':'rgba(100,160,255,0.1)',border:`1px solid ${dark?'rgba(255,255,255,0.1)':'rgba(100,160,255,0.2)'}`,borderRadius:99,padding:'3px 9px',whiteSpace:'nowrap'}}>{qCount} câu</span>
-                  {/* Dup */}
-                  <button onClick={(e)=>{e.stopPropagation();
-                    const _t=l.title||'Chưa đặt tên';
-                    confirm_({
-                    iconType:'copy',title:'Sao chép bộ câu hỏi?',
-                    message:'Tạo bản sao của <b>'+_t+'</b>.',
-                    confirmLabel:'Sao chép',confirmColor:'#A855F7',
-                    confirmGrad:'linear-gradient(135deg,#C084FC,#A855F7)',
-                    onConfirm:()=>dupLesson(l,null),
-                  });}}
-                    style={{width:28,height:28,borderRadius:8,border:`1.5px solid ${C.border2}`,background:C.lavL,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,transition:'all .15s'}}
-                    onMouseEnter={e=>e.currentTarget.style.background=C.lavPale}
-                    onMouseLeave={e=>e.currentTarget.style.background=C.lavL}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.lav} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                  </button>
-                  {/* Delete */}
-                  <button onClick={(e)=>{e.stopPropagation();
-                    const _t2=l.title||'Chưa đặt tên';
-                    const _qc=(l.questions||[]).length;
-                    confirm_({
-                    iconType:'delete',title:'Xoá bộ câu hỏi?',
-                    message:'<b>'+_t2+'</b><br/><span style="color:#A07090">'+_qc+' câu hỏi sẽ bị xóa vĩnh viễn.</span>',
-                    confirmLabel:'Xoá',confirmColor:'#EF4444',
-                    onConfirm:()=>deleteLesson(l.id,null,true),
-                  });}}
-                    style={{width:28,height:28,borderRadius:8,border:'1.5px solid #FECDD3',background:C.rosePale,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,transition:'all .15s'}}
-                    onMouseEnter={e=>e.currentTarget.style.background=C.roseL}
-                    onMouseLeave={e=>e.currentTarget.style.background=C.rosePale}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                  </button>
-                  {/* Arrow */}
-                  <svg width="14" height="14" viewBox="0 0 20 20" fill={C.lav2}><path d="M5 7l5 5 5-5"/></svg>
+                {/* Actions — gộp Sao chép + Xoá thành 1 menu ⋮ thay vì 2 nút màu rời */}
+                <div style={{display:'flex',alignItems:'center',gap:4,flexShrink:0}}>
+                  <div data-card-menu style={{position:'relative'}}>
+                    <button onClick={(e)=>{e.stopPropagation();setCardMenuOpenId(p=>p===l.id?null:l.id);}}
+                      style={{width:30,height:30,borderRadius:9,border:`1.5px solid ${cardMenuOpenId===l.id?C.lav:C.border2}`,background:cardMenuOpenId===l.id?C.lavL:'transparent',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,transition:'all .15s'}}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill={cardMenuOpenId===l.id?C.lav:C.text3}><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+                    </button>
+                    {cardMenuOpenId===l.id&&(
+                      <div onClick={e=>e.stopPropagation()} style={{position:'absolute',top:'calc(100% + 6px)',right:0,minWidth:154,background:dark?'#1E0D15':'#fff',border:`1.5px solid ${C.border2}`,borderRadius:14,boxShadow:'0 8px 28px rgba(168,85,247,0.2)',padding:6,zIndex:80,animation:'fadeUp .15s ease both'}}>
+                        <button onClick={()=>{setCardMenuOpenId(null);
+                            const _t=l.title||'Chưa đặt tên';
+                            confirm_({
+                            iconType:'copy',title:'Sao chép bộ câu hỏi?',
+                            message:'Tạo bản sao của <b>'+_t+'</b>.',
+                            confirmLabel:'Sao chép',confirmColor:'#A855F7',
+                            confirmGrad:'linear-gradient(135deg,#C084FC,#A855F7)',
+                            onConfirm:()=>dupLesson(l,null),
+                          });}}
+                          style={{display:'flex',alignItems:'center',gap:8,width:'100%',padding:'8px 10px',borderRadius:10,border:'none',background:'transparent',color:C.text2,cursor:'pointer',fontSize:12.5,fontWeight:700,textAlign:'left',transition:'background .12s'}}
+                          onMouseEnter={e=>e.currentTarget.style.background=C.lavL}
+                          onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.lav} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                          Sao chép
+                        </button>
+                        <button onClick={()=>{setCardMenuOpenId(null);
+                            const _t2=l.title||'Chưa đặt tên';
+                            const _qc=(l.questions||[]).length;
+                            confirm_({
+                            iconType:'delete',title:'Xoá bộ câu hỏi?',
+                            message:'<b>'+_t2+'</b><br/><span style="color:#A07090">'+_qc+' câu hỏi sẽ bị xóa vĩnh viễn.</span>',
+                            confirmLabel:'Xoá',confirmColor:'#EF4444',
+                            onConfirm:()=>deleteLesson(l.id,null,true),
+                          });}}
+                          style={{display:'flex',alignItems:'center',gap:8,width:'100%',padding:'8px 10px',borderRadius:10,border:'none',background:'transparent',color:'#EF4444',cursor:'pointer',fontSize:12.5,fontWeight:800,textAlign:'left',transition:'background .12s'}}
+                          onMouseEnter={e=>e.currentTarget.style.background=dark?'rgba(239,68,68,0.14)':'#FEF2F2'}
+                          onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                          Xoá
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {/* Mũi tên — sửa lại hướng phải (điều hướng vào trong) thay vì hướng xuống */}
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={C.lav2} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
                 </div>
               </div>
             );
@@ -1106,10 +1122,10 @@ function App(){
           <div onClick={()=>setHistDetail(null)} style={{position:'fixed',inset:0,background:'rgba(10,2,25,0.82)',backdropFilter:'blur(12px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:9999,padding:20}}>
             <div onClick={e=>e.stopPropagation()} style={{background:dark?'linear-gradient(160deg,#1E0845,#120330)':'linear-gradient(160deg,#FFF5F9,#F0E6FF)',border:`1.5px solid ${dark?'rgba(255,150,200,0.2)':C.border}`,borderRadius:24,padding:'22px 18px 20px',maxWidth:340,width:'100%',boxShadow:'0 30px 80px rgba(0,0,0,0.5)',animation:'pop .22s ease both',maxHeight:'85vh',overflowY:'auto'}}>
               <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:14}}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.rose} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.rose} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{filter:'drop-shadow(0 0 4px rgba(255,107,149,.55))'}}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 <span style={{fontSize:14,fontWeight:900,color:C.text,flex:1}}>Chi tiết lần làm</span>
-                <button onClick={()=>setHistDetail(null)} style={{background:'none',border:'none',cursor:'pointer',padding:4,color:C.text3}}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <button onClick={()=>setHistDetail(null)} style={{width:26,height:26,borderRadius:999,border:`1.5px solid ${C.border2}`,background:dark?'rgba(255,255,255,0.06)':'#fff',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:C.text3,flexShrink:0}}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
               {/* Score summary */}
@@ -1133,6 +1149,7 @@ function App(){
                   {histDetail.perQ.map((pq,pi)=>{
                     const typeLabel={true_false:'ĐS',multiple:'TN',multi_select:'CN',fill_blank:'ĐT'}[pq.type]||'?';
                     const c=pq.ok?'#10B981':pq.partial?'#F59E0B':'#EF4444';
+                    const cBg=pq.ok?(dark?'rgba(16,185,129,0.16)':'rgba(16,185,129,0.1)'):pq.partial?(dark?'rgba(245,158,11,0.16)':'rgba(245,158,11,0.1)'):(dark?'rgba(239,68,68,0.16)':'rgba(239,68,68,0.1)');
                     return(
                       <div key={pi} style={{padding:'5px 0',borderBottom:pi<histDetail.perQ.length-1?`1px solid ${dark?'rgba(255,255,255,0.05)':C.border}`:'none'}}>
                         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',fontSize:12,fontWeight:700}}>
@@ -1140,7 +1157,10 @@ function App(){
                             <span style={{fontSize:9,fontWeight:800,color:C.text4,background:dark?'rgba(255,255,255,0.06)':C.border,padding:'1px 5px',borderRadius:99}}>{typeLabel}</span>
                             Câu {pi+1}
                           </span>
-                          <span style={{color:c,display:'flex',alignItems:'center',gap:3}}>
+                          <span style={{color:c,background:cBg,display:'inline-flex',alignItems:'center',gap:4,padding:'2px 8px',borderRadius:99,fontSize:10.5,fontWeight:800}}>
+                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                              {pq.ok?<polyline points="20 6 9 17 4 12"/>:pq.partial?<circle cx="12" cy="12" r="5" fill="currentColor" stroke="none"/>:<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>}
+                            </svg>
                             {pq.ok?'Đúng':pq.partial?'Một phần':'Sai'}
                           </span>
                         </div>
@@ -1333,36 +1353,58 @@ function App(){
 
       {/* ══ AI MODAL ══ */}
       {aiModal&&(
-        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',zIndex:200,display:'flex',alignItems:'flex-end',justifyContent:'center',padding:'0 0 0 0'}} onClick={()=>setAiModal(false)}>
-          <div onClick={e=>e.stopPropagation()} style={{width:'100%',maxWidth:700,maxHeight:'80vh',overflowY:'auto',background:dark?'#1E0D15':'#fff',borderRadius:'24px 24px 0 0',padding:'20px 16px 32px',boxShadow:'0 -8px 40px rgba(168,85,247,0.25)'}}>
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',zIndex:200,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={()=>setAiModal(false)}>
+          <div onClick={e=>e.stopPropagation()} style={{width:'100%',maxWidth:700,maxHeight:'80vh',overflowY:'auto',background:dark?'#1E0D15':'#fff',borderRadius:'24px 24px 0 0',padding:'14px 16px 32px',boxShadow:'0 -8px 40px rgba(168,85,247,0.25)'}}>
+            <div style={{width:36,height:4,borderRadius:99,background:C.border2,margin:'0 auto 16px'}}/>
             <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:16}}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A855F7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A855F7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{filter:'drop-shadow(0 0 4px rgba(168,85,247,.55))'}}><path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z"/></svg>
               <span style={{fontSize:15,fontWeight:900,color:C.text}}>Gợi ý câu hỏi từ AI</span>
               <div style={{flex:1}}/>
-              <button onClick={()=>setAiModal(false)} style={{background:'none',border:'none',fontSize:20,cursor:'pointer',color:C.text3}}>×</button>
+              <button onClick={()=>setAiModal(false)} style={{width:26,height:26,borderRadius:999,border:`1.5px solid ${C.border2}`,background:dark?'rgba(255,255,255,0.06)':'#fff',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:C.text3,flexShrink:0}}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
             </div>
             {aiLoading&&(
-              <div style={{textAlign:'center',padding:'32px 0',color:C.text3,fontSize:13}}>✦ AI đang soạn câu hỏi...</div>
+              <div style={{textAlign:'center',padding:'40px 0',display:'flex',flexDirection:'column',alignItems:'center',gap:12}}>
+                <span style={{width:26,height:26,border:`3px solid ${C.lavL}`,borderTopColor:C.lav,borderRadius:'50%',display:'inline-block'}} className="spin"/>
+                <span style={{color:C.text3,fontSize:13,fontWeight:700}}>AI đang soạn câu hỏi...</span>
+              </div>
             )}
             {!aiLoading&&aiSuggestions.length===0&&(
-              <div style={{textAlign:'center',padding:'32px 0',color:C.text3,fontSize:13}}>Không lấy được gợi ý. Thử lại nhé!</div>
+              <div style={{textAlign:'center',padding:'32px 0',color:C.text3,fontSize:13,fontWeight:700}}>Không lấy được gợi ý. Thử lại nhé!</div>
             )}
             {!aiLoading&&aiSuggestions.map((q,i)=>(
-              <div key={i} style={{background:dark?'rgba(255,255,255,0.04)':'#F9F0FF',border:`1.5px solid ${C.border2}`,borderRadius:14,padding:'13px 14px',marginBottom:10}}>
-                <div style={{fontSize:13,fontWeight:800,color:C.text,marginBottom:8}}>❓ {q.text}</div>
-                {q.options?.map((opt,oi)=>(
-                  <div key={oi} style={{fontSize:12,color:oi===q.correct?'#10B981':C.text3,fontWeight:oi===q.correct?800:600,padding:'3px 0'}}>
-                    {['A','B','C','D'][oi]}. {opt} {oi===q.correct?'✓':''}
-                  </div>
-                ))}
+              <div key={i} style={{background:dark?'rgba(255,255,255,0.04)':'#F9F0FF',border:`1.5px solid ${C.border2}`,borderRadius:16,padding:'14px 15px',marginBottom:10}}>
+                <div style={{display:'flex',alignItems:'flex-start',gap:8,marginBottom:10}}>
+                  <span style={{flexShrink:0,width:20,height:20,borderRadius:7,background:C.grad,color:'#fff',fontSize:10,fontWeight:900,display:'flex',alignItems:'center',justifyContent:'center'}}>{i+1}</span>
+                  <span style={{fontSize:13,fontWeight:800,color:C.text,lineHeight:1.5}}>{q.text}</span>
+                </div>
+                <div style={{display:'flex',flexDirection:'column',gap:4}}>
+                  {q.options?.map((opt,oi)=>{
+                    const isCorrect=oi===q.correct;
+                    return(
+                      <div key={oi} style={{display:'flex',alignItems:'center',gap:7,padding:'5px 8px',borderRadius:9,
+                        background:isCorrect?(dark?'rgba(16,185,129,0.15)':'rgba(16,185,129,0.1)'):'transparent'}}>
+                        <span style={{flexShrink:0,width:16,height:16,borderRadius:'50%',fontSize:9,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center',
+                          background:isCorrect?'#10B981':C.border,color:isCorrect?'#fff':C.text3}}>{['A','B','C','D'][oi]}</span>
+                        <span style={{fontSize:12,color:isCorrect?'#10B981':C.text3,fontWeight:isCorrect?800:600}}>{opt}</span>
+                        {isCorrect&&<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{marginLeft:'auto'}}><polyline points="20 6 9 17 4 12"/></svg>}
+                      </div>
+                    );
+                  })}
+                </div>
                 <button onClick={()=>addAiQuestion(q)}
-                  style={{marginTop:10,padding:'7px 16px',borderRadius:999,border:'none',background:'linear-gradient(135deg,#F472B6,#A855F7)',color:'#fff',fontSize:12,fontWeight:800,cursor:'pointer'}}>
-                  + Thêm vào đề
+                  style={{marginTop:11,display:'flex',alignItems:'center',gap:5,padding:'7px 16px',borderRadius:999,border:'none',background:C.grad,color:'#fff',fontSize:12,fontWeight:800,cursor:'pointer',boxShadow:'0 3px 10px rgba(168,85,247,0.25)'}}>
+                  <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path d="M11 9h4v2h-4v4H9v-4H5V9h4V5h2v4z"/></svg>
+                  Thêm vào đề
                 </button>
               </div>
             ))}
             {!aiLoading&&aiSuggestions.length>0&&(
-              <button onClick={suggestAI} style={{width:'100%',marginTop:4,padding:'10px',borderRadius:999,border:`1.5px solid ${C.border2}`,background:'none',color:C.lav,fontSize:13,fontWeight:800,cursor:'pointer'}}>↺ Gợi ý lại</button>
+              <button onClick={suggestAI} style={{width:'100%',marginTop:4,display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'10px',borderRadius:999,border:`1.5px solid ${C.border2}`,background:'none',color:C.lav,fontSize:13,fontWeight:800,cursor:'pointer'}}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                Gợi ý lại
+              </button>
             )}
           </div>
         </div>
