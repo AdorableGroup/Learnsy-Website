@@ -175,8 +175,8 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
 
     return(
       <div onClick={e=>{if(e.target===e.currentTarget && !saving) onClose();}}
-        style={{position:'fixed', inset:0, zIndex:9200, background:'rgba(10,2,25,0.72)', backdropFilter:'blur(10px)', display:'flex', alignItems:'center', justifyContent:'center', padding:16}}>
-        <div style={{width:'100%', maxWidth:420, maxHeight:'min(85vh, 640px)', borderRadius:22, background:dark?'#1E0D15':'#fff', border:`1.5px solid ${C.border2}`, boxShadow:'0 24px 60px rgba(0,0,0,.3)', animation:'pop .2s ease both', display:'flex', flexDirection:'column', overflow:'hidden'}}>
+        style={{position:'fixed', inset:0, zIndex:9200, background:'rgba(10,2,25,0.72)', backdropFilter:'blur(10px)', display:'flex', alignItems:'flex-start', justifyContent:'center', padding:16, overflowY:'auto', WebkitOverflowScrolling:'touch'}}>
+        <div style={{width:'100%', maxWidth:420, maxHeight:'min(85vh, 640px)', margin:'auto 0', borderRadius:22, background:dark?'#1E0D15':'#fff', border:`1.5px solid ${C.border2}`, boxShadow:'0 24px 60px rgba(0,0,0,.3)', animation:'pop .2s ease both', display:'flex', flexDirection:'column', overflow:'hidden'}}>
           <div style={{flex:'1 1 auto', minHeight:0, overflowY:'auto', WebkitOverflowScrolling:'touch', padding:'20px 18px 4px'}}>
             <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16}}>
               <div style={{fontSize:15.5, fontWeight:900, color:C.text, display:'flex', alignItems:'center', gap:8}}>
@@ -235,8 +235,8 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
 
     return(
       <div onClick={e=>{if(e.target===e.currentTarget && !saving) onClose();}}
-        style={{position:'fixed', inset:0, zIndex:9200, background:'rgba(10,2,25,0.72)', backdropFilter:'blur(10px)', display:'flex', alignItems:'center', justifyContent:'center', padding:16}}>
-        <div style={{width:'100%', maxWidth:420, maxHeight:'min(85vh, 640px)', borderRadius:22, background:dark?'#1E0D15':'#fff', border:`1.5px solid ${C.border2}`, boxShadow:'0 24px 60px rgba(0,0,0,.3)', animation:'pop .2s ease both', display:'flex', flexDirection:'column', overflow:'hidden'}}>
+        style={{position:'fixed', inset:0, zIndex:9200, background:'rgba(10,2,25,0.72)', backdropFilter:'blur(10px)', display:'flex', alignItems:'flex-start', justifyContent:'center', padding:16, overflowY:'auto', WebkitOverflowScrolling:'touch'}}>
+        <div style={{width:'100%', maxWidth:420, maxHeight:'min(85vh, 640px)', margin:'auto 0', borderRadius:22, background:dark?'#1E0D15':'#fff', border:`1.5px solid ${C.border2}`, boxShadow:'0 24px 60px rgba(0,0,0,.3)', animation:'pop .2s ease both', display:'flex', flexDirection:'column', overflow:'hidden'}}>
           <div style={{flex:'1 1 auto', minHeight:0, overflowY:'auto', WebkitOverflowScrolling:'touch', padding:'20px 18px 4px'}}>
             <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16}}>
               <div style={{fontSize:15.5, fontWeight:900, color:C.text}}>{isEdit?'Sửa Unit':'Tạo Unit mới'}</div>
@@ -295,8 +295,8 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
 
     return(
       <div onClick={e=>{if(e.target===e.currentTarget && !saving) onClose();}}
-        style={{position:'fixed', inset:0, zIndex:9200, background:'rgba(10,2,25,0.72)', backdropFilter:'blur(10px)', display:'flex', alignItems:'center', justifyContent:'center', padding:16}}>
-        <div style={{width:'100%', maxWidth:440, maxHeight:'min(85vh, 640px)', borderRadius:22, background:dark?'#1E0D15':'#fff', border:`1.5px solid ${C.border2}`, boxShadow:'0 24px 60px rgba(0,0,0,.3)', animation:'pop .2s ease both', display:'flex', flexDirection:'column', overflow:'hidden'}}>
+        style={{position:'fixed', inset:0, zIndex:9200, background:'rgba(10,2,25,0.72)', backdropFilter:'blur(10px)', display:'flex', alignItems:'flex-start', justifyContent:'center', padding:16, overflowY:'auto', WebkitOverflowScrolling:'touch'}}>
+        <div style={{width:'100%', maxWidth:440, maxHeight:'min(85vh, 640px)', margin:'auto 0', borderRadius:22, background:dark?'#1E0D15':'#fff', border:`1.5px solid ${C.border2}`, boxShadow:'0 24px 60px rgba(0,0,0,.3)', animation:'pop .2s ease both', display:'flex', flexDirection:'column', overflow:'hidden'}}>
           <div style={{flex:'1 1 auto', minHeight:0, overflowY:'auto', WebkitOverflowScrolling:'touch', padding:'20px 18px 4px'}}>
             <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16}}>
               <div style={{fontSize:15.5, fontWeight:900, color:C.text}}>{isEdit?'Sửa từ vựng':'Thêm từ vựng'}</div>
