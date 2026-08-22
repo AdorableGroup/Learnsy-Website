@@ -794,7 +794,7 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
               style={{width:'100%', padding:'10px 12px 10px 34px', borderRadius:14, border:`1.5px solid ${C.border2}`, background:C.surface, color:C.text, fontSize:13, outline:'none', fontFamily:"'Nunito',sans-serif", fontWeight:600, boxSizing:'border-box'}}/>
           </div>
           <PrimaryBtn onClick={()=>setLessonModal(true)} C={C} style={{whiteSpace:'nowrap'}}>
-            <IconPlus/> Bài học
+            <IconPlus/> Thêm từ vựng
           </PrimaryBtn>
         </div>
 
@@ -820,7 +820,7 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
               width:64, height:64, borderRadius:'50%', background:C.lavPale, alignItems:'center', justifyContent:'center',
             }}><IconBook size={30}/></span>
             <div style={{fontSize:14.5, fontWeight:900, color:C.text2, fontFamily:"'Baloo 2',cursive"}}>{search ? 'Không tìm thấy bài học' : 'Chưa có bài học nào'}</div>
-            <div style={{fontSize:12, color:C.text3}}>{search ? 'Thử từ khoá khác nhé' : 'Bấm "Bài học" để tạo bài học đầu tiên'}</div>
+            <div style={{fontSize:12, color:C.text3}}>{search ? 'Thử từ khoá khác nhé' : 'Bấm "Thêm từ vựng" để tạo bài học đầu tiên'}</div>
           </div>
         )}
 
