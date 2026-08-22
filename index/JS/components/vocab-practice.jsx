@@ -75,8 +75,12 @@ import React from 'react';
     const IconCheck = ({ size = 16, color = '#10B981' }) => (
       <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke={color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 10 8 14 16 6" /></svg>
     );
-    const IconSpeaker = ({ size = 18 }) => (
-      <svg width={size} height={size} viewBox="0 0 20 20" fill="currentColor" stroke="none"><path d="M3 7v6h4l5 5V2L7 7H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" /></svg>
+    const IconSpeaker = ({ size = 18, waves = 2 }) => (
+      <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M2.5 7.2v5.6h3l4.3 3.6V3.6L5.5 7.2h-3z" fill="currentColor" stroke="none" />
+        {waves >= 1 && <path d="M12.3 7c.9.75 1.4 1.83 1.4 3s-.5 2.25-1.4 3" />}
+        {waves >= 2 && <path d="M14.7 4.7c1.7 1.4 2.65 3.4 2.65 5.3s-.95 3.9-2.65 5.3" />}
+      </svg>
     );
 
     /* ─────────────────────── SKELETON ─────────────────────── */
@@ -201,6 +205,15 @@ import React from 'react';
         );
       }
 
+      if (!vocab) {
+        // Trạng thái chuyển tiếp: vừa học xong từ cuối, chờ useEffect chuyển sang màn "Hoàn thành"
+        return (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
+            <div style={{ animation: 'vp-float 2s ease-in-out infinite' }}><IconTrophy size={64} /></div>
+          </div>
+        );
+      }
+
       return (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           {/* Progress bar */}
@@ -221,14 +234,20 @@ import React from 'react';
                   {getPosLabel(vocab.pos)}
                 </div>
                 {vocab.ipa && <div style={{ fontSize: 18, color: LC.textMid, fontStyle: 'italic', marginBottom: 20 }}>/{vocab.ipa.replace(/^\/|\/$/g, '')}/</div>}
-                <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
-                  {[0.6, 1, 1.4].map(rate => (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 4, marginBottom: 24,
+                  padding: 6, borderRadius: 999,
+                  background: dark ? 'rgba(196,181,253,0.08)' : 'rgba(168,85,247,0.07)',
+                  border: `1.5px solid ${dark ? 'rgba(196,181,253,0.18)' : 'rgba(168,85,247,0.16)'}`,
+                }}>
+                  {[{ rate: 0.6, label: '0.5x', waves: 1 }, { rate: 1, label: '1x', waves: 2 }, { rate: 1.4, label: '2x', waves: 2 }].map(({ rate, label, waves }) => (
                     <button key={rate} onClick={() => speak(vocab.word, rate)}
                       title={rate < 1 ? 'Nghe chậm' : rate > 1 ? 'Nghe nhanh' : 'Nghe bình thường'}
-                      style={{ width: 46, height: 46, borderRadius: '50%', border: 'none', background: 'linear-gradient(135deg,#FF6B95,#A855F7)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(155,114,239,0.3)', transition: 'transform .15s ease, box-shadow .15s ease' }}
-                      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px) scale(1.06)'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(155,114,239,0.42)'; }}
+                      style={{ width: 58, height: 46, borderRadius: 999, border: 'none', background: 'linear-gradient(135deg,#FF6B95,#A855F7)', color: '#fff', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, boxShadow: '0 4px 14px rgba(155,114,239,0.3)', transition: 'transform .15s ease, box-shadow .15s ease' }}
+                      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px) scale(1.05)'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(155,114,239,0.42)'; }}
                       onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0) scale(1)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(155,114,239,0.3)'; }}>
-                      <IconSpeaker size={16} />
+                      <IconSpeaker size={15} waves={waves} />
+                      <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '.2px', opacity: 0.92 }}>{label}</span>
                     </button>
                   ))}
                 </div>
