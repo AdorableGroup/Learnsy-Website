@@ -58,6 +58,23 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
   };
   const posLabel = p => POS_OPTIONS.find(o=>o.value===p)?.short || p;
   const posColor = p => POS_COLORS[p] || '#9ca3af';
+
+  // Nhận diện loại từ viết tắt/tiếng Việt lúc nhập nhanh (VD: "dt", "n", "danh từ" → noun)
+  const POS_ALIASES = {
+    n:'noun', noun:'noun', dt:'noun', 'danh từ':'noun', 'danh tu':'noun',
+    v:'verb', verb:'verb', đt:'verb', 'động từ':'verb', 'dong tu':'verb',
+    adj:'adjective', adjective:'adjective', tt:'adjective', 'tính từ':'adjective', 'tinh tu':'adjective',
+    adv:'adverb', adverb:'adverb', trt:'adverb', 'trạng từ':'adverb', 'trang tu':'adverb',
+    pron:'pronoun', pronoun:'pronoun', dait:'pronoun', 'đại từ':'pronoun', 'dai tu':'pronoun',
+    prep:'preposition', preposition:'preposition', gt:'preposition', 'giới từ':'preposition', 'gioi tu':'preposition',
+    conj:'conjunction', conjunction:'conjunction', lt:'conjunction', 'liên từ':'conjunction', 'lien tu':'conjunction',
+    interj:'interjection', interjection:'interjection', tht:'interjection', 'thán từ':'interjection', 'than tu':'interjection',
+  };
+  const parsePos = raw => {
+    const key = (raw||'').trim().toLowerCase();
+    if(!key) return 'noun';
+    return POS_ALIASES[key] || 'noun';
+  };
   const fmtDate = d => { try{return new Date(d).toLocaleDateString('vi-VN');}catch(e){return '';} };
 
   /* ─────────────────────── ICONS ─────────────────────── */
@@ -78,6 +95,12 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
   );
   const IconBook = ({size=14}) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+  );
+  const IconStack = ({size=15}) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+  );
+  const IconStar = ({size=14, color="#F59E0B"}) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill={color}><polygon points="10,1.5 12.6,7 18.5,7.8 14.2,11.8 15.4,17.6 10,14.7 4.6,17.6 5.8,11.8 1.5,7.8 7.4,7"/></svg>
   );
 
   /* ─────────────────────── HELPERS: styles dùng chung ─────────────────────── */
@@ -267,6 +290,103 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
     );
   }
 
+  /* ─────────────────────── MODAL: Nhập nhanh nhiều từ vựng ─────────────────────── */
+  function BulkWordModal({dark, C, unitId, onClose, onSaved, toast_}){
+    const [text,setText] = useState('');
+    const [saving,setSaving] = useState(false);
+    const [err,setErr] = useState('');
+    const inputStyle = useInputStyle(C);
+    const fh = focusHandlers(C);
+
+    // Mỗi dòng: từ | loại từ | phiên âm | nghĩa | ví dụ  (chỉ "từ" bắt buộc, phần sau tuỳ chọn)
+    const parsed = useMemo(()=>{
+      return text.split('\n').map(line=>line.trim()).filter(Boolean).map(line=>{
+        const parts = line.split('|').map(p=>p.trim());
+        const [word, posRaw, ipa, meaning, example] = parts;
+        return { word: word||'', pos: parsePos(posRaw), ipa: ipa||'', meaning: meaning||'', example: example||'' };
+      }).filter(r=>r.word);
+    }, [text]);
+
+    async function handleBulkSave(){
+      if(parsed.length===0){ setErr('Chưa có từ vựng hợp lệ nào để thêm!'); return; }
+      setSaving(true); setErr('');
+      try{
+        const rows = parsed.map(r=>({ id: crypto.randomUUID(), unit_id: unitId, ...r, sort_order:0 }));
+        const { error } = await window.supa.from('vocab_words').insert(rows);
+        if(error) throw error;
+        toast_ && toast_(`Đã thêm ${rows.length} từ vựng!`);
+        onSaved();
+      } catch(e){
+        console.error('[vocab-manager] bulk word save error:', e);
+        setErr(e.message || 'Có lỗi xảy ra, thử lại nhé!');
+      } finally { setSaving(false); }
+    }
+
+    return(
+      <div onClick={e=>{if(e.target===e.currentTarget && !saving) onClose();}}
+        style={{position:'fixed', inset:0, zIndex:9200, background:'rgba(10,2,25,0.72)', backdropFilter:'blur(10px)', display:'flex', alignItems:'flex-start', justifyContent:'center', padding:16, overflowY:'auto', WebkitOverflowScrolling:'touch'}}>
+        <div style={{width:'100%', maxWidth:560, maxHeight:'min(85vh, 680px)', margin:'auto 0', borderRadius:20, background:dark?'#1E0D15':'#fff', border:`1.5px solid ${C.border2}`, boxShadow:'0 24px 60px rgba(0,0,0,.3)', animation:'pop .2s ease both', display:'flex', flexDirection:'column', overflow:'hidden'}}>
+          <div style={{flex:'1 1 auto', minHeight:0, overflowY:'auto', WebkitOverflowScrolling:'touch', padding:'18px 20px 2px'}}>
+            <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6}}>
+              <div style={{fontSize:15, fontWeight:900, color:C.text, display:'flex', alignItems:'center', gap:7}}>
+                <span style={{display:'flex', color:C.lav}}><IconStack size={16}/></span>
+                Nhập nhanh nhiều từ vựng
+              </div>
+              <button onClick={onClose} disabled={saving} style={{width:26, height:26, borderRadius:99, border:`1.5px solid ${C.border2}`, background:C.bg2, color:C.text3, cursor:saving?'not-allowed':'pointer', fontSize:14, fontWeight:900, lineHeight:1, opacity:saving?0.5:1}}>×</button>
+            </div>
+            <div style={{fontSize:11.5, color:C.text3, fontWeight:600, marginBottom:10}}>
+              Mỗi dòng 1 từ vựng — xem ví dụ định dạng bên dưới.
+            </div>
+            <textarea value={text} onChange={e=>{setText(e.target.value); setErr('');}}
+              placeholder={"hello | dt | /həˈloʊ/ | xin chào | Hello, how are you?\nrun | đt | /rʌn/ | chạy\napple | dt"}
+              rows={7} style={{...inputStyle, resize:'vertical', fontFamily:'monospace', fontSize:12.5, marginBottom:12}} {...fh}/>
+
+            <div style={{fontSize:11.5, fontWeight:800, color:C.text3, marginBottom:6}}>
+              Xem trước: {parsed.length>0 ? `${parsed.length} từ vựng hợp lệ` : 'chưa có từ nào'}
+            </div>
+            <div style={{maxHeight:180, overflowY:'auto', borderRadius:12, border:`1.5px solid ${C.border2}`, marginBottom:12}}>
+              {parsed.length===0 ? (
+                <div style={{padding:'14px 12px', fontSize:12, color:C.text3, textAlign:'center'}}>Nhập từ vựng bên trên để xem trước ở đây</div>
+              ) : parsed.map((r,i)=>(
+                <div key={i} style={{display:'flex', alignItems:'center', gap:8, padding:'7px 10px', borderBottom: i<parsed.length-1?`1px solid ${C.border2}`:'none'}}>
+                  <span style={{fontSize:12.5, fontWeight:800, color:C.text, minWidth:70}}>{r.word}</span>
+                  <span style={{fontSize:9.5, fontWeight:800, color:posColor(r.pos), background:posColor(r.pos)+'1c', padding:'2px 6px', borderRadius:6, flexShrink:0}}>{posLabel(r.pos)}</span>
+                  {r.meaning && <span style={{fontSize:11.5, color:C.text3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', flex:1}}>{r.meaning}</span>}
+                </div>
+              ))}
+            </div>
+            {err && <div style={{fontSize:12, fontWeight:700, color:'#ef4444', background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:10, padding:'8px 12px', marginBottom:12}}>{err}</div>}
+
+            {/* Ví dụ định dạng văn bản */}
+            <div style={{background:C.surface||(dark?'#170A11':'#FAFAFA'), border:`1.5px solid ${C.border2}`, borderRadius:16, padding:'13px 15px', marginBottom:14}}>
+              <div style={{display:'flex', alignItems:'center', gap:6, marginBottom:11}}>
+                <IconStar size={14}/>
+                <span style={{fontSize:11, fontWeight:900, color:C.mint||'#10b981', textTransform:'uppercase', letterSpacing:'.8px'}}>Ví dụ định dạng văn bản</span>
+              </div>
+              {[
+                ['Đầy đủ', C.lav, C.lavL, 'hello | dt | /həˈloʊ/ | xin chào | Hello, how are you?'],
+                ['Chỉ loại từ', C.rose||'#e8547a', C.roseL||'rgba(232,84,122,0.12)', 'run | đt'],
+                ['Chỉ từ vựng', C.peach, C.peachL, 'apple'],
+              ].map(([k,c,bg,v])=>(
+                <div key={k} style={{marginBottom:10}}>
+                  <span style={{fontSize:11, fontWeight:900, color:c, background:bg, padding:'2px 9px', borderRadius:999}}>{k}</span>
+                  <pre style={{marginTop:6, fontSize:11.5, color:C.text2, lineHeight:1.75, whiteSpace:'pre-wrap', fontFamily:'monospace', background:dark?'#120B10':'#FAFAFA', padding:'9px 11px', borderRadius:10, border:`1px solid ${C.border2}`}}>{v}</pre>
+                </div>
+              ))}
+              <div style={{fontSize:11, color:C.text3, fontWeight:600, lineHeight:1.5}}>
+                Thứ tự cột: <b style={{color:C.text2}}>từ | loại từ | phiên âm | nghĩa | ví dụ</b> — chỉ từ vựng bắt buộc, có thể dán nhiều dòng cùng lúc.
+              </div>
+            </div>
+          </div>
+          <div style={{display:'flex', gap:8, padding:'12px 16px', borderTop:`1.5px solid ${C.border2}`, background:dark?'#1E0D15':'#fff', flexShrink:0}}>
+            <GhostBtn onClick={onClose} disabled={saving} C={C}>Huỷ</GhostBtn>
+            <PrimaryBtn onClick={handleBulkSave} disabled={saving || parsed.length===0} C={C} style={{flex:2}}>{saving?'Đang lưu...':`Thêm ${parsed.length||''} từ vựng`}</PrimaryBtn>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   /* ─────────────────────── MODAL: Từ vựng (thêm/sửa) ─────────────────────── */
   function WordModal({dark, C, unitId, initial, onClose, onSaved, toast_}){
     const isEdit = !!initial;
@@ -382,6 +502,7 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
     const [words,setWords] = useState([]);
     const [loaded,setLoaded] = useState(false);
     const [wordModal,setWordModal] = useState(null); // null | {} (add) | word (edit)
+    const [bulkModal,setBulkModal] = useState(false);
     const [unitModal,setUnitModal] = useState(false);
 
     const fetchWords = useCallback(async ()=>{
@@ -460,15 +581,26 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
 
         {open && (
           <div style={{padding:'12px 14px 14px', display:'flex', flexDirection:'column', gap:8, borderTop:`1.5px solid ${C.border}`, animation:'fadeUp .18s ease both'}}>
-            <button onClick={()=>setWordModal({})} style={{
-              display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'9px', borderRadius:12,
-              border:`1.5px dashed ${C.lav2}`, background:'transparent', color:C.lav, fontSize:12.5, fontWeight:800,
-              cursor:'pointer', fontFamily:"'Nunito',sans-serif", transition:'all .15s',
-            }}
-              onMouseEnter={e=>{e.currentTarget.style.background=C.lavPale;}}
-              onMouseLeave={e=>{e.currentTarget.style.background='transparent';}}>
-              <IconPlus/> Thêm từ vựng
-            </button>
+            <div style={{display:'flex', gap:8}}>
+              <button onClick={()=>setWordModal({})} style={{
+                flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'9px', borderRadius:12,
+                border:`1.5px dashed ${C.lav2}`, background:'transparent', color:C.lav, fontSize:12.5, fontWeight:800,
+                cursor:'pointer', fontFamily:"'Nunito',sans-serif", transition:'all .15s',
+              }}
+                onMouseEnter={e=>{e.currentTarget.style.background=C.lavPale;}}
+                onMouseLeave={e=>{e.currentTarget.style.background='transparent';}}>
+                <IconPlus/> Thêm từ vựng
+              </button>
+              <button onClick={()=>setBulkModal(true)} title="Nhập nhiều từ vựng cùng lúc" style={{
+                display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'9px 12px', borderRadius:12,
+                border:`1.5px dashed ${C.lav2}`, background:'transparent', color:C.lav, fontSize:12.5, fontWeight:800,
+                cursor:'pointer', fontFamily:"'Nunito',sans-serif", transition:'all .15s', whiteSpace:'nowrap',
+              }}
+                onMouseEnter={e=>{e.currentTarget.style.background=C.lavPale;}}
+                onMouseLeave={e=>{e.currentTarget.style.background='transparent';}}>
+                <IconStack/> Nhập nhanh
+              </button>
+            </div>
 
             {!loaded && (
               <div style={{display:'flex', flexDirection:'column', gap:8}}>
@@ -489,6 +621,12 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
           <WordModal dark={dark} C={C} unitId={unit.id} initial={wordModal.id?wordModal:null}
             onClose={()=>setWordModal(null)}
             onSaved={()=>{ setWordModal(null); fetchWords(); }}
+            toast_={toast_}/>
+        )}
+        {bulkModal && (
+          <BulkWordModal dark={dark} C={C} unitId={unit.id}
+            onClose={()=>setBulkModal(false)}
+            onSaved={()=>{ setBulkModal(false); fetchWords(); }}
             toast_={toast_}/>
         )}
         {unitModal && (
