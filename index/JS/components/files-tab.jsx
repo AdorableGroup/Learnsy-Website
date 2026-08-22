@@ -465,6 +465,7 @@ const loadXLSX = () => loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/xl
           <div style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
             minHeight: '40vh', gap: 14, padding: 32, textAlign: 'center', animation: 'bb-fadeUp .3s ease both',
+            borderRadius: 18, border: `1.5px solid ${C.cardBorder}`,
           }}>
             <span style={{ display: 'inline-flex', color: 'rgba(244,114,182,0.5)', animation: 'bb-float 3s ease-in-out infinite' }}>
               <svg viewBox="0 0 24 24" width="52" height="52" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>

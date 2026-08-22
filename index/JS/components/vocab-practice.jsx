@@ -337,7 +337,7 @@ import React from 'react';
       return (
         <div style={{ flex: 1, padding: '16px 14px 100px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {units.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 10px', color: LC.textMid, fontSize: 13, fontWeight: 700 }}>
+            <div style={{ textAlign: 'center', padding: '40px 10px', color: LC.textMid, fontSize: 13, fontWeight: 700, borderRadius: 16, border: `1.5px solid ${LC.borderQ}` }}>
               Chưa có bài học nào trong khóa học này.
             </div>
           ) : units.map((u, uIdx) => {
@@ -531,7 +531,7 @@ import React from 'react';
                     <SkeletonCard LC={LC} /><SkeletonCard LC={LC} /><SkeletonCard LC={LC} />
                   </>
                 ) : courses.length === 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '34vh', gap: 12, padding: '32px 20px', textAlign: 'center', animation: 'fadeUp .3s ease both' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '34vh', gap: 12, padding: '32px 20px', textAlign: 'center', animation: 'fadeUp .3s ease both', borderRadius: 18, border: `1.5px solid ${LC.borderQ}` }}>
                     <span style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center', width: 64, height: 64, borderRadius: '50%',
                       background: dark ? 'rgba(196,181,253,0.1)' : 'rgba(168,85,247,0.08)', color: LC.textMid,

@@ -952,7 +952,7 @@ import React from 'react';
                   <SkeletonCard dark={dark} />
                 </>
               ) : items.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px 10px', color: LC.textMid, fontSize: 13, fontWeight: 700, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                <div style={{ textAlign: 'center', padding: '40px 10px', color: LC.textMid, fontSize: 13, fontWeight: 700, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, borderRadius: 16, border: `1.5px solid ${LC.borderQ}` }}>
                   <IconHeadphones size={20} color={LC.textMid} />
                   Chưa có bài Listening nào. Quay lại sau nhé!
                 </div>
