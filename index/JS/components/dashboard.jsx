@@ -1348,7 +1348,7 @@ function TabHome({student,lessons,loading,fetchError,onPlay,shuffleQ,shuffleA,se
           <span style={{fontSize:13,fontWeight:700}}>Đang tải bài học...</span>
         </div>
       ):fetchError?(
-        <div style={{textAlign:'center',padding:50,display:'flex',flexDirection:'column',alignItems:'center',gap:8}}>
+        <div style={{textAlign:'center',padding:50,display:'flex',flexDirection:'column',alignItems:'center',gap:8,borderRadius:18,border:`1.5px solid ${C.cardBorder}`}}>
           <span style={{display:'inline-flex',color:'#f472b6',opacity:0.6}}><Icon name="sad" size={40} color="#f472b6"/></span>
           <div style={{fontSize:14,color:C.sub,fontWeight:700}}>Không tải được bài học</div>
           <div style={{fontSize:12,color:C.sub}}>Thử lại nhé bé ơi~</div>
@@ -1356,7 +1356,7 @@ function TabHome({student,lessons,loading,fetchError,onPlay,shuffleQ,shuffleA,se
       ):(
         <div style={{padding:'0 14px',display:'flex',flexDirection:'column',gap:10}}>
           {filtered.length===0&&(
-            <div style={{textAlign:'center',padding:36,color:C.sub,display:'flex',flexDirection:'column',alignItems:'center',gap:8}}>
+            <div style={{textAlign:'center',padding:36,color:C.sub,display:'flex',flexDirection:'column',alignItems:'center',gap:8,borderRadius:18,border:`1.5px solid ${C.cardBorder}`}}>
               <Icon name="search" size={36} color="rgba(244,114,182,0.4)"/>
               <div style={{fontSize:13,fontWeight:700}}>Không tìm thấy bài nào</div>
             </div>
@@ -1437,7 +1437,8 @@ function TabStats({history,dark}){
   const C=dark?CD:CL;
   if(!history.length)return(
     <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
-      minHeight:'60vh',gap:14,padding:32,textAlign:'center',animation:'bb-fadeUp .3s ease both'}}>
+      minHeight:'60vh',gap:14,padding:32,textAlign:'center',animation:'bb-fadeUp .3s ease both',
+      borderRadius:20,border:`1.5px solid ${C.cardBorder}`}}>
       <span style={{display:'inline-flex',color:'rgba(244,114,182,0.5)',animation:'bb-float 3s ease-in-out infinite'}}>
         <Icon name="stats" size={56} color="rgba(244,114,182,0.5)"/>
       </span>
@@ -1577,7 +1578,8 @@ function TabHistory({history,onHistDetail,onClearHistory,dark}){
   const [confirmClear,setConfirmClear]=useState(false);
   if(!history.length)return(
     <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
-      minHeight:'60vh',gap:14,padding:32,textAlign:'center',animation:'bb-fadeUp .3s ease both'}}>
+      minHeight:'60vh',gap:14,padding:32,textAlign:'center',animation:'bb-fadeUp .3s ease both',
+      borderRadius:20,border:`1.5px solid ${C.cardBorder}`}}>
       <span style={{display:'inline-flex',color:'rgba(244,114,182,0.5)',animation:'bb-float 3s ease-in-out infinite'}}>
         <Icon name="history" size={52} color="rgba(244,114,182,0.5)"/>
       </span>
