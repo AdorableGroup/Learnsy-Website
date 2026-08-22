@@ -1436,14 +1436,20 @@ function TabHome({student,lessons,loading,fetchError,onPlay,shuffleQ,shuffleA,se
 function TabStats({history,dark}){
   const C=dark?CD:CL;
   if(!history.length)return(
-    <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
-      minHeight:'60vh',gap:14,padding:32,textAlign:'center',animation:'bb-fadeUp .3s ease both',
-      borderRadius:20,border:`1.5px solid ${C.cardBorder}`}}>
-      <span style={{display:'inline-flex',color:'rgba(244,114,182,0.5)',animation:'bb-float 3s ease-in-out infinite'}}>
-        <Icon name="stats" size={56} color="rgba(244,114,182,0.5)"/>
-      </span>
-      <div style={{fontSize:20,fontWeight:900,color:C.fg,fontFamily:"'Baloo 2',cursive"}}>Chưa có dữ liệu</div>
-      <div style={{fontSize:13,color:C.sub}}>Làm bài quiz để xem thống kê nhé!</div>
+    <div style={{padding:'14px 14px 100px'}}>
+      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:14}}>
+        <Icon name="stats" size={18} color={C.accent}/>
+        <span className="bb-section-title" style={{color:C.fg}}>Thống kê</span>
+      </div>
+      <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+        gap:14,padding:'48px 32px',textAlign:'center',animation:'bb-fadeUp .3s ease both',
+        borderRadius:20,border:`1.5px solid ${C.cardBorder}`}}>
+        <span style={{display:'inline-flex',color:'rgba(244,114,182,0.5)',animation:'bb-float 3s ease-in-out infinite'}}>
+          <Icon name="stats" size={56} color="rgba(244,114,182,0.5)"/>
+        </span>
+        <div style={{fontSize:20,fontWeight:900,color:C.fg,fontFamily:"'Baloo 2',cursive"}}>Chưa có dữ liệu</div>
+        <div style={{fontSize:13,color:C.sub}}>Làm bài quiz để xem thống kê nhé!</div>
+      </div>
     </div>
   );
 
@@ -1577,14 +1583,20 @@ function TabHistory({history,onHistDetail,onClearHistory,dark}){
   const C=dark?CD:CL;
   const [confirmClear,setConfirmClear]=useState(false);
   if(!history.length)return(
-    <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
-      minHeight:'60vh',gap:14,padding:32,textAlign:'center',animation:'bb-fadeUp .3s ease both',
-      borderRadius:20,border:`1.5px solid ${C.cardBorder}`}}>
-      <span style={{display:'inline-flex',color:'rgba(244,114,182,0.5)',animation:'bb-float 3s ease-in-out infinite'}}>
-        <Icon name="history" size={52} color="rgba(244,114,182,0.5)"/>
-      </span>
-      <div style={{fontSize:20,fontWeight:900,color:C.fg,fontFamily:"'Baloo 2',cursive"}}>Chưa có lịch sử</div>
-      <div style={{fontSize:13,color:C.sub}}>Làm bài quiz để lưu kết quả nhé~</div>
+    <div style={{padding:'14px 14px 100px'}}>
+      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:14}}>
+        <Icon name="history" size={18} color={C.accent}/>
+        <span className="bb-section-title" style={{color:C.fg}}>Lịch sử</span>
+      </div>
+      <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+        gap:14,padding:'48px 32px',textAlign:'center',animation:'bb-fadeUp .3s ease both',
+        borderRadius:20,border:`1.5px solid ${C.cardBorder}`}}>
+        <span style={{display:'inline-flex',color:'rgba(244,114,182,0.5)',animation:'bb-float 3s ease-in-out infinite'}}>
+          <Icon name="history" size={52} color="rgba(244,114,182,0.5)"/>
+        </span>
+        <div style={{fontSize:20,fontWeight:900,color:C.fg,fontFamily:"'Baloo 2',cursive"}}>Chưa có lịch sử</div>
+        <div style={{fontSize:13,color:C.sub}}>Làm bài quiz để lưu kết quả nhé~</div>
+      </div>
     </div>
   );
   return(
