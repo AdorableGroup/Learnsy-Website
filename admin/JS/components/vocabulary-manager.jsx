@@ -83,13 +83,17 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
   /* ─────────────────────── HELPERS: styles dùng chung ─────────────────────── */
   function useInputStyle(C){
     return useMemo(()=>({
-      width:'100%', padding:'10px 12px', borderRadius:12,
+      width:'100%', padding:'9px 11px', borderRadius:11,
       border:`1.5px solid ${C.border2}`, background:C.surface, color:C.text,
       fontSize:13.5, fontFamily:"'Nunito',sans-serif", fontWeight:600,
-      outline:'none', boxSizing:'border-box',
+      outline:'none', boxSizing:'border-box', transition:'border-color .15s, box-shadow .15s',
     }),[C]);
   }
-  const labelStyleFor = C => ({ fontSize:11.5, fontWeight:800, color:C.text3, marginBottom:5, display:'block' });
+  const focusHandlers = C => ({
+    onFocus: e=>{ e.currentTarget.style.borderColor = C.lav||'#a855f7'; e.currentTarget.style.boxShadow = `0 0 0 3px ${C.lav?C.lav+'26':'rgba(168,85,247,0.15)'}`; },
+    onBlur: e=>{ e.currentTarget.style.borderColor = C.border2; e.currentTarget.style.boxShadow = 'none'; },
+  });
+  const labelStyleFor = C => ({ fontSize:11, fontWeight:800, color:C.text3, marginBottom:4, display:'block', letterSpacing:'.2px' });
 
   function PrimaryBtn({children, onClick, disabled, C, style, ...rest}){
     return(
@@ -152,6 +156,7 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
     const [saving,setSaving] = useState(false);
     const [err,setErr] = useState('');
     const inputStyle = useInputStyle(C);
+    const fh = focusHandlers(C);
 
     async function handleSave(){
       if(!title.trim()){ setErr('Nhập tên khóa học nhé!'); return; }
@@ -176,24 +181,24 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
     return(
       <div onClick={e=>{if(e.target===e.currentTarget && !saving) onClose();}}
         style={{position:'fixed', inset:0, zIndex:9200, background:'rgba(10,2,25,0.72)', backdropFilter:'blur(10px)', display:'flex', alignItems:'flex-start', justifyContent:'center', padding:16, overflowY:'auto', WebkitOverflowScrolling:'touch'}}>
-        <div style={{width:'100%', maxWidth:420, maxHeight:'min(85vh, 640px)', margin:'auto 0', borderRadius:22, background:dark?'#1E0D15':'#fff', border:`1.5px solid ${C.border2}`, boxShadow:'0 24px 60px rgba(0,0,0,.3)', animation:'pop .2s ease both', display:'flex', flexDirection:'column', overflow:'hidden'}}>
-          <div style={{flex:'1 1 auto', minHeight:0, overflowY:'auto', WebkitOverflowScrolling:'touch', padding:'20px 18px 4px'}}>
-            <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16}}>
-              <div style={{fontSize:15.5, fontWeight:900, color:C.text, display:'flex', alignItems:'center', gap:8}}>
-                <span style={{display:'flex', color:C.lav}}><IconBook size={17}/></span>
+        <div style={{width:'100%', maxWidth:420, maxHeight:'min(85vh, 620px)', margin:'auto 0', borderRadius:20, background:dark?'#1E0D15':'#fff', border:`1.5px solid ${C.border2}`, boxShadow:'0 24px 60px rgba(0,0,0,.3)', animation:'pop .2s ease both', display:'flex', flexDirection:'column', overflow:'hidden'}}>
+          <div style={{flex:'1 1 auto', minHeight:0, overflowY:'auto', WebkitOverflowScrolling:'touch', padding:'18px 18px 2px'}}>
+            <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14}}>
+              <div style={{fontSize:15, fontWeight:900, color:C.text, display:'flex', alignItems:'center', gap:7}}>
+                <span style={{display:'flex', color:C.lav}}><IconBook size={16}/></span>
                 {isEdit ? 'Sửa khóa học' : 'Tạo khóa học mới'}
               </div>
-              <button onClick={onClose} disabled={saving} style={{width:28, height:28, borderRadius:99, border:`1.5px solid ${C.border2}`, background:C.bg2, color:C.text3, cursor:saving?'not-allowed':'pointer', fontSize:15, fontWeight:900, lineHeight:1, opacity:saving?0.5:1}}>×</button>
+              <button onClick={onClose} disabled={saving} style={{width:26, height:26, borderRadius:99, border:`1.5px solid ${C.border2}`, background:C.bg2, color:C.text3, cursor:saving?'not-allowed':'pointer', fontSize:14, fontWeight:900, lineHeight:1, opacity:saving?0.5:1}}>×</button>
+            </div>
+            <div style={{marginBottom:10}}>
+              <label style={labelStyleFor(C)}>Tên khóa học *</label>
+              <input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Vd: Tiếng Anh Cơ Bản A1" style={inputStyle} {...fh} autoFocus/>
             </div>
             <div style={{marginBottom:12}}>
-              <label style={labelStyleFor(C)}>Tên khóa học *</label>
-              <input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Vd: Tiếng Anh Cơ Bản A1" style={inputStyle} autoFocus/>
-            </div>
-            <div style={{marginBottom:16}}>
               <label style={labelStyleFor(C)}>Mô tả</label>
-              <textarea value={description} onChange={e=>setDescription(e.target.value)} placeholder="Mô tả ngắn về khóa học..." rows={2} style={{...inputStyle, resize:'vertical'}}/>
+              <textarea value={description} onChange={e=>setDescription(e.target.value)} placeholder="Mô tả ngắn về khóa học..." rows={2} style={{...inputStyle, resize:'vertical'}} {...fh}/>
             </div>
-            {err && <div style={{fontSize:12, fontWeight:700, color:'#ef4444', background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:10, padding:'8px 12px', marginBottom:14}}>{err}</div>}
+            {err && <div style={{fontSize:12, fontWeight:700, color:'#ef4444', background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:10, padding:'8px 12px', marginBottom:12}}>{err}</div>}
           </div>
           <div style={{display:'flex', gap:8, padding:'12px 18px', borderTop:`1.5px solid ${C.border2}`, background:dark?'#1E0D15':'#fff', flexShrink:0}}>
             <GhostBtn onClick={onClose} disabled={saving} C={C}>Huỷ</GhostBtn>
@@ -212,6 +217,7 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
     const [saving,setSaving] = useState(false);
     const [err,setErr] = useState('');
     const inputStyle = useInputStyle(C);
+    const fh = focusHandlers(C);
 
     async function handleSave(){
       if(!title.trim()){ setErr('Nhập tên bài học nhé!'); return; }
@@ -236,23 +242,23 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
     return(
       <div onClick={e=>{if(e.target===e.currentTarget && !saving) onClose();}}
         style={{position:'fixed', inset:0, zIndex:9200, background:'rgba(10,2,25,0.72)', backdropFilter:'blur(10px)', display:'flex', alignItems:'flex-start', justifyContent:'center', padding:16, overflowY:'auto', WebkitOverflowScrolling:'touch'}}>
-        <div style={{width:'100%', maxWidth:420, maxHeight:'min(85vh, 640px)', margin:'auto 0', borderRadius:22, background:dark?'#1E0D15':'#fff', border:`1.5px solid ${C.border2}`, boxShadow:'0 24px 60px rgba(0,0,0,.3)', animation:'pop .2s ease both', display:'flex', flexDirection:'column', overflow:'hidden'}}>
-          <div style={{flex:'1 1 auto', minHeight:0, overflowY:'auto', WebkitOverflowScrolling:'touch', padding:'20px 18px 4px'}}>
-            <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16}}>
-              <div style={{fontSize:15.5, fontWeight:900, color:C.text}}>{isEdit?'Sửa Unit':'Tạo Unit mới'}</div>
-              <button onClick={onClose} disabled={saving} style={{width:28, height:28, borderRadius:99, border:`1.5px solid ${C.border2}`, background:C.bg2, color:C.text3, cursor:saving?'not-allowed':'pointer', fontSize:15, fontWeight:900, lineHeight:1, opacity:saving?0.5:1}}>×</button>
+        <div style={{width:'100%', maxWidth:420, maxHeight:'min(85vh, 620px)', margin:'auto 0', borderRadius:20, background:dark?'#1E0D15':'#fff', border:`1.5px solid ${C.border2}`, boxShadow:'0 24px 60px rgba(0,0,0,.3)', animation:'pop .2s ease both', display:'flex', flexDirection:'column', overflow:'hidden'}}>
+          <div style={{flex:'1 1 auto', minHeight:0, overflowY:'auto', WebkitOverflowScrolling:'touch', padding:'18px 18px 2px'}}>
+            <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14}}>
+              <div style={{fontSize:15, fontWeight:900, color:C.text}}>{isEdit?'Sửa Unit':'Tạo Unit mới'}</div>
+              <button onClick={onClose} disabled={saving} style={{width:26, height:26, borderRadius:99, border:`1.5px solid ${C.border2}`, background:C.bg2, color:C.text3, cursor:saving?'not-allowed':'pointer', fontSize:14, fontWeight:900, lineHeight:1, opacity:saving?0.5:1}}>×</button>
+            </div>
+            <div style={{marginBottom:10}}>
+              <label style={labelStyleFor(C)}>Tên bài học *</label>
+              <input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Vd: Unit 1 - Greetings" style={inputStyle} {...fh} autoFocus/>
             </div>
             <div style={{marginBottom:12}}>
-              <label style={labelStyleFor(C)}>Tên bài học *</label>
-              <input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Vd: Unit 1 - Greetings" style={inputStyle} autoFocus/>
-            </div>
-            <div style={{marginBottom:16}}>
               <label style={labelStyleFor(C)}>Level</label>
-              <input value={level} onChange={e=>setLevel(e.target.value)} placeholder="Vd: Beginner, A1, A2..." style={inputStyle}/>
+              <input value={level} onChange={e=>setLevel(e.target.value)} placeholder="Vd: Beginner, A1, A2..." style={inputStyle} {...fh}/>
             </div>
-            {err && <div style={{fontSize:12, fontWeight:700, color:'#ef4444', background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:10, padding:'8px 12px', marginBottom:14}}>{err}</div>}
+            {err && <div style={{fontSize:12, fontWeight:700, color:'#ef4444', background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:10, padding:'8px 12px', marginBottom:12}}>{err}</div>}
           </div>
-          <div style={{display:'flex', gap:8, padding:'12px 18px', borderTop:`1.5px solid ${C.border2}`, background:dark?'#1E0D15':'#fff', flexShrink:0}}>
+          <div style={{display:'flex', gap:8, padding:'12px 16px', borderTop:`1.5px solid ${C.border2}`, background:dark?'#1E0D15':'#fff', flexShrink:0}}>
             <GhostBtn onClick={onClose} disabled={saving} C={C}>Huỷ</GhostBtn>
             <PrimaryBtn onClick={handleSave} disabled={saving} C={C} style={{flex:2}}>{saving?'Đang lưu...':(isEdit?'Lưu thay đổi':'Tạo Unit')}</PrimaryBtn>
           </div>
@@ -272,6 +278,7 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
     const [saving,setSaving] = useState(false);
     const [err,setErr] = useState('');
     const inputStyle = useInputStyle(C);
+    const fh = focusHandlers(C);
 
     async function handleSave(){
       if(!word.trim()){ setErr('Nhập từ vựng nhé!'); return; }
@@ -296,39 +303,39 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
     return(
       <div onClick={e=>{if(e.target===e.currentTarget && !saving) onClose();}}
         style={{position:'fixed', inset:0, zIndex:9200, background:'rgba(10,2,25,0.72)', backdropFilter:'blur(10px)', display:'flex', alignItems:'flex-start', justifyContent:'center', padding:16, overflowY:'auto', WebkitOverflowScrolling:'touch'}}>
-        <div style={{width:'100%', maxWidth:440, maxHeight:'min(85vh, 640px)', margin:'auto 0', borderRadius:22, background:dark?'#1E0D15':'#fff', border:`1.5px solid ${C.border2}`, boxShadow:'0 24px 60px rgba(0,0,0,.3)', animation:'pop .2s ease both', display:'flex', flexDirection:'column', overflow:'hidden'}}>
-          <div style={{flex:'1 1 auto', minHeight:0, overflowY:'auto', WebkitOverflowScrolling:'touch', padding:'20px 18px 4px'}}>
-            <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16}}>
-              <div style={{fontSize:15.5, fontWeight:900, color:C.text}}>{isEdit?'Sửa từ vựng':'Thêm từ vựng'}</div>
-              <button onClick={onClose} disabled={saving} style={{width:28, height:28, borderRadius:99, border:`1.5px solid ${C.border2}`, background:C.bg2, color:C.text3, cursor:saving?'not-allowed':'pointer', fontSize:15, fontWeight:900, lineHeight:1, opacity:saving?0.5:1}}>×</button>
+        <div style={{width:'100%', maxWidth:420, maxHeight:'min(85vh, 620px)', margin:'auto 0', borderRadius:20, background:dark?'#1E0D15':'#fff', border:`1.5px solid ${C.border2}`, boxShadow:'0 24px 60px rgba(0,0,0,.3)', animation:'pop .2s ease both', display:'flex', flexDirection:'column', overflow:'hidden'}}>
+          <div style={{flex:'1 1 auto', minHeight:0, overflowY:'auto', WebkitOverflowScrolling:'touch', padding:'18px 18px 2px'}}>
+            <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14}}>
+              <div style={{fontSize:15, fontWeight:900, color:C.text}}>{isEdit?'Sửa từ vựng':'Thêm từ vựng'}</div>
+              <button onClick={onClose} disabled={saving} style={{width:26, height:26, borderRadius:99, border:`1.5px solid ${C.border2}`, background:C.bg2, color:C.text3, cursor:saving?'not-allowed':'pointer', fontSize:14, fontWeight:900, lineHeight:1, opacity:saving?0.5:1}}>×</button>
             </div>
-            <div style={{display:'flex', gap:10, marginBottom:12}}>
+            <div style={{display:'flex', gap:8, marginBottom:10}}>
               <div style={{flex:2}}>
                 <label style={labelStyleFor(C)}>Từ vựng *</label>
-                <input value={word} onChange={e=>setWord(e.target.value)} placeholder="Vd: Hello" style={inputStyle} autoFocus/>
+                <input value={word} onChange={e=>setWord(e.target.value)} placeholder="Vd: Hello" style={inputStyle} {...fh} autoFocus/>
               </div>
               <div style={{flex:1}}>
                 <label style={labelStyleFor(C)}>Loại từ</label>
-                <select value={pos} onChange={e=>setPos(e.target.value)} style={{...inputStyle, cursor:'pointer'}}>
+                <select value={pos} onChange={e=>setPos(e.target.value)} style={{...inputStyle, cursor:'pointer'}} {...fh}>
                   {POS_OPTIONS.map(p=><option key={p.value} value={p.value}>{p.label}</option>)}
                 </select>
               </div>
             </div>
-            <div style={{marginBottom:12}}>
+            <div style={{marginBottom:10}}>
               <label style={labelStyleFor(C)}>Phiên âm (IPA)</label>
-              <input value={ipa} onChange={e=>setIpa(e.target.value)} placeholder="Vd: /həˈloʊ/" style={inputStyle}/>
+              <input value={ipa} onChange={e=>setIpa(e.target.value)} placeholder="Vd: /həˈloʊ/" style={inputStyle} {...fh}/>
+            </div>
+            <div style={{marginBottom:10}}>
+              <label style={labelStyleFor(C)}>Nghĩa</label>
+              <textarea value={meaning} onChange={e=>setMeaning(e.target.value)} placeholder="Giải thích nghĩa..." rows={2} style={{...inputStyle, resize:'vertical'}} {...fh}/>
             </div>
             <div style={{marginBottom:12}}>
-              <label style={labelStyleFor(C)}>Nghĩa</label>
-              <textarea value={meaning} onChange={e=>setMeaning(e.target.value)} placeholder="Giải thích nghĩa..." rows={2} style={{...inputStyle, resize:'vertical'}}/>
-            </div>
-            <div style={{marginBottom:16}}>
               <label style={labelStyleFor(C)}>Ví dụ</label>
-              <textarea value={example} onChange={e=>setExample(e.target.value)} placeholder="Câu ví dụ..." rows={2} style={{...inputStyle, resize:'vertical'}}/>
+              <textarea value={example} onChange={e=>setExample(e.target.value)} placeholder="Câu ví dụ..." rows={2} style={{...inputStyle, resize:'vertical'}} {...fh}/>
             </div>
-            {err && <div style={{fontSize:12, fontWeight:700, color:'#ef4444', background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:10, padding:'8px 12px', marginBottom:14}}>{err}</div>}
+            {err && <div style={{fontSize:12, fontWeight:700, color:'#ef4444', background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:10, padding:'8px 12px', marginBottom:12}}>{err}</div>}
           </div>
-          <div style={{display:'flex', gap:8, padding:'12px 18px', borderTop:`1.5px solid ${C.border2}`, background:dark?'#1E0D15':'#fff', flexShrink:0}}>
+          <div style={{display:'flex', gap:8, padding:'12px 16px', borderTop:`1.5px solid ${C.border2}`, background:dark?'#1E0D15':'#fff', flexShrink:0}}>
             <GhostBtn onClick={onClose} disabled={saving} C={C}>Huỷ</GhostBtn>
             <PrimaryBtn onClick={handleSave} disabled={saving} C={C} style={{flex:2}}>{saving?'Đang lưu...':(isEdit?'Lưu thay đổi':'Thêm từ vựng')}</PrimaryBtn>
           </div>
