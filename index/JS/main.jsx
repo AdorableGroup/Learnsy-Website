@@ -18,6 +18,7 @@ window.React = React
 window.ReactDOM = ReactDOM
 
 import './components/globals.jsx'
+import './toast.jsx'
 import './components/save-result.jsx'
 import './components/quiz-player.jsx'
 import './components/pw-gate.jsx'
