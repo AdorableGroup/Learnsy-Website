@@ -226,9 +226,16 @@ import React from 'react';
             </div>
           </div>
 
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px 20px 30px', textAlign: 'center' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px 20px 30px' }}>
             {!isWriting ? (
-              <div key={currentVocabIdx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', animation: 'bb-pop .3s cubic-bezier(.34,1.56,.64,1) both' }}>
+              <div key={currentVocabIdx} style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+                width: '100%', maxWidth: 480, padding: '32px 24px',
+                background: dark ? 'rgba(30,13,21,0.6)' : '#fff',
+                border: `1.5px solid ${LC.border}`, borderRadius: 24,
+                boxShadow: dark ? '0 10px 34px rgba(0,0,0,.28)' : '0 10px 34px rgba(168,85,247,0.12)',
+                animation: 'bb-pop .3s cubic-bezier(.34,1.56,.64,1) both',
+              }}>
                 <div style={{ fontSize: 44, fontWeight: 900, color: '#E8547A', marginBottom: 10 }}>{vocab.word}</div>
                 <div style={{ display: 'inline-block', background: '#FEF3C7', color: '#78350f', padding: '5px 16px', borderRadius: 999, fontSize: 12.5, fontWeight: 800, marginBottom: 12 }}>
                   {getPosLabel(vocab.pos)}
@@ -251,9 +258,9 @@ import React from 'react';
                     </button>
                   ))}
                 </div>
-                {vocab.meaning && <div style={{ fontSize: 16, color: LC.text, marginBottom: 14, maxWidth: 480, lineHeight: 1.6 }}>{vocab.meaning}</div>}
+                {vocab.meaning && <div style={{ fontSize: 16, color: LC.text, marginBottom: 14, lineHeight: 1.6 }}>{vocab.meaning}</div>}
                 {vocab.example && (
-                  <div style={{ fontSize: 13.5, color: LC.text2, fontStyle: 'italic', padding: 14, background: dark ? 'rgba(196,181,253,0.08)' : 'rgba(168,85,247,0.06)', borderRadius: 14, borderLeft: '3.5px solid #A855F7', maxWidth: 480, marginBottom: 24 }}>
+                  <div style={{ fontSize: 13.5, color: LC.text2, fontStyle: 'italic', padding: 14, width: '100%', boxSizing: 'border-box', background: dark ? 'rgba(196,181,253,0.08)' : 'rgba(168,85,247,0.06)', borderRadius: 14, borderLeft: '3.5px solid #A855F7', marginBottom: 24 }}>
                     "{vocab.example}"
                   </div>
                 )}
@@ -266,7 +273,14 @@ import React from 'react';
                 </div>
               </div>
             ) : (
-              <div key={`w-${currentVocabIdx}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', animation: 'bb-pop .3s cubic-bezier(.34,1.56,.64,1) both' }}>
+              <div key={`w-${currentVocabIdx}`} style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+                width: '100%', maxWidth: 480, padding: '32px 24px',
+                background: dark ? 'rgba(30,13,21,0.6)' : '#fff',
+                border: `1.5px solid ${LC.border}`, borderRadius: 24,
+                boxShadow: dark ? '0 10px 34px rgba(0,0,0,.28)' : '0 10px 34px rgba(168,85,247,0.12)',
+                animation: 'bb-pop .3s cubic-bezier(.34,1.56,.64,1) both',
+              }}>
                 {vocab.ipa && <div style={{ fontSize: 18, color: LC.textMid, fontStyle: 'italic', marginBottom: 22 }}>/{vocab.ipa.replace(/^\/|\/$/g, '')}/</div>}
                 <button onClick={() => speak(vocab.word, 1)} style={{ width: 46, height: 46, borderRadius: '50%', border: 'none', background: 'linear-gradient(135deg,#FF6B95,#A855F7)', color: '#fff', cursor: 'pointer', marginBottom: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'transform .15s ease' }}
                   onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; }}
