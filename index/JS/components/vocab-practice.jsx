@@ -54,13 +54,21 @@ import React from 'react';
       try {
         if (!word) return;
         const synth = window.speechSynthesis;
-        if (!synth) return;
+        if (!synth) { console.warn('[vocab] Trình duyệt không hỗ trợ Web Speech API (speechSynthesis).'); return; }
         synth.cancel();
         const utterance = new SpeechSynthesisUtterance(word);
         utterance.lang = 'en-US';
         utterance.rate = rate;
+        utterance.onerror = (ev) => console.warn('[vocab] Lỗi phát âm:', ev.error);
+        // Một số trình duyệt (đặc biệt Android WebView/Opera) load voices bất đồng bộ,
+        // nên nếu chưa có voice nào sẵn sàng thì phát vẫn không kêu — thử nạp trước.
+        const voices = synth.getVoices();
+        if (voices.length === 0) {
+          console.warn('[vocab] Chưa có giọng đọc nào sẵn sàng, đang thử lại...');
+          synth.onvoiceschanged = () => { synth.speak(utterance); };
+        }
         synth.speak(utterance);
-      } catch (e) { /* no-op: TTS không khả dụng */ }
+      } catch (e) { console.warn('[vocab] speak() lỗi:', e); }
     }
 
     /* ─────────────────────── ICONS ─────────────────────── */
