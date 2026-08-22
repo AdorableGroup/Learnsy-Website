@@ -303,35 +303,37 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
     return(
       <div onClick={e=>{if(e.target===e.currentTarget && !saving) onClose();}}
         style={{position:'fixed', inset:0, zIndex:9200, background:'rgba(10,2,25,0.72)', backdropFilter:'blur(10px)', display:'flex', alignItems:'flex-start', justifyContent:'center', padding:16, overflowY:'auto', WebkitOverflowScrolling:'touch'}}>
-        <div style={{width:'100%', maxWidth:420, maxHeight:'min(85vh, 620px)', margin:'auto 0', borderRadius:20, background:dark?'#1E0D15':'#fff', border:`1.5px solid ${C.border2}`, boxShadow:'0 24px 60px rgba(0,0,0,.3)', animation:'pop .2s ease both', display:'flex', flexDirection:'column', overflow:'hidden'}}>
-          <div style={{flex:'1 1 auto', minHeight:0, overflowY:'auto', WebkitOverflowScrolling:'touch', padding:'18px 18px 2px'}}>
+        <div style={{width:'100%', maxWidth:560, maxHeight:'min(85vh, 620px)', margin:'auto 0', borderRadius:20, background:dark?'#1E0D15':'#fff', border:`1.5px solid ${C.border2}`, boxShadow:'0 24px 60px rgba(0,0,0,.3)', animation:'pop .2s ease both', display:'flex', flexDirection:'column', overflow:'hidden'}}>
+          <div style={{flex:'1 1 auto', minHeight:0, overflowY:'auto', WebkitOverflowScrolling:'touch', padding:'18px 20px 2px'}}>
             <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14}}>
               <div style={{fontSize:15, fontWeight:900, color:C.text}}>{isEdit?'Sửa từ vựng':'Thêm từ vựng'}</div>
               <button onClick={onClose} disabled={saving} style={{width:26, height:26, borderRadius:99, border:`1.5px solid ${C.border2}`, background:C.bg2, color:C.text3, cursor:saving?'not-allowed':'pointer', fontSize:14, fontWeight:900, lineHeight:1, opacity:saving?0.5:1}}>×</button>
             </div>
-            <div style={{display:'flex', gap:8, marginBottom:10}}>
-              <div style={{flex:2}}>
+            <div style={{display:'flex', flexWrap:'wrap', gap:10, marginBottom:10}}>
+              <div style={{flex:'2 1 160px'}}>
                 <label style={labelStyleFor(C)}>Từ vựng *</label>
                 <input value={word} onChange={e=>setWord(e.target.value)} placeholder="Vd: Hello" style={inputStyle} {...fh} autoFocus/>
               </div>
-              <div style={{flex:1}}>
+              <div style={{flex:'1 1 110px'}}>
                 <label style={labelStyleFor(C)}>Loại từ</label>
                 <select value={pos} onChange={e=>setPos(e.target.value)} style={{...inputStyle, cursor:'pointer'}} {...fh}>
                   {POS_OPTIONS.map(p=><option key={p.value} value={p.value}>{p.label}</option>)}
                 </select>
               </div>
+              <div style={{flex:'1 1 110px'}}>
+                <label style={labelStyleFor(C)}>Phiên âm (IPA)</label>
+                <input value={ipa} onChange={e=>setIpa(e.target.value)} placeholder="/həˈloʊ/" style={inputStyle} {...fh}/>
+              </div>
             </div>
-            <div style={{marginBottom:10}}>
-              <label style={labelStyleFor(C)}>Phiên âm (IPA)</label>
-              <input value={ipa} onChange={e=>setIpa(e.target.value)} placeholder="Vd: /həˈloʊ/" style={inputStyle} {...fh}/>
-            </div>
-            <div style={{marginBottom:10}}>
-              <label style={labelStyleFor(C)}>Nghĩa</label>
-              <textarea value={meaning} onChange={e=>setMeaning(e.target.value)} placeholder="Giải thích nghĩa..." rows={2} style={{...inputStyle, resize:'vertical'}} {...fh}/>
-            </div>
-            <div style={{marginBottom:12}}>
-              <label style={labelStyleFor(C)}>Ví dụ</label>
-              <textarea value={example} onChange={e=>setExample(e.target.value)} placeholder="Câu ví dụ..." rows={2} style={{...inputStyle, resize:'vertical'}} {...fh}/>
+            <div style={{display:'flex', flexWrap:'wrap', gap:10, marginBottom:12}}>
+              <div style={{flex:'1 1 220px'}}>
+                <label style={labelStyleFor(C)}>Nghĩa</label>
+                <textarea value={meaning} onChange={e=>setMeaning(e.target.value)} placeholder="Giải thích nghĩa..." rows={3} style={{...inputStyle, resize:'vertical', minHeight:78}} {...fh}/>
+              </div>
+              <div style={{flex:'1 1 220px'}}>
+                <label style={labelStyleFor(C)}>Ví dụ</label>
+                <textarea value={example} onChange={e=>setExample(e.target.value)} placeholder="Câu ví dụ..." rows={3} style={{...inputStyle, resize:'vertical', minHeight:78}} {...fh}/>
+              </div>
             </div>
             {err && <div style={{fontSize:12, fontWeight:700, color:'#ef4444', background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:10, padding:'8px 12px', marginBottom:12}}>{err}</div>}
           </div>
