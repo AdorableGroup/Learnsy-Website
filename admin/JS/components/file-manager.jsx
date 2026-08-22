@@ -627,7 +627,7 @@ const loadXLSX = () => loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/xl
         )}
 
         {!loading && filtered.length===0 && (
-          <div style={{textAlign:'center', padding:'40px 20px', color:C.text3}}>
+          <div style={{textAlign:'center', padding:'40px 20px', color:C.text3, borderRadius:16, border:`1.5px solid ${C.border}`}}>
             <div style={{display:'flex', justifyContent:'center', marginBottom:10, opacity:0.5}}>
               <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
             </div>

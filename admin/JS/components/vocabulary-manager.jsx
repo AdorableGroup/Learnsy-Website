@@ -1,7 +1,7 @@
 import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
 
 // ══════════════════════════════════════════════════════════════════════
-//  VOCABULARY MANAGER — trang độc lập, quản lý Khóa học > Unit > Từ vựng
+//  VOCABULARY MANAGER — trang độc lập, quản lý Bài học > Unit > Từ vựng
 //  Hiện ở tab riêng "Từ vựng" cạnh "Bài học" / "Listening" / "Tài liệu" / "Học sinh".
 //  Dữ liệu lưu trong Supabase: vocab_courses, vocab_units, vocab_words
 //
@@ -171,8 +171,8 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
     );
   }
 
-  /* ─────────────────────── MODAL: Khóa học (thêm/sửa) ─────────────────────── */
-  function CourseModal({dark, C, initial, onClose, onSaved, toast_}){
+  /* ─────────────────────── MODAL: Bài học (thêm/sửa) ─────────────────────── */
+  function LessonModal({dark, C, initial, onClose, onSaved, toast_}){
     const isEdit = !!initial;
     const [title,setTitle] = useState(initial?.title||'');
     const [description,setDescription] = useState(initial?.description||'');
@@ -182,7 +182,7 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
     const fh = focusHandlers(C);
 
     async function handleSave(){
-      if(!title.trim()){ setErr('Nhập tên khóa học nhé!'); return; }
+      if(!title.trim()){ setErr('Nhập tên bài học nhé!'); return; }
       setSaving(true); setErr('');
       try{
         const row = { title: title.trim(), description: description.trim() };
@@ -193,10 +193,10 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
           const { error } = await window.supa.from('vocab_courses').insert({ id: crypto.randomUUID(), ...row, sort_order:0 });
           if(error) throw error;
         }
-        toast_ && toast_(isEdit ? 'Đã cập nhật khóa học!' : 'Đã tạo khóa học mới!');
+        toast_ && toast_(isEdit ? 'Đã cập nhật bài học!' : 'Đã tạo bài học mới!');
         onSaved();
       } catch(e){
-        console.error('[vocab-manager] course save error:', e);
+        console.error('[vocab-manager] lesson save error:', e);
         setErr(e.message || 'Có lỗi xảy ra, thử lại nhé!');
       } finally { setSaving(false); }
     }
@@ -209,23 +209,23 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
             <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14}}>
               <div style={{fontSize:15, fontWeight:900, color:C.text, display:'flex', alignItems:'center', gap:7}}>
                 <span style={{display:'flex', color:C.lav}}><IconBook size={16}/></span>
-                {isEdit ? 'Sửa khóa học' : 'Tạo khóa học mới'}
+                {isEdit ? 'Sửa bài học' : 'Tạo bài học mới'}
               </div>
               <button onClick={onClose} disabled={saving} style={{width:26, height:26, borderRadius:99, border:`1.5px solid ${C.border2}`, background:C.bg2, color:C.text3, cursor:saving?'not-allowed':'pointer', fontSize:14, fontWeight:900, lineHeight:1, opacity:saving?0.5:1}}>×</button>
             </div>
             <div style={{marginBottom:10}}>
-              <label style={labelStyleFor(C)}>Tên khóa học *</label>
+              <label style={labelStyleFor(C)}>Tên bài học *</label>
               <input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Vd: Tiếng Anh Cơ Bản A1" style={inputStyle} {...fh} autoFocus/>
             </div>
             <div style={{marginBottom:12}}>
               <label style={labelStyleFor(C)}>Mô tả</label>
-              <textarea value={description} onChange={e=>setDescription(e.target.value)} placeholder="Mô tả ngắn về khóa học..." rows={2} style={{...inputStyle, resize:'vertical'}} {...fh}/>
+              <textarea value={description} onChange={e=>setDescription(e.target.value)} placeholder="Mô tả ngắn về bài học..." rows={2} style={{...inputStyle, resize:'vertical'}} {...fh}/>
             </div>
             {err && <div style={{fontSize:12, fontWeight:700, color:'#ef4444', background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:10, padding:'8px 12px', marginBottom:12}}>{err}</div>}
           </div>
           <div style={{display:'flex', gap:8, padding:'12px 18px', borderTop:`1.5px solid ${C.border2}`, background:dark?'#1E0D15':'#fff', flexShrink:0}}>
             <GhostBtn onClick={onClose} disabled={saving} C={C}>Huỷ</GhostBtn>
-            <PrimaryBtn onClick={handleSave} disabled={saving} C={C} style={{flex:2}}>{saving?'Đang lưu...':(isEdit?'Lưu thay đổi':'Tạo khóa học')}</PrimaryBtn>
+            <PrimaryBtn onClick={handleSave} disabled={saving} C={C} style={{flex:2}}>{saving?'Đang lưu...':(isEdit?'Lưu thay đổi':'Tạo bài học')}</PrimaryBtn>
           </div>
         </div>
       </div>
@@ -640,43 +640,43 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
   }
 
   /* ─────────────────────── KHỐI KHÓA HỌC (accordion) ─────────────────────── */
-  function CourseBlock({course, dark, C, confirm_, toast_, onChanged, defaultOpen}){
+  function LessonBlock({lesson, dark, C, confirm_, toast_, onChanged, defaultOpen}){
     const [open,setOpen] = useState(!!defaultOpen);
     const [units,setUnits] = useState([]);
     const [loaded,setLoaded] = useState(false);
     const [unitModal,setUnitModal] = useState(false);
-    const [courseModal,setCourseModal] = useState(false);
+    const [lessonModal,setLessonModal] = useState(false);
 
     const fetchUnits = useCallback(async ()=>{
       try{
         const { data, error } = await window.supa.from('vocab_units')
-          .select('*').eq('course_id', course.id).order('sort_order',{ascending:true}).order('created_at',{ascending:true});
+          .select('*').eq('course_id', lesson.id).order('sort_order',{ascending:true}).order('created_at',{ascending:true});
         if(error) throw error;
         setUnits(data||[]);
       } catch(e){
         console.error('[vocab-manager] fetch units error:', e);
-        toast_ && toast_('Không tải được units của khóa học');
+        toast_ && toast_('Không tải được units của bài học');
       } finally { setLoaded(true); }
-    },[course.id, toast_]);
+    },[lesson.id, toast_]);
 
     useEffect(()=>{ if(open && !loaded) fetchUnits(); },[open, loaded, fetchUnits]);
 
-    async function doDeleteCourse(){
+    async function doDeleteLesson(){
       try{
-        const { error } = await window.supa.from('vocab_courses').delete().eq('id', course.id);
+        const { error } = await window.supa.from('vocab_courses').delete().eq('id', lesson.id);
         if(error) throw error;
-        toast_ && toast_('Đã xoá khóa học');
+        toast_ && toast_('Đã xoá bài học');
         onChanged();
       } catch(e){
-        console.error('[vocab-manager] delete course error:', e);
+        console.error('[vocab-manager] delete lesson error:', e);
         toast_ && toast_('Xoá thất bại, thử lại nhé!');
       }
     }
-    function handleDeleteCourse(e){
+    function handleDeleteLesson(e){
       e.stopPropagation();
       if(confirm_){
-        confirm_({ title:'Xoá khóa học?', message:`"${course.title}" và toàn bộ Unit + từ vựng bên trong sẽ bị xoá vĩnh viễn.`, confirmLabel:'Xoá', danger:true, onConfirm:doDeleteCourse });
-      } else if(window.confirm(`Xoá "${course.title}" và toàn bộ nội dung?`)){ doDeleteCourse(); }
+        confirm_({ title:'Xoá bài học?', message:`"${lesson.title}" và toàn bộ Unit + từ vựng bên trong sẽ bị xoá vĩnh viễn.`, confirmLabel:'Xoá', danger:true, onConfirm:doDeleteLesson });
+      } else if(window.confirm(`Xoá "${lesson.title}" và toàn bộ nội dung?`)){ doDeleteLesson(); }
     }
 
     return(
@@ -702,14 +702,14 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
             <IconBook size={17}/>
           </div>
           <div style={{flex:1, minWidth:0}}>
-            <div style={{fontSize:14.5, fontWeight:900, color:C.text, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{course.title}</div>
+            <div style={{fontSize:14.5, fontWeight:900, color:C.text, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{lesson.title}</div>
             <div style={{fontSize:11.5, color:C.text3, marginTop:1, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>
-              {course.description || (loaded ? `${units.length} unit` : 'Bấm để xem units')}
+              {lesson.description || (loaded ? `${units.length} unit` : 'Bấm để xem units')}
             </div>
           </div>
           <div style={{display:'flex', gap:6, flexShrink:0}} onClick={e=>e.stopPropagation()}>
-            <IconBtn onClick={()=>setCourseModal(true)} title="Sửa khóa học" C={C}><IconEdit/></IconBtn>
-            <IconBtn onClick={handleDeleteCourse} title="Xoá khóa học" danger C={C}><IconTrash/></IconBtn>
+            <IconBtn onClick={()=>setLessonModal(true)} title="Sửa bài học" C={C}><IconEdit/></IconBtn>
+            <IconBtn onClick={handleDeleteLesson} title="Xoá bài học" danger C={C}><IconTrash/></IconBtn>
           </div>
         </div>
 
@@ -731,7 +731,7 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
               </div>
             )}
             {loaded && units.length===0 && (
-              <div style={{textAlign:'center', padding:'20px 10px', fontSize:12.5, color:C.text3, fontWeight:600}}>Chưa có Unit nào trong khóa học này</div>
+              <div style={{textAlign:'center', padding:'20px 10px', fontSize:12.5, color:C.text3, fontWeight:600}}>Chưa có Unit nào trong bài học này</div>
             )}
             {loaded && units.map(u=>(
               <UnitBlock key={u.id} unit={u} dark={dark} C={C} confirm_={confirm_} toast_={toast_} onChanged={fetchUnits}/>
@@ -740,15 +740,15 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
         )}
 
         {unitModal && (
-          <UnitModal dark={dark} C={C} courseId={course.id} initial={null}
+          <UnitModal dark={dark} C={C} courseId={lesson.id} initial={null}
             onClose={()=>setUnitModal(false)}
             onSaved={()=>{ setUnitModal(false); setOpen(true); fetchUnits(); }}
             toast_={toast_}/>
         )}
-        {courseModal && (
-          <CourseModal dark={dark} C={C} initial={course}
-            onClose={()=>setCourseModal(false)}
-            onSaved={()=>{ setCourseModal(false); onChanged(); }}
+        {lessonModal && (
+          <LessonModal dark={dark} C={C} initial={lesson}
+            onClose={()=>setLessonModal(false)}
+            onSaved={()=>{ setLessonModal(false); onChanged(); }}
             toast_={toast_}/>
         )}
       </div>
@@ -757,31 +757,31 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
 
   /* ══ VOCABULARY MANAGER (main export) ══ */
   function VocabularyManager({dark, C, confirm_, toast_}){
-    const [courses,setCourses] = useState([]);
+    const [lessons,setLessons] = useState([]);
     const [loading,setLoading] = useState(true);
     const [search,setSearch] = useState('');
-    const [courseModal,setCourseModal] = useState(false);
+    const [lessonModal,setLessonModal] = useState(false);
 
-    const fetchCourses = useCallback(async ()=>{
+    const fetchLessons = useCallback(async ()=>{
       setLoading(true);
       try{
         const { data, error } = await window.supa.from('vocab_courses')
           .select('*').order('sort_order',{ascending:true}).order('created_at',{ascending:false});
         if(error) throw error;
-        setCourses(data||[]);
+        setLessons(data||[]);
       } catch(e){
-        console.error('[vocab-manager] fetch courses error:', e);
-        toast_ && toast_('Không tải được danh sách khóa học');
+        console.error('[vocab-manager] fetch lessons error:', e);
+        toast_ && toast_('Không tải được danh sách bài học');
       } finally { setLoading(false); }
     },[toast_]);
 
-    useEffect(()=>{ fetchCourses(); },[fetchCourses]);
+    useEffect(()=>{ fetchLessons(); },[fetchLessons]);
 
     const filtered = useMemo(()=>{
       const q = search.trim().toLowerCase();
-      if(!q) return courses;
-      return courses.filter(c=>(c.title||'').toLowerCase().includes(q) || (c.description||'').toLowerCase().includes(q));
-    },[courses,search]);
+      if(!q) return lessons;
+      return lessons.filter(c=>(c.title||'').toLowerCase().includes(q) || (c.description||'').toLowerCase().includes(q));
+    },[lessons,search]);
 
     return(
       <div style={{padding:'16px 12px 100px', display:'flex', flexDirection:'column', gap:14}} className="fade-up">
@@ -790,16 +790,16 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
             <span style={{position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', color:C.text3, display:'flex'}}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </span>
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Tìm khóa học..."
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Tìm bài học..."
               style={{width:'100%', padding:'10px 12px 10px 34px', borderRadius:14, border:`1.5px solid ${C.border2}`, background:C.surface, color:C.text, fontSize:13, outline:'none', fontFamily:"'Nunito',sans-serif", fontWeight:600, boxSizing:'border-box'}}/>
           </div>
-          <PrimaryBtn onClick={()=>setCourseModal(true)} C={C} style={{whiteSpace:'nowrap'}}>
-            <IconPlus/> Khóa học
+          <PrimaryBtn onClick={()=>setLessonModal(true)} C={C} style={{whiteSpace:'nowrap'}}>
+            <IconPlus/> Bài học
           </PrimaryBtn>
         </div>
 
         <div style={{fontSize:12, color:C.text3, fontWeight:700}}>
-          {courses.length} khóa học {search && `· ${filtered.length} khớp tìm kiếm`}
+          {lessons.length} bài học {search && `· ${filtered.length} khớp tìm kiếm`}
         </div>
 
         {loading && (
@@ -812,28 +812,30 @@ import React, {useState,useEffect,useCallback,useMemo,useRef} from 'react';
           <div style={{
             display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
             minHeight:'34vh', gap:12, padding:'32px 20px', textAlign:'center', animation:'fadeUp .3s ease both',
+            borderRadius:18, border:`1.5px solid ${C.border}`,
+            background:dark?'rgba(255,255,255,0.02)':'rgba(168,85,247,0.02)',
           }}>
             <span style={{
               display:'flex', color:C.lav, opacity:0.55, animation:'bb-float 3s ease-in-out infinite',
               width:64, height:64, borderRadius:'50%', background:C.lavPale, alignItems:'center', justifyContent:'center',
             }}><IconBook size={30}/></span>
-            <div style={{fontSize:14.5, fontWeight:900, color:C.text2, fontFamily:"'Baloo 2',cursive"}}>{search ? 'Không tìm thấy khóa học' : 'Chưa có khóa học nào'}</div>
-            <div style={{fontSize:12, color:C.text3}}>{search ? 'Thử từ khoá khác nhé' : 'Bấm "Khóa học" để tạo khóa học đầu tiên'}</div>
+            <div style={{fontSize:14.5, fontWeight:900, color:C.text2, fontFamily:"'Baloo 2',cursive"}}>{search ? 'Không tìm thấy bài học' : 'Chưa có bài học nào'}</div>
+            <div style={{fontSize:12, color:C.text3}}>{search ? 'Thử từ khoá khác nhé' : 'Bấm "Bài học" để tạo bài học đầu tiên'}</div>
           </div>
         )}
 
         {!loading && filtered.length>0 && (
           <div style={{display:'flex', flexDirection:'column', gap:10}}>
             {filtered.map(c=>(
-              <CourseBlock key={c.id} course={c} dark={dark} C={C} confirm_={confirm_} toast_={toast_} onChanged={fetchCourses}/>
+              <LessonBlock key={c.id} lesson={c} dark={dark} C={C} confirm_={confirm_} toast_={toast_} onChanged={fetchLessons}/>
             ))}
           </div>
         )}
 
-        {courseModal && (
-          <CourseModal dark={dark} C={C} initial={null}
-            onClose={()=>setCourseModal(false)}
-            onSaved={()=>{ setCourseModal(false); fetchCourses(); }}
+        {lessonModal && (
+          <LessonModal dark={dark} C={C} initial={null}
+            onClose={()=>setLessonModal(false)}
+            onSaved={()=>{ setLessonModal(false); fetchLessons(); }}
             toast_={toast_}/>
         )}
       </div>

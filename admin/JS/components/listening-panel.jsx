@@ -964,7 +964,7 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
 
             {/* empty state */}
             {items.length===0 && (
-              <div style={{textAlign:'center',padding:'28px 10px',color:C.text3,fontSize:12.5,fontWeight:700}}>
+              <div style={{textAlign:'center',padding:'28px 10px',color:C.text3,fontSize:12.5,fontWeight:700,borderRadius:18,border:`1.5px solid ${C.border}`}}>
                 Chưa có câu Listening nào.<br/>
                 <button onClick={()=>{resetForm();setTab('form');}} style={{marginTop:10,...btnBase(C.lav,C.lavL)}}
                   onMouseEnter={liftHover} onMouseLeave={liftLeave} onMouseDown={pressDown} onMouseUp={pressUp}>+ Thêm câu đầu tiên</button>
@@ -973,7 +973,7 @@ import React, {useState,useEffect,useCallback,useRef,useMemo} from 'react';
 
             {/* no results */}
             {items.length>0 && displayItems.length===0 && (
-              <div style={{textAlign:'center',padding:'18px',color:C.text3,fontSize:12.5,fontWeight:700}}>
+              <div style={{textAlign:'center',padding:'18px',color:C.text3,fontSize:12.5,fontWeight:700,borderRadius:18,border:`1.5px solid ${C.border}`}}>
                 Không tìm thấy câu nào khớp với bộ lọc.
               </div>
             )}
